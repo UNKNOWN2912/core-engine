@@ -1,0 +1,13 @@
+[submodule "Engine/Vendor/glfw"]
+	path = Engine/Vendor/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Engine/Vendor/glm"]
+	path = Engine/Vendor/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Project/Editor/imgui"]
+	path = Project/Editor/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
+[submodule "Engine/Vendor/stb"]
+	path = Engine/Vendor/stb
+	url = https://github.com/nothings/stb.git
