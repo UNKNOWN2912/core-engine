@@ -2,13 +2,18 @@
 A lightweight game engine written in C++ capable of 2d and 3d rendering
 
 # Table of Content
-*   [Features](#features)
-*   [Building Engine](#building-engine)
-*   [TODO List](#todo-list-more-will-be-added-in-the-future)
+- [Core Engine](#core-engine)
+- [Table of Content](#table-of-content)
+- [Features](#features)
+- [Building Engine](#building-engine)
+  - [Dependencies](#dependencies)
+  - [Building](#building)
+      - [Single Line version](#single-line-version)
+- [TODO List (More will be added in the future)](#todo-list-more-will-be-added-in-the-future)
 # Features
-- Editor(work in progress)
+<!-- - Editor(work in progress) -->
 - Rendering using Vulkan(working in progress)
-- Node base scene
+<!-- - Node base scene -->
 # Building Engine
 ## Dependencies
 - `cmake`
@@ -26,7 +31,7 @@ make -j12
 mkdir out && cd out && cmake .. && make -j12
 ```
 
-# Running Editor
+<!-- # Running Editor
 - Goto project root directory
 ```bash
 cd ..
@@ -46,9 +51,11 @@ cd Project/Editor
 ### Single Line version
 ```bash
 cd .. && mv out/Project/Editor/Editor Project/Editor && cd Project/Editor && ./Editor
-```
+``` -->
 # TODO List (More will be added in the future)
 - [ ] Abstract renderer and graphic (Currently Renderer is implemented directly in Vulkan.
-- [ ] Add more node types (Currently only have mesh renderer node)
+- [ ] Model Loading
+- [ ] Add Entity Component System(ECS)
 - [ ] Functional editor (Can make anything with current editor)
 - [ ] Scripting language support
+- [ ] Editor
