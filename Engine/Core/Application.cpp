@@ -1,32 +1,28 @@
 #include "Application.hpp"
 #include <cassert>
+#include <print>
 
 void Application::InitializeApplication()
 {
-
 	WindowSpecification windowSpecification;
-	windowSpecification.size = Vector2u(800, 600);
+	windowSpecification.size = glm::uvec2(800, 600);
 	windowSpecification.title = "Hello triangle";
 
-	mWindow.reset(new Window());
-	mWindow->Create(windowSpecification);
-	mWindow->AddListener(BindMember(Application::WindowEventCallback));
+	mWindow.Create(windowSpecification);
+	mWindow.AddListener(BindMember(Application::WindowEventCallback));
 
-	mRenderer.reset(Renderer::Create(*mWindow));
-	mAssetManager.reset(new AssetManager());
-
+	mRenderer.Initialize(mWindow);
 }
 
 void Application::TerminateApplication()
 {
-	mWindow->Destroy();
+	mWindow.Destroy();
 }
 
 void Application::RunApplication()
 {
 	InitializeApplication();
 	Start();
-	mRenderer->CreateAssets(mAssetManager);
 	MainLoop();
 	End();
 	TerminateApplication();
@@ -51,6 +47,8 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 		Close();
 	}
 
+	std::println("Data: {}", data);
+
 	return false;
 }
 
@@ -68,7 +66,7 @@ void Application::MainLoop()
 {
 	while (mRunning)
 	{
-		mWindow->ProcessEvent();
+		mWindow.ProcessEvent();
 		Update();
 	}
 }

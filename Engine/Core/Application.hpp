@@ -1,8 +1,6 @@
 #pragma once
-#include "Assets/AssetManager.hpp"
 #include "Core/Window.hpp"
 #include "Renderer/Renderer.hpp"
-#include <memory>
 
 class Application
 {
@@ -22,25 +20,18 @@ public:
 	bool WindowEventCallback(uint32_t code, void* data);
 
 
-	std::shared_ptr<AssetManager> GetAssetManager() { return mAssetManager; }
-	std::shared_ptr<Renderer> GetRenderer() { return mRenderer; }
+	Renderer& GetRendererRef() { return mRenderer; }
 
 	static Application* Create();
 	static Application* GetInstance() { return mInstance; }
 
 	Application();
-	~Application();
-
+	virtual ~Application();
 private:
 	bool mRunning = true;
 	static Application* mInstance;
 	void MainLoop();
 
-	std::shared_ptr<Window> mWindow;
-	std::shared_ptr<Renderer> mRenderer;
-
-	std::shared_ptr<AssetManager> mAssetManager;
-
-	Material mMaterial;
-	Mesh mMesh;
+	Window mWindow;
+	Renderer mRenderer;
 };

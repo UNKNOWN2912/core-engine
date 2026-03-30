@@ -32,7 +32,8 @@ void VulkanSwapchain::Create(const glm::vec2& size, VkPhysicalDevice physicalDev
 
     mImageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
 
-    VkSwapchainCreateInfoKHR createInfo = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
+    VkSwapchainCreateInfoKHR createInfo = {};
+    createInfo.sType = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
     createInfo.clipped = VK_TRUE;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.imageArrayLayers = 1;
@@ -61,7 +62,8 @@ void VulkanSwapchain::Create(const glm::vec2& size, VkPhysicalDevice physicalDev
 
     for (VkImage image : mImages)
     {
-        VkImageViewCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        VkImageViewCreateInfo createInfo = {};
+        createInfo.sType = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         createInfo.image = image;
         createInfo.format = mFormat;

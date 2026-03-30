@@ -1,56 +1,42 @@
 #include <Engine.hpp>
-#include <Maths/Vector.hpp>
-#include <filesystem>
-#include <print>
+
+
 
 class Sandbox : public Application
 {
-	void Initialize() override
-	{
-	}
-	void Start() override 
-	{
+	public:
+		Sandbox(): mGraphic(GetRendererRef().GetGraphicRef())
+		{
+		}
+		void Start() override 
+		{
+		}
+		void Update() override 
+		{
+			mGraphic.BeginCommandBufferRecording(mCommandBuffer);
 
-		GetAssetManager()->LoadShader("skybox", "Shader/shader.vert.spv", "Shader/shader.frag.spv");
+			mGraphic.BeginRenderPass(mRenderPass);
 
-		mesh = std::make_shared<Mesh>();
-		material = std::make_shared<Material>();
-		meshRenderer = std::make_shared<MeshRenderer>(mesh, material);
+			mGraphic.BindVertexBuffer(mVertexBuffer, 0);
+			mGraphic.BindIndexBuffer(mIndexBuffer);
+			mGraphic.DrawIndexed(3);
 
-		mesh2 = std::make_shared<Mesh>();
-		material2 = std::make_shared<Material>();
-		meshRenderer2 = std::make_shared<MeshRenderer>(mesh2, material2);
+			mGraphic.EndRenderPass();
 
-		mesh->positions.push_back(Vector3f( 0.5, 0.5, 0.0));
-		mesh->positions.push_back(Vector3f( 0.5,-0.5, 0.0));
-		mesh->positions.push_back(Vector3f(-0.5,-0.5, 0.0));
-		
-		mesh->AddFace(0, 1, 2);
-		
-		material->shader = "skybox";
+			mGraphic.EndCommandBufferRecording(mCommandBuffer);
 
-		mesh2->positions.push_back(Vector3f( 0.1, 0.1, 0.0));
-		mesh2->positions.push_back(Vector3f( 0.1,-0.1, 0.0));
-		mesh2->positions.push_back(Vector3f(-0.1,-0.1, 0.0));
-		
-		mesh2->AddFace(0, 1, 2);
-		
-		material2->shader = "skybox";
 
-		
-		GetRenderer()->CreateAssets(GetAssetManager());
-		GetRenderer()->CreateMeshRendererObjects(meshRenderer);
-		GetRenderer()->CreateMeshRendererObjects(meshRenderer2);
-	}
-	void Update() override 
-	{
-		GetRenderer()->BeginFrame(Vector4f(1,0,1,1));
-		GetRenderer()->Submit(meshRenderer2);
-		GetRenderer()->EndFrame();
-	}
-	void End() override 
-	{
-	}
+		}
+		void End() override 
+		{
+		}
+	private:
+		Graphic& mGraphic;
+
+		VertexBuffer mVertexBuffer;
+		IndexBuffer mIndexBuffer;
+		RenderPass mRenderPass;
+		CommandBuffer mCommandBuffer;
 };
 
-Application *Application::Create() { return new Sandbox; }
+Application *Application::Create() { return new Sandbox(); }

@@ -1,8 +1,8 @@
 #pragma once
 
-
 enum class ImageFormat
 {
+	None,
 	R8,
 	RG8,
 	RGB8,

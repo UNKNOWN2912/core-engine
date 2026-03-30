@@ -1,4 +1,5 @@
 #pragma once
+
 #include <print>
 
 #define ENABLE_LOGGING 1

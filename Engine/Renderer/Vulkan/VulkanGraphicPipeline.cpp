@@ -1,20 +1,22 @@
 #include "VulkanGraphicPipeline.hpp"
-#include "VulkanUtility.hpp"
+#include <cassert>
 
 void VulkanGraphicPipeline::Create(VkDevice device, VkRenderPass renderPass, uint32_t subpass, VkPipelineLayout pipelineLayout)
 {
     mDevice = device;
 
-    vkAssert(mDevice);
-    vkAssert(mVertexShaderModule);
-    vkAssert(mFragmentShaderModule);
+    assert(mDevice != VK_NULL_HANDLE);
+    assert(mVertexShaderModule != VK_NULL_HANDLE);
+    assert(mFragmentShaderModule != VK_NULL_HANDLE);
 
-    VkPipelineShaderStageCreateInfo vertexShaderStageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    VkPipelineShaderStageCreateInfo vertexShaderStageCreateInfo;
+    vertexShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertexShaderStageCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertexShaderStageCreateInfo.module = mVertexShaderModule;
     vertexShaderStageCreateInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo;
+    fragmentShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragmentShaderStageCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragmentShaderStageCreateInfo.module = mFragmentShaderModule;
     fragmentShaderStageCreateInfo.pName = "main";
@@ -29,29 +31,35 @@ void VulkanGraphicPipeline::Create(VkDevice device, VkRenderPass renderPass, uin
     VkRect2D scissor = {};
     scissor.extent = { 800, 600 };
 
-    VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    VkPipelineViewportStateCreateInfo viewportState;
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.pViewports = &viewport;
     viewportState.viewportCount = 1;
     viewportState.pScissors = &scissor;
     viewportState.scissorCount = 1;
 
-    VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    VkPipelineColorBlendStateCreateInfo colorBlendState;
+    colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlendState.attachmentCount = mColorBlendAttachments.size();
     colorBlendState.pAttachments = mColorBlendAttachments.data();
 
     VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
-    VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    VkPipelineDynamicStateCreateInfo dynamicState;
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = 2;
     dynamicState.pDynamicStates = dynamicStates;
 
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly;
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    VkPipelineMultisampleStateCreateInfo multisample = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    VkPipelineMultisampleStateCreateInfo multisample;
+    multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    VkPipelineRasterizationStateCreateInfo rasterization = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    VkPipelineRasterizationStateCreateInfo rasterization;
+    rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization.cullMode = VK_CULL_MODE_NONE;
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;
     if (mWireFrameEnabled)
@@ -59,20 +67,23 @@ void VulkanGraphicPipeline::Create(VkDevice device, VkRenderPass renderPass, uin
     rasterization.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterization.lineWidth = 1.f;
 
-    VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    VkPipelineVertexInputStateCreateInfo vertexInput;
+    vertexInput.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInput.pVertexAttributeDescriptions = mAttributes.data();
     vertexInput.vertexAttributeDescriptionCount = mAttributes.size();
     vertexInput.pVertexBindingDescriptions = mBindings.data();
     vertexInput.vertexBindingDescriptionCount = mBindings.size();
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    VkPipelineDepthStencilStateCreateInfo depthStencil;
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.minDepthBounds = 0.f;
     depthStencil.maxDepthBounds = 1.f;
     depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthTestEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo;
+    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.layout = pipelineLayout;
     pipelineCreateInfo.renderPass = renderPass;
     pipelineCreateInfo.stageCount = 2;
@@ -90,6 +101,8 @@ void VulkanGraphicPipeline::Create(VkDevice device, VkRenderPass renderPass, uin
         pipelineCreateInfo.pDepthStencilState = &depthStencil;
 
     vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mHandle);
+
+    VkRenderPassCreateInfo c;
 }
 
 void VulkanGraphicPipeline::AddVertexAttribute(uint32_t binding, uint32_t location, uint32_t offset, VkFormat format)

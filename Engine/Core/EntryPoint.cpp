@@ -1,12 +1,13 @@
 ﻿#include <Core/EntryPoint.hpp>
 #include <Core/Application.hpp>
+#include <print>
 
 using namespace std; 
 
 int main(int argc, char** argv)
 {
+	std::println("Args: {} {}", argc, argv[0]);
 	Application* application = Application::Create();
 	application->RunApplication();
 	delete application;
-
 }

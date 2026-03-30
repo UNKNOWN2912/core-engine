@@ -1,6 +1,6 @@
 #pragma once
+#include <cstdint>
 #include <functional>
-#include <memory>
 #include <vector>
 
 #define BindMember(callback) std::bind(&callback, this, std::placeholders::_1, std::placeholders::_2)
@@ -14,7 +14,7 @@ class EventDispatcher
 
         void Dispatch(int code, void* data)
         {
-            for (int i = 0; i < mListeners.size(); i++)
+            for (size_t i = 0; i < mListeners.size(); i++)
             {
                 if(mListeners[i](code, data) == true)
                 {
