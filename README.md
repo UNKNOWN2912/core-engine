@@ -9,7 +9,6 @@ A lightweight game engine written in C++ capable of 2d and 3d rendering
 - [Building Engine](#building-engine)
   - [Dependencies](#dependencies)
   - [Building](#building)
-      - [Single Line version](#single-line-version)
 - [TODO List (More will be added in the future)](#todo-list-more-will-be-added-in-the-future)
 # Features
 <!-- - Editor(work in progress) -->
