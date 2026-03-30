@@ -1,5 +1,6 @@
 # Core Engine
 A lightweight game engine written in C++ capable of 2d and 3d rendering
+!!! Engine is in development. Nothing works 
 
 # Table of Content
 - [Core Engine](#core-engine)
