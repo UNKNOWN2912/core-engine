@@ -5,15 +5,6 @@
 
 class Sandbox : public Application
 {
-	std::shared_ptr<Mesh> mesh;
-	std::shared_ptr<Material> material;
-	std::shared_ptr<MeshRenderer> meshRenderer;
-
-	std::shared_ptr<Mesh> mesh2;
-	std::shared_ptr<Material> material2;
-	std::shared_ptr<MeshRenderer> meshRenderer2;
-
-
 	void Initialize() override
 	{
 	}
