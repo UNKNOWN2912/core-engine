@@ -21,6 +21,7 @@ public:
 
 
 	Renderer& GetRendererRef() { return mRenderer; }
+	Window& GetWindowRef() { return mWindow; }
 
 	static Application* Create();
 	static Application* GetInstance() { return mInstance; }

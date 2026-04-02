@@ -1,8 +1,8 @@
 #pragma once
-#include "Maths/Vector.hpp"
+#include <glm/glm.hpp>
 
 struct Viewport
 {
-    Vector2u size;
-    Vector2u offset;
+    glm::uvec2 size;
+    glm::uvec2 offset;
 };

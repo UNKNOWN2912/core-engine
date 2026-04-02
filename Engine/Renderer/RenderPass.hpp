@@ -1,4 +1,6 @@
 #pragma once
+#include "Renderer/Enums.hpp"
+#include "Renderer/Image.hpp"
 #include <glm/glm.hpp>
 
 enum class AttachmentUsage
@@ -18,21 +20,17 @@ enum class LoadOperation
 
 enum class StoreOperation
 {
-    Clear,
     Store,
     DontCare
 };
 
 struct Attachment
 {
-    AttachmentUsage usage = AttachmentUsage::ColorOutput;
+    ImageUsage usage = ImageUsage::ColorOutput;
     LoadOperation loadOperation = LoadOperation::Load;
     StoreOperation storeOperation = StoreOperation::Store;
     glm::vec4 clearValue = glm::vec4(1.f);
-
-    Attachment(AttachmentUsage usage, LoadOperation loadOperation, StoreOperation storeOperation, const glm::vec4& clearValue)
-        : usage(usage), loadOperation(loadOperation), storeOperation(storeOperation), clearValue(clearValue) 
-    {}
+    ImageFormat format;
 };
 
 struct AttachmentRef
@@ -49,19 +47,42 @@ class Subpass
         void SetDepthAttachment(uint32_t index) { mDepthAttachmentIndex = index; }
 
     private:
+        friend class Graphic;
         std::vector<uint32_t> mColorAttachmentIndex;
         std::vector<uint32_t> mInputAttachmentIndex;
         uint32_t mDepthAttachmentIndex = UINT32_MAX;
 };
 
+class Dependency
+{
+    public:
+        void SetSourceSubpass(uint32_t index) { mSourceSubpassIndex = index; }
+        void SetDestinationSubpass(uint32_t index) { mDestinationSubpassIndex = index; }
+
+
+    private:
+        friend class Graphic;
+        uint32_t mSourceSubpassIndex = UINT32_MAX;
+        uint32_t mDestinationSubpassIndex = UINT32_MAX;
+};
+
 class RenderPass
 {
     public:
-        uint32_t AddAttachment(const Attachment& attachment) { mAttachments.push_back(attachment); return mAttachments.size() - 1; }
-        void AddSubpass(const Subpass& subpass) { mSubpasses.push_back(subpass); }
+        RenderPass& AddAttachment(const Attachment& attachment) { mAttachments.push_back(attachment); return *this; }
+        RenderPass& AddSubpass(const Subpass& subpass, const Dependency& dependency) 
+        { 
+            mSubpasses.push_back(subpass);
+            mDependencies.push_back(dependency);
+            return *this;
+        }
+
         uint32_t GetId() { return mId; }
+
     private:
-        uint32_t mId = 0;
+        friend class Graphic;
+        uint64_t mId = 0;
         std::vector<Subpass> mSubpasses;
+        std::vector<Dependency> mDependencies;
         std::vector<Attachment> mAttachments;
 };

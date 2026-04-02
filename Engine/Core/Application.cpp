@@ -6,7 +6,7 @@ void Application::InitializeApplication()
 {
 	WindowSpecification windowSpecification;
 	windowSpecification.size = glm::uvec2(800, 600);
-	windowSpecification.title = "Hello triangle";
+	windowSpecification.title = "world";
 
 	mWindow.Create(windowSpecification);
 	mWindow.AddListener(BindMember(Application::WindowEventCallback));

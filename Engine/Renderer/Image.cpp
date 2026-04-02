@@ -33,8 +33,20 @@ size_t getSizePerPixel(ImageFormat format)
             return 3 * 4;
         case ImageFormat::RGBA32:
             return 4 * 4;
-        break;
+        case ImageFormat::BGRA8:
+            return 4 * 1;
+        case ImageFormat::R64:
+            return 1 * 8;
+        case ImageFormat::RG64:
+            return 2 * 8;
+        case ImageFormat::RGB64:
+            return 3 * 8;
+        case ImageFormat::RGBA64:
+            return 4 * 8;
+          break;
     }
+
+    return 0;
 }
 
 

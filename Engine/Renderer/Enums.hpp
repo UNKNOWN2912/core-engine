@@ -3,6 +3,7 @@
 enum class ImageFormat
 {
 	None,
+	BGRA8,
 	R8,
 	RG8,
 	RGB8,
@@ -15,6 +16,10 @@ enum class ImageFormat
 	RG32,
 	RGB32,
 	RGBA32,
+	R64,
+	RG64,
+	RGB64,
+	RGBA64,
 };
 
 enum class TextureFilter

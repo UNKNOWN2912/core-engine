@@ -24,15 +24,42 @@ class HostImage
         ImageFormat mFormat = ImageFormat::None;
 };
 
+enum class ImageUsage : uint8_t
+{
+    None = 0,
+    ColorOutput = 1,
+    Sample = 2,
+    Storage = 4,
+    TransferSrc = 8,
+    TransferDst = 16,
+    SubpassInput = 32,
+    Depth = 64,
+    Present = 128,
+};
+
+inline ImageUsage operator|(ImageUsage lhs, ImageUsage rhs)
+{
+    return ImageUsage(uint8_t(lhs) | uint8_t(rhs));
+}
+
+inline ImageUsage operator&(ImageUsage lhs, ImageUsage rhs)
+{
+    return ImageUsage(uint8_t(lhs) & uint8_t(rhs));
+}
+
+
 class DeviceImage
 {
     public:
         uint32_t GetId() const { return mId; }
         ImageFormat GetFormat() const { return mFormat; }
         const glm::uvec2& GetSize() const { return mSize; }
+        ImageUsage GetImageUsage() const { return mUsage; }
 
     private:
-        uint32_t mId = 0;
+        friend class Graphic;
+        uint64_t mId = 0;
         glm::uvec2 mSize = {0,0};
         ImageFormat mFormat = ImageFormat::None;
+        ImageUsage mUsage = ImageUsage::None;
 };
