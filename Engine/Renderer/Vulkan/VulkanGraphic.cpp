@@ -3,6 +3,7 @@
 #include <cstring>
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+#include <Core/Macro.hpp>
 
 #include "VulkanHelper.hpp"
 
@@ -20,7 +21,6 @@ struct GraphicData
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     VkCommandPool commandPool = VK_NULL_HANDLE;
-    VulkanSwapchain swapchain;
     QueueIndex queueIndices;
     Queue queues;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -56,12 +56,10 @@ void Graphic::CreateVulkanObjects(const Window& window)
     mData->device = VulkanHelper::CreateDevice(mData->physicalDevice, mData->queueIndices);
     mData->queues = VulkanHelper::GetQueues(mData->device, mData->queueIndices);
     mData->commandPool = VulkanHelper::CreateCommandPool(mData->device);
-    mData->swapchain = VulkanHelper::CreateSwapchain(mData->physicalDevice, mData->device, mData->surface, window);
 }
 
 void Graphic::DestroyVulkanObjects() 
 {
-    mData->swapchain.Destroy();
     vkDestroySurfaceKHR(mData->instance, mData->surface, nullptr);
     vkDestroyDevice(mData->device, nullptr);
     vkDestroyCommandPool(mData->device, mData->commandPool, nullptr);
@@ -183,15 +181,16 @@ void Graphic::CreateRenderPass(RenderPass& renderPass)
 
     for (size_t i = 0; i < subpassDescriptions.size(); i++)
     {
-        delete subpassDescriptions[i].pColorAttachments;
-        delete subpassDescriptions[i].pInputAttachments;
-        delete subpassDescriptions[i].pDepthStencilAttachment;
+        delete[] subpassDescriptions[i].pColorAttachments;
+        delete[] subpassDescriptions[i].pInputAttachments;
+        delete[] subpassDescriptions[i].pDepthStencilAttachment;
     }
 }
 
 
 void Graphic::BeginCommandBufferRecording(const CommandBuffer& commandBuffer) 
 {
+    WaitForDevice();
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -399,6 +398,11 @@ void Graphic::WaitForDevice()
 
 void Graphic::CreateSwapchain(Swapchain& swapchain) 
 {
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mData->physicalDevice, mData->surface, &capabilities);
+
+
+
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.clipped = VK_TRUE;
@@ -416,7 +420,11 @@ void Graphic::CreateSwapchain(Swapchain& swapchain)
     createInfo.surface = mData->surface;
 
     VkSwapchainKHR swpc;
-    vkCreateSwapchainKHR(mData->device, &createInfo, nullptr, &swpc);
+    VkResult result = vkCreateSwapchainKHR(mData->device, &createInfo, nullptr, &swpc);
+    if(result != VK_SUCCESS)
+    {
+        LOG("Error: {}", (uint32_t)result);
+    }
 
     swapchain.mId = (uint64_t)swpc;
 
@@ -462,7 +470,71 @@ void Graphic::CreateSwapchain(Swapchain& swapchain)
 
 }
 
-void Graphic::CreateFrameBufferWithoutAttachments(FrameBuffer& frameBuffer, const RenderPass& renderPass, const Viewport& viewport) 
+void Graphic::CreateFrameBufferWithUserAttachments(FrameBuffer& frameBuffer, const RenderPass& renderPass, const Viewport& viewport, const std::vector<DeviceImage>& images) 
 {
-    
+    for (size_t i = 0; i < images.size(); i++)
+    {
+        frameBuffer.mAttachments.push_back(images[i]);
+    }
+
+    std::vector<VkImageView> vkAttachment;
+
+    for (size_t i = 0; i < frameBuffer.mAttachments.size(); i++)
+    {
+        vkAttachment.push_back(((ImageData*)frameBuffer.mAttachments[i].mId)->view);
+    }
+
+    VkFramebufferCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    createInfo.attachmentCount = vkAttachment.size();
+    createInfo.pAttachments = vkAttachment.data();
+    createInfo.width = viewport.size.x;
+    createInfo.height = viewport.size.y;
+    createInfo.layers = 1;
+    createInfo.renderPass = (VkRenderPass)renderPass.mId;
+
+    VkFramebuffer fBuffer;
+    vkCreateFramebuffer(mData->device, &createInfo, nullptr, &fBuffer);
+    frameBuffer.mId = (uint64_t)fBuffer;
 }
+
+uint32_t Graphic::GetNextSwapchainImage(const Swapchain& swapchain, DeviceSemaphore semaphore) 
+{
+    uint32_t index;
+    vkAcquireNextImageKHR(mData->device, (VkSwapchainKHR)swapchain.mId, UINT64_MAX, (VkSemaphore)semaphore.GetId(), VK_NULL_HANDLE, &index);
+    return index;
+}
+
+void Graphic::PresentSwapchainImage(const Swapchain& swapchain, uint32_t imageIndex, DeviceSemaphore waitSemaphore) 
+{
+    VkSwapchainKHR swapchains[] = {(VkSwapchainKHR)swapchain.GetId()};
+    VkSemaphore waitSemaphores[] = {(VkSemaphore)waitSemaphore.GetId()};
+
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pSwapchains = swapchains;
+    presentInfo.swapchainCount = 1;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = waitSemaphores;
+
+    vkQueuePresentKHR(mData->queues.present, &presentInfo);
+}
+
+DeviceSemaphore Graphic::CreateSemaphore()
+{
+    VkSemaphoreCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkSemaphore semaphore;
+    vkCreateSemaphore(mData->device, &createInfo, nullptr, &semaphore);
+
+    DeviceSemaphore result;
+    result.mId = (uint64_t)semaphore;
+    return result;
+}
+
+
+
+
+

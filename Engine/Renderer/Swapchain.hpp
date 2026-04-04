@@ -16,5 +16,5 @@ class Swapchain
         uint64_t mId = 0;
         std::vector<DeviceImage> mImages;
         ImageFormat mFormat = ImageFormat::BGRA8;
-        glm::uvec2 mSize = {0,0};
+        glm::uvec2 mSize = {800,600};
 };

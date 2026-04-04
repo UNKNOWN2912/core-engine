@@ -13,10 +13,10 @@ class Sandbox : public Application
 			
 			Attachment attachment = 
 			{
-				.usage = ImageUsage::ColorOutput,
-				.loadOperation = LoadOperation::DontCare,
+				.usage = ImageUsage::Present,
+				.loadOperation = LoadOperation::Clear,
 				.storeOperation = StoreOperation::Store,
-				.clearValue = glm::vec4(1.f),
+				.clearValue = glm::vec4(0.1f),
 				.format = ImageFormat::BGRA8
 			};
 
@@ -37,39 +37,46 @@ class Sandbox : public Application
 
 			mGraphic.CreateSwapchain(mSwapchain);
 
-			mGraphic.CreateFrameBuffer(mFrameBuffer, mRenderPass, mViewport);
+			for (size_t i = 0; i < mSwapchain.GetImages().size(); i++)
+			{
+				FrameBuffer frameBuffer;
+				mGraphic.CreateFrameBufferWithUserAttachments(frameBuffer, mRenderPass, mViewport, {mSwapchain.GetImages()[i]});
+				mFrameBuffer.push_back(frameBuffer);
+			}
 
+			mImageAcquiredSemaphore = mGraphic.CreateSemaphore();
 		}
 		void Update() override 
 		{
+			uint32_t index = mGraphic.GetNextSwapchainImage(mSwapchain, mImageAcquiredSemaphore);
 			mGraphic.BeginCommandBufferRecording(mCommandBuffer);
-
-			mGraphic.BeginRenderPass(mCommandBuffer, mRenderPass, mFrameBuffer, mViewport);
-
+			
+			mGraphic.BeginRenderPass(mCommandBuffer, mRenderPass, mFrameBuffer[index], mViewport);
+			
 			mGraphic.BindVertexBuffer(mVertexBuffer, 0);
 			mGraphic.BindIndexBuffer(mIndexBuffer);
 			mGraphic.DrawIndexed(3);
-
+			
 			mGraphic.EndRenderPass(mCommandBuffer);
-
+			
 			mGraphic.EndCommandBufferRecording(mCommandBuffer);
-
+			
 			mGraphic.ExecuteCommandBuffer(mCommandBuffer, QueueType::Graphic);
-
-			mGraphic.WaitForDevice();
+			
+			mGraphic.PresentSwapchainImage(mSwapchain, index, mImageAcquiredSemaphore);
 		}
 		void End() override 
 		{
 		}
 	private:
 		Graphic& mGraphic;
-
+		DeviceSemaphore mImageAcquiredSemaphore;
 		VertexBuffer mVertexBuffer;
 		IndexBuffer mIndexBuffer;
 		RenderPass mRenderPass;
 		CommandBuffer mCommandBuffer;
 		Viewport mViewport = {};
-		FrameBuffer mFrameBuffer;
+		std::vector<FrameBuffer> mFrameBuffer;
 		Swapchain mSwapchain;
 };
 

@@ -9,10 +9,7 @@ struct WindowData
 {
 	GLFWwindow* window = nullptr;
 	EventDispatcher dispatcher;
-	static bool glfwInitialized;
 };
-
-bool WindowData::glfwInitialized = false;
 
 void windowCloseCallback(GLFWwindow* window)
 {
@@ -24,12 +21,8 @@ void Window::Create(const WindowSpecification& specification)
 {
 	mData = new WindowData();
 
-	if (mData->glfwInitialized == false)
-	{
+		glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 		glfwInit();
-		mData->glfwInitialized = true;
-	}
-
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	mData->window = glfwCreateWindow(specification.size.x, specification.size.y, specification.title.c_str(), nullptr, nullptr);
@@ -51,7 +44,6 @@ void Window::Destroy()
 	glfwDestroyWindow(mData->window);
 
 	delete mData;
-	mData->window = nullptr;
 }
 
 glm::uvec2 Window::GetSize() const

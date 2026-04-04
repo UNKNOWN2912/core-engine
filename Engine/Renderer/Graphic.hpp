@@ -2,6 +2,7 @@
 #include "Core/Window.hpp"
 #include "RenderPass.hpp"
 #include "Renderer/CommandBuffer.hpp"
+#include "Renderer/DeviceSemaphore.hpp"
 #include "Renderer/FrameBuffer.hpp"
 #include "Renderer/Swapchain.hpp"
 
@@ -53,21 +54,25 @@ public:
     void CreateRenderPass(RenderPass& renderPass);
     void CreateCommandBuffer(CommandBuffer& commandBuffer);
     void CreateFrameBuffer(FrameBuffer& frameBuffer, const RenderPass& renderPass, const Viewport& viewport);
-    void CreateFrameBufferWithoutAttachments(FrameBuffer& frameBuffer, const RenderPass& renderPass, const Viewport& viewport);
+    void CreateFrameBufferWithUserAttachments(FrameBuffer& frameBuffer, const RenderPass& renderPass, const Viewport& viewport, const std::vector<DeviceImage>& images);
     void CreateDeviceImage(DeviceImage& image);
     void CreateSwapchain(Swapchain& swapchain);
+
+    DeviceSemaphore CreateSemaphore();
 
     void ExecuteCommandBuffer(CommandBuffer& commandBuffer, QueueType queueType);
 
     void WaitForDevice();
+
+    uint32_t GetNextSwapchainImage(const Swapchain& swapchain, DeviceSemaphore semaphore);
+
+    void PresentSwapchainImage(const Swapchain& swapchain, uint32_t index, DeviceSemaphore waitSemaphore);
 private:
     void Clean();
     void DestroyVulkanObjects();
     void CreateVulkanObjects(const Window& window);
     GraphicData* mData = nullptr;
 };
-
-
 
 
 
