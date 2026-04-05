@@ -1,7 +1,10 @@
 #pragma once
 #include "Core/Window.hpp"
 #include "Renderer/Enums.hpp"
+#include "Renderer/GraphicPipeline.hpp"
+#include "Renderer/PipelineLayout.hpp"
 #include "Renderer/RenderPass.hpp"
+#include "Renderer/Shader.hpp"
 #include "Renderer/Vulkan/VulkanSwapchain.hpp"
 #include <vulkan/vulkan.h>
 
@@ -36,10 +39,17 @@ struct VulkanHelper
     static VkImageLayout GetLayoutFromAttachmentUsage(ImageUsage usage);
     static VkAttachmentLoadOp ConvertToVulkanLoadOperation(LoadOperation loadOperation);
     static VkAttachmentStoreOp ConvertToVulkanStoreOperation(StoreOperation storeOperation);
-    // static VkImageLayout ConvertToSubpassLayout(AttachmentUsage usage); 
 
     static VkAttachmentDescription GetVulkanAttachmentFromAttachment(const Attachment& attachment);
 
     static uint32_t GetMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags memoryProperty);
     static VkDeviceMemory AllocateMemoryForImage(VkPhysicalDevice physicalDevice, VkDevice device, VkImage image, VkMemoryPropertyFlags memoryProperty);
+
+    static VkShaderStageFlags ConvertToVulkanShaderStage(ShaderType shaderType);
+    static VkDescriptorType ConvertToVulkanDescriptorType(DescriptorType descriptorType);
+    static VkPrimitiveTopology ConvertToVulkanPrimitiveTopology(PrimitiveType primitiveType);
+    static VkCullModeFlags ConvertToVulkanCullMode(CullMode cullMode);
+    static VkFrontFace ConvertToVulkanFrontFace(FrontFace frontFace);
+    static VkFormat ConvertToVulkanVertexFormat(VertexFormatType format);
+    static VkSampleCountFlagBits ConvertToVulkanSampleCount(uint32_t sampleCount);
 };

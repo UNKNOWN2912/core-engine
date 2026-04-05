@@ -74,17 +74,17 @@ void Graphic::CreateRenderPass(RenderPass& renderPass)
     std::vector<VkSubpassDescription> subpassDescriptions;
     std::vector<VkSubpassDependency> subpassDependencies;
 
-    for (size_t i = 0; i < renderPass.mAttachments.size(); i++)
+    for (size_t i = 0; i < renderPass.GetAttachments().size(); i++)
     {
-        const Attachment& attachment = renderPass.mAttachments[i];
+        const Attachment& attachment = renderPass.GetAttachments()[i];
         VkAttachmentDescription description = VulkanHelper::GetVulkanAttachmentFromAttachment(attachment);
         attachmentDescriptions.push_back(description); 
     }
 
-    for (size_t i = 0; i < renderPass.mSubpasses.size(); i++)
+    for (size_t i = 0; i < renderPass.GetSubpasses().size(); i++)
     {
-        const Subpass& subpass = renderPass.mSubpasses[i];
-        const Dependency& dependency = renderPass.mDependencies[i];
+        const Subpass& subpass = renderPass.GetSubpasses()[i];
+        const Dependency& dependency = renderPass.GetDependencies()[i];
 
         std::vector<VkAttachmentReference> colorAttachmentRefs;
         std::vector<VkAttachmentReference> inputAttachmentRefs;
@@ -177,7 +177,7 @@ void Graphic::CreateRenderPass(RenderPass& renderPass)
     VkRenderPass vkRenderPass;
     vkCreateRenderPass(mData->device, &createInfo, nullptr, &vkRenderPass);
     
-    renderPass.mId = (uint64_t)vkRenderPass;
+    renderPass.SetId((uint64_t)vkRenderPass);
 
     for (size_t i = 0; i < subpassDescriptions.size(); i++)
     {
@@ -206,25 +206,26 @@ void Graphic::BeginRenderPass(const CommandBuffer& commandBuffer, const RenderPa
 {
     uint32_t clearColorCount = 0;
     VkClearValue clearColors[16];
-    for (size_t i = 0; i < renderPass.mAttachments.size(); i++)
+    for (size_t i = 0; i < renderPass.GetAttachments().size(); i++)
     {
-        const Attachment& attachment = renderPass.mAttachments[i];
-        if(attachment.loadOperation == LoadOperation::Clear)
+        const Attachment& attachment = renderPass.GetAttachments()[i];
+        if(attachment.GetLoadOperation() == LoadOperation::Clear)
         {
-            glm::vec4 color = attachment.clearValue;
+            glm::vec4 color = attachment.GetClearValue();
             clearColors[clearColorCount].color = {{color.r, color.g, color.b, color.a}};
             clearColorCount++;
         }
     }
 
+
     VkRenderPassBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    beginInfo.renderArea.extent = {viewport.size.x, viewport.size.y};
-    beginInfo.renderArea.offset = {int32_t(viewport.position.x), int32_t(viewport.position.y)};
+    beginInfo.renderArea.extent = {viewport.GetSize().x, viewport.GetSize().y};
+    beginInfo.renderArea.offset = {int32_t(viewport.GetPosition().x), int32_t(viewport.GetPosition().y)};
     beginInfo.clearValueCount = clearColorCount;
     beginInfo.pClearValues = clearColors;
-    beginInfo.framebuffer = (VkFramebuffer)frameBuffer.mId;
-    beginInfo.renderPass = (VkRenderPass)renderPass.mId;
+    beginInfo.framebuffer = (VkFramebuffer)frameBuffer.GetId();
+    beginInfo.renderPass = (VkRenderPass)renderPass.GetId();
 
     vkCmdBeginRenderPass((VkCommandBuffer)commandBuffer.mId, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
@@ -264,38 +265,38 @@ void Graphic::CreateCommandBuffer(CommandBuffer& commandBuffer)
 
 void Graphic::CreateFrameBuffer(FrameBuffer& frameBuffer, const RenderPass& renderPass, const Viewport& viewport) 
 {
-    for (size_t i = 0; i < renderPass.mAttachments.size(); i++)
+    for (size_t i = 0; i < renderPass.GetAttachments().size(); i++)
     {
-        const Attachment& attachment = renderPass.mAttachments[i];
+        const Attachment& attachment = renderPass.GetAttachments()[i];
         DeviceImage image;
-        image.mFormat = attachment.format;
-        image.mSize = viewport.size;
-        image.mUsage = attachment.usage;
+        image.mFormat = attachment.GetFormat();
+        image.mSize = viewport.GetSize();
+        image.mUsage = attachment.GetImageUsage();
 
         CreateDeviceImage(image);
 
-        frameBuffer.mAttachments.push_back(image);
+        frameBuffer.AddAttachment(image);
     }
 
     std::vector<VkImageView> vkAttachment;
 
-    for (size_t i = 0; i < frameBuffer.mAttachments.size(); i++)
+    for (size_t i = 0; i < frameBuffer.GetAttachments().size(); i++)
     {
-        vkAttachment.push_back(((ImageData*)frameBuffer.mAttachments[i].mId)->view);
+        vkAttachment.push_back(((ImageData*)frameBuffer.GetAttachments()[i].mId)->view);
     }
 
     VkFramebufferCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     createInfo.attachmentCount = vkAttachment.size();
     createInfo.pAttachments = vkAttachment.data();
-    createInfo.width = viewport.size.x;
-    createInfo.height = viewport.size.y;
+    createInfo.width = viewport.GetSize().x;
+    createInfo.height = viewport.GetSize().y;
     createInfo.layers = 1;
-    createInfo.renderPass = (VkRenderPass)renderPass.mId;
+    createInfo.renderPass = (VkRenderPass)renderPass.GetId();
 
     VkFramebuffer fBuffer;
     vkCreateFramebuffer(mData->device, &createInfo, nullptr, &fBuffer);
-    frameBuffer.mId = (uint64_t)fBuffer;
+    frameBuffer.SetId((uint64_t)fBuffer);
 }
 
 void Graphic::CreateDeviceImage(DeviceImage& image) 
@@ -359,15 +360,32 @@ void Graphic::CreateDeviceImage(DeviceImage& image)
 
 }
 
-void Graphic::ExecuteCommandBuffer(CommandBuffer& commandBuffer, QueueType queueType) 
+void Graphic::ExecuteCommandBuffer(const CommandBuffer& commandBuffer, QueueType queueType, const std::vector<DeviceSemaphore>& waitSemaphores, DeviceSemaphore signalSemaphore) 
 {
 
-    VkCommandBuffer cmdBuffers[] = {(VkCommandBuffer)commandBuffer.mId};
+    std::vector<VkSemaphore> waitSemaphoreHandles;
+    for (size_t i = 0; i < waitSemaphores.size(); i++)
+    {
+        waitSemaphoreHandles.push_back((VkSemaphore)waitSemaphores[i].mId);
+    }
+
+    std::vector<VkPipelineStageFlags> waitStages;
+    for (size_t i = 0; i < waitSemaphores.size(); i++)
+    {
+        waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    }
+
+    std::vector<VkCommandBuffer> cmdBuffers = {(VkCommandBuffer)commandBuffer.mId};
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = cmdBuffers;
+    submitInfo.pCommandBuffers = cmdBuffers.data();
+    submitInfo.waitSemaphoreCount = waitSemaphores.size();
+    submitInfo.pWaitSemaphores = waitSemaphoreHandles.data();
+    submitInfo.pWaitDstStageMask = waitStages.data();
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = (VkSemaphore*)signalSemaphore.mId;
 
     VkQueue queue;
 
@@ -474,28 +492,28 @@ void Graphic::CreateFrameBufferWithUserAttachments(FrameBuffer& frameBuffer, con
 {
     for (size_t i = 0; i < images.size(); i++)
     {
-        frameBuffer.mAttachments.push_back(images[i]);
+        frameBuffer.AddAttachment(images[i]);
     }
 
     std::vector<VkImageView> vkAttachment;
 
-    for (size_t i = 0; i < frameBuffer.mAttachments.size(); i++)
+    for (size_t i = 0; i < frameBuffer.GetAttachments().size(); i++)
     {
-        vkAttachment.push_back(((ImageData*)frameBuffer.mAttachments[i].mId)->view);
+        vkAttachment.push_back(((ImageData*)frameBuffer.GetAttachments()[i].mId)->view);
     }
 
     VkFramebufferCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     createInfo.attachmentCount = vkAttachment.size();
     createInfo.pAttachments = vkAttachment.data();
-    createInfo.width = viewport.size.x;
-    createInfo.height = viewport.size.y;
+    createInfo.width = viewport.GetSize().x;
+    createInfo.height = viewport.GetSize().y;
     createInfo.layers = 1;
-    createInfo.renderPass = (VkRenderPass)renderPass.mId;
+    createInfo.renderPass = (VkRenderPass)renderPass.GetId();
 
     VkFramebuffer fBuffer;
     vkCreateFramebuffer(mData->device, &createInfo, nullptr, &fBuffer);
-    frameBuffer.mId = (uint64_t)fBuffer;
+    frameBuffer.SetId((uint64_t)fBuffer);
 }
 
 uint32_t Graphic::GetNextSwapchainImage(const Swapchain& swapchain, DeviceSemaphore semaphore) 
@@ -521,20 +539,222 @@ void Graphic::PresentSwapchainImage(const Swapchain& swapchain, uint32_t imageIn
     vkQueuePresentKHR(mData->queues.present, &presentInfo);
 }
 
-DeviceSemaphore Graphic::CreateSemaphore()
+void Graphic::CreateSemaphore(DeviceSemaphore& semaphore)
 {
     VkSemaphoreCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VkSemaphore semaphore;
-    vkCreateSemaphore(mData->device, &createInfo, nullptr, &semaphore);
+    VkSemaphore semaphoreHandle;
+    vkCreateSemaphore(mData->device, &createInfo, nullptr, &semaphoreHandle);
 
-    DeviceSemaphore result;
-    result.mId = (uint64_t)semaphore;
-    return result;
+    semaphore.mId = (uint64_t)semaphoreHandle;
 }
 
+void Graphic::CreateShader(Shader& shader, const std::vector<char>& code)
+{
+    VkShaderModuleCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = (const uint32_t*)code.data();
+
+    VkShaderModule shaderModule;
+    vkCreateShaderModule(mData->device, &createInfo, nullptr, &shaderModule);
+
+    shader.SetId((uint64_t)shaderModule);
+}
+
+void Graphic::CreateShaderFromFile(Shader& shader, std::string_view path)
+{
+    FILE* file = fopen(path.data(), "rb");
+    if(file == nullptr)
+    {
+        LOG("Failed to open shader file: {}", path.data());
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    std::vector<char> code(fileSize);
+    fread(code.data(), 1, fileSize, file);
+    fclose(file);
+
+    CreateShader(shader, code);
+}
+
+void Graphic::CreatePipelineLayout(PipelineLayout& pipelineLayout) 
+{
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    for (size_t i = 0; i < pipelineLayout.GetDescriptorInfos().size(); i++)
+    {
+        const DescriptorDescription& description = pipelineLayout.GetDescriptorInfos()[i];
+        VkDescriptorSetLayoutBinding binding = {};
+        binding.binding = description.binding;
+        binding.descriptorCount = 1;
+        binding.stageFlags = VulkanHelper::ConvertToVulkanShaderStage(description.stage);
+        binding.descriptorType = VulkanHelper::ConvertToVulkanDescriptorType(description.type);
+
+        bindings.push_back(binding);
+    }
+
+    VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+    setLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    setLayoutCreateInfo.bindingCount = bindings.size();
+    setLayoutCreateInfo.pBindings = bindings.data();
+    
+    VkDescriptorSetLayout setLayout;
+    vkCreateDescriptorSetLayout(mData->device, &setLayoutCreateInfo, nullptr, &setLayout);
+
+    VkPipelineLayoutCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    createInfo.setLayoutCount = 1;
+    createInfo.pSetLayouts = &setLayout;
+
+    VkPipelineLayout pipelineLayoutHandle;
+    vkCreatePipelineLayout(mData->device, &createInfo, nullptr, &pipelineLayoutHandle);
+    pipelineLayout.SetId((uint64_t)pipelineLayoutHandle);
+}
+
+void Graphic::CreateGraphicPipeline(GraphicPipeline& graphicPipeline, const RenderPass& renderPass, uint64_t subpassIndex, const Viewport& viewport) 
+{
+    VkPipelineShaderStageCreateInfo shaderStages[2] = {};
+    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    shaderStages[0].module = (VkShaderModule)graphicPipeline.GetShader().GetVertexShader().GetId();
+    shaderStages[0].pName = "main";
+
+    shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    shaderStages[1].module = (VkShaderModule)graphicPipeline.GetShader().GetFragmentShader().GetId();
+    shaderStages[1].pName = "main";
 
 
+    uint32_t colorAttachmentCount = renderPass.GetSubpasses()[subpassIndex].mColorAttachmentIndex.size();
+    std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(colorAttachmentCount);
+    for (size_t i = 0; i < colorAttachmentCount; i++)
+    {
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+        colorBlendAttachment.blendEnable = VK_FALSE;
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachments.emplace_back(colorBlendAttachment);
+    }
+
+    VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo = {};
+    colorBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendStateCreateInfo.logicOpEnable = VK_FALSE;
+    colorBlendStateCreateInfo.attachmentCount = colorAttachmentCount;
+    colorBlendStateCreateInfo.pAttachments = colorBlendAttachments.data();
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
+    inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyStateCreateInfo.topology = VulkanHelper::ConvertToVulkanPrimitiveTopology(graphicPipeline.GetPrimitiveType());
+    inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {};
+    rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
+    rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE;
+    rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizationStateCreateInfo.cullMode = VulkanHelper::ConvertToVulkanCullMode(graphicPipeline.GetCullMode());
+    rasterizationStateCreateInfo.frontFace = VulkanHelper::ConvertToVulkanFrontFace(graphicPipeline.GetFrontFace());
+    rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;
+    rasterizationStateCreateInfo.lineWidth = 1.f;
+
+    VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = {};
+    multisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    if(graphicPipeline.GetSampleCount() == 1)
+    {
+        multisampleStateCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisampleStateCreateInfo.sampleShadingEnable = VK_FALSE;
+    }
+    else
+    {
+        multisampleStateCreateInfo.rasterizationSamples = VulkanHelper::ConvertToVulkanSampleCount(graphicPipeline.GetSampleCount());
+        multisampleStateCreateInfo.sampleShadingEnable = VK_TRUE;
+        multisampleStateCreateInfo.minSampleShading = 1.f;
+    }
+
+    VkViewport vkViewport = {};
+    vkViewport.x = viewport.GetPosition().x;
+    vkViewport.y = viewport.GetPosition().y;
+    vkViewport.width = viewport.GetSize().x;
+    vkViewport.height = viewport.GetSize().y;
+    vkViewport.minDepth = 0.f;
+    vkViewport.maxDepth = 1.f;
+
+    VkRect2D scissor = {};
+    scissor.offset = {int32_t(viewport.GetPosition().x), int32_t(viewport.GetPosition().y)};
+    scissor.extent = {viewport.GetSize().x, viewport.GetSize().y};
+
+    VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
+    viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateCreateInfo.viewportCount = 1;
+    viewportStateCreateInfo.scissorCount = 1;
+    viewportStateCreateInfo.pViewports = &vkViewport;
+    viewportStateCreateInfo.pScissors = &scissor;
+
+    VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = {};
+    depthStencilStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencilStateCreateInfo.depthTestEnable = graphicPipeline.IsDepthEnabled() ? VK_TRUE : VK_FALSE;
+    depthStencilStateCreateInfo.depthWriteEnable = graphicPipeline.IsDepthEnabled() ? VK_TRUE : VK_FALSE;
+    depthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;
+    depthStencilStateCreateInfo.stencilTestEnable = VK_FALSE;
+
+    VertexLayout vertexLayout = graphicPipeline.GetVertexLayout();
+
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+
+    for (size_t i = 0; i < vertexLayout.GetAttributes().size(); i++)
+    {
+        const Attribute& attribute = vertexLayout.GetAttributes()[i];
+
+        VkVertexInputAttributeDescription attributeDescription = {};
+        attributeDescription.binding = attribute.binding;
+        attributeDescription.location = attribute.location;
+        attributeDescription.format = VulkanHelper::ConvertToVulkanVertexFormat(attribute.format);
+        attributeDescription.offset = attribute.offset;
+
+        attributeDescriptions.emplace_back(attributeDescription);
+    }
+
+    for (size_t i = 0; i < vertexLayout.GetBindings().size(); i++)
+    {
+        VkVertexInputBindingDescription bindingDescription = {};
+        bindingDescription.binding = vertexLayout.GetBindings()[i].binding;
+        bindingDescription.inputRate = (vertexLayout.GetBindings()[i].perInstance) ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+        bindingDescription.stride = vertexLayout.GetBindings()[i].stride;
+
+        bindingDescriptions.emplace_back(bindingDescription);
+    }
 
 
+    VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
+    vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputStateCreateInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
+    vertexInputStateCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+    vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+    vertexInputStateCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+    VkGraphicsPipelineCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    createInfo.layout = (VkPipelineLayout)graphicPipeline.GetShader().GetPipelineLayout().GetId();
+    createInfo.stageCount = 2;
+    createInfo.pStages = shaderStages;
+    createInfo.renderPass = (VkRenderPass)renderPass.GetId();
+    createInfo.subpass = subpassIndex;
+    createInfo.pColorBlendState = &colorBlendStateCreateInfo;
+    createInfo.pInputAssemblyState = &inputAssemblyStateCreateInfo;
+    createInfo.pRasterizationState = &rasterizationStateCreateInfo;
+    createInfo.pMultisampleState = &multisampleStateCreateInfo;
+    createInfo.pViewportState = &viewportStateCreateInfo;
+    createInfo.pDepthStencilState = &depthStencilStateCreateInfo;
+    createInfo.pVertexInputState = &vertexInputStateCreateInfo;
+
+    VkPipeline graphicPipelineHandle;
+    vkCreateGraphicsPipelines(mData->device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &graphicPipelineHandle);
+
+    graphicPipeline.SetId((uint64_t)graphicPipelineHandle);
+}
