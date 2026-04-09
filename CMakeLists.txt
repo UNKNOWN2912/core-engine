@@ -22,3 +22,5 @@ include_directories("Engine/Vendor/stb/")
 # Include sub-projects.
 add_subdirectory ("Engine")
 add_subdirectory ("Project")
+
+add_definitions(-CORE_USING_GLFW=1)

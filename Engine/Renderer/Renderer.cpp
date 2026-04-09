@@ -1,12 +1,11 @@
 #include "Renderer.hpp"
 
-void Renderer::Initialize(const Window& window) 
+void Renderer::Initialize(const Window& window)
 {
-	mGraphic.Initialize(window);
+	Graphics::Initialize(window);
 }
 
-Graphic& Renderer::GetGraphicRef() 
+void Renderer::Terminate()
 {
-	return mGraphic;
+	Graphics::Terminate();
 }
-

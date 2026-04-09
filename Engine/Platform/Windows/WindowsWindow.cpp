@@ -9,10 +9,7 @@ struct WindowData
 {
 	GLFWwindow* window = nullptr;
 	EventDispatcher dispatcher;
-	static bool glfwInitialized;
 };
-
-bool WindowData::glfwInitialized = false;
 
 void windowCloseCallback(GLFWwindow* window)
 {
@@ -20,15 +17,29 @@ void windowCloseCallback(GLFWwindow* window)
 	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowClose, nullptr);
 }
 
+void windowResizeCallback(GLFWwindow* window, int width, int height)
+{
+	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	glm::uvec2 size = { width, height };
+	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowResize, &size);
+}
+
+void windowMoveCallback(GLFWwindow* window, int x, int y)
+{
+	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	glm::uvec2 position = { x, y };
+	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMove, &position);
+}
+
+
 void Window::Create(const WindowSpecification& specification)
 {
 	mData = new WindowData();
 
-	if (mData->glfwInitialized == false)
-	{
-		glfwInit();
-		mData->glfwInitialized = true;
-	}
+#if UNIX
+	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
+	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -36,13 +47,16 @@ void Window::Create(const WindowSpecification& specification)
 
 	if (mData->window == nullptr)
 	{
-		ERROR("Failed to create window");
+		const char* description;
+		glfwGetError(&description);
+		ERROR("Failed to create window: {}", description);
 		return;
 	}
 
 	glfwSetWindowUserPointer(mData->window, mData);
 	glfwSetWindowCloseCallback(mData->window, windowCloseCallback);
-
+	glfwSetWindowSizeCallback(mData->window, windowResizeCallback);
+	glfwSetWindowPosCallback(mData->window, windowMoveCallback);
 }
 
 void Window::Destroy()
@@ -51,13 +65,20 @@ void Window::Destroy()
 	glfwDestroyWindow(mData->window);
 
 	delete mData;
-	mData->window = nullptr;
 }
 
 glm::uvec2 Window::GetSize() const
 {
 	int width, height;
 	glfwGetWindowSize(mData->window, &width, &height);
+
+	return glm::uvec2(width, height);
+}
+
+glm::uvec2 Window::GetFrameBufferSize() const
+{
+	int width, height;
+	glfwGetFramebufferSize(mData->window, &width, &height);
 
 	return glm::uvec2(width, height);
 }

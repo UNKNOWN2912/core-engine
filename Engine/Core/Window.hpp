@@ -12,7 +12,11 @@ struct WindowSpecification
 
 enum class WindowEvent
 {
-	WindowClose
+	WindowClose,
+	WindowResize,
+	WindowMove,
+	WindowMinimize,
+	WindowMaxmimize
 };
 
 struct WindowData;
@@ -24,6 +28,7 @@ public:
 	void Destroy();
 	glm::uvec2 GetSize() const;
 	glm::uvec2 GetPosition() const;
+	glm::uvec2 GetFrameBufferSize() const;
 	std::string GetTitle() const;
 	void SetSize(const glm::uvec2& size);
 	void SetPosition(const glm::uvec2& position);

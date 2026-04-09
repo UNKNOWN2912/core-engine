@@ -54,6 +54,16 @@ glm::uvec2 Window::GetSize() const
 	return glm::uvec2(width, height);
 }
 
+
+glm::uvec2 Window::GetFramebufferSize() const
+{
+	int width, height;
+	glfwGetFramebufferSize(mData->window, &width, &height);
+
+	return glm::uvec2(width, height);
+}
+
+
 glm::uvec2 Window::GetPosition() const
 {
 	int x, y;
