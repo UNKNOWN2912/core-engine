@@ -1,5 +1,6 @@
 #pragma once
 #include <Core/Window.hpp>
+#include "Platform.hpp"
 
 enum class DeviceType
 {
@@ -8,14 +9,13 @@ enum class DeviceType
 	Cpu
 };
 
-struct GraphicsData;
-
 class Graphics
 {
 	public:
 		static void Initialize(const Window& window, DeviceType deviceType);
 		static void Terminate();
-		static GraphicsData GetGraphicsData();
+		static GraphicsData GetData();
+		static GraphicsData& GetDataRef();
 
 		static GraphicsData sData;
 };

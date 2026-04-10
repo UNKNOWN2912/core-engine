@@ -70,3 +70,12 @@ enum class PipelineStage
 	EarlyFragmentTest,
 	LateFragmentTest
 };
+
+enum class QueueType
+{
+	None = 0,
+	Graphic, 
+	Compute, 
+	Transfer, 
+	Present
+};

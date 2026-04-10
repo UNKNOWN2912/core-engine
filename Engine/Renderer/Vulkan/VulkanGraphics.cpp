@@ -1,7 +1,5 @@
 #include "VulkanGraphics.hpp"
-#include "VulkanHelper.hpp"
 
-GraphicsData Graphics::sData;
 
 void Graphics::Initialize(const Window& window, DeviceType deviceType)
 {
@@ -22,7 +20,7 @@ void Graphics::Terminate()
 	vkDestroyInstance(sData.instance, nullptr);
 }
 
-GraphicsData Graphics::GetGraphicsData()
+GraphicsData Graphics::GetData()
 {
 	return sData;
 }

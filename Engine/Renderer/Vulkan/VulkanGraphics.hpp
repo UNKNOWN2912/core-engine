@@ -4,7 +4,7 @@
 #include "VulkanTypes.hpp"
 
 
-struct GraphicsData
+struct VulkanGraphicsData
 {
 	VkInstance instance = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;

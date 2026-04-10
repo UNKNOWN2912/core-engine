@@ -172,5 +172,5 @@ void RenderPass::Create()
 	createInfo.dependencyCount = mData.dependencies.size();
 	createInfo.pDependencies = mData.dependencies.data();
 	
-	vkCreateRenderPass(Graphics::GetGraphicsData().device, &createInfo, nullptr, &mData.handle);
+	vkCreateRenderPass(Graphics::GetData().device, &createInfo, nullptr, &mData.handle);
 }
