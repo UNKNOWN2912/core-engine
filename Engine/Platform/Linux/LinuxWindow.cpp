@@ -21,8 +21,7 @@ void Window::Create(const WindowSpecification& specification)
 {
 	mData = new WindowData();
 
-		glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
-		glfwInit();
+	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	mData->window = glfwCreateWindow(specification.size.x, specification.size.y, specification.title.c_str(), nullptr, nullptr);
@@ -55,7 +54,7 @@ glm::uvec2 Window::GetSize() const
 }
 
 
-glm::uvec2 Window::GetFramebufferSize() const
+glm::uvec2 Window::GetFrameBufferSize() const
 {
 	int width, height;
 	glfwGetFramebufferSize(mData->window, &width, &height);

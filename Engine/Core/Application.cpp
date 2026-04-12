@@ -10,10 +10,14 @@ void Application::InitializeApplication()
 
 	mWindow.Create(windowSpecification);
 	mWindow.AddListener(BindMember(Application::WindowEventCallback));
+
+	mRenderer.Initialize(mWindow);
+
 }
 
 void Application::TerminateApplication()
 {
+	mRenderer.Terminate();
 	mWindow.Destroy();
 }
 
@@ -44,25 +48,28 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 
 	switch (event)
 	{
-	case WindowEvent::WindowClose:
-		Close();
-		break;
-	case WindowEvent::WindowResize:
-		glm::uvec2 size = *(glm::uvec2*)data;
-		OnWindowResize(size);
-		break;
-	case WindowEvent::WindowMove:
-		glm::uvec2 position = *(glm::uvec2*)data;
-		OnWindowMove(position);
-		break;
-	case WindowEvent::WindowMinimize:
-		break;
-	case WindowEvent::WindowMaxmimize:
-		break;
-	default:
-		break;
-	}
-	return false;
+		case WindowEvent::WindowClose:
+			Close();
+			break;
+		case WindowEvent::WindowResize:
+			{
+				glm::uvec2 size = *(glm::uvec2*)data;
+				OnWindowResize(size);
+				break;
+			}
+		case WindowEvent::WindowMove:
+			{
+				glm::uvec2 position = *(glm::uvec2*)data;
+				OnWindowMove(position);
+				break;
+			}
+		case WindowEvent::WindowMinimize:
+			break;
+		case WindowEvent::WindowMaxmimize:
+			break;
+
+		}
+        return false;
 }
 
 

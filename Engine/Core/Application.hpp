@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Window.hpp"
+#include "Renderer/Renderer.hpp"
 
 class Application
 {
@@ -29,6 +30,8 @@ public:
 
 	Application();
 	virtual ~Application();
+
+	Renderer mRenderer;
 private:
 	bool mRunning = true;
 	static Application* instance;

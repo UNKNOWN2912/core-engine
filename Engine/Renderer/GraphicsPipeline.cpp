@@ -1,0 +1,204 @@
+#include "GraphicsPipeline.hpp"
+#include "Core/Macro.hpp"
+#include "GraphicsContext.hpp"
+#include "Utility.hpp"
+
+void GraphicsPipeline::LoadVertexShader(std::string_view filename)
+{
+    mVertexShader = CreateShaderFromFile(getDevice(), filename.data());
+}
+
+void GraphicsPipeline::LoadFragmentShader(std::string_view filename)
+{
+    mFragmentShader = CreateShaderFromFile(getDevice(), filename.data());
+}
+
+void GraphicsPipeline::LoadGeometryShader(std::string_view filename)
+{
+    mGeometryShader = CreateShaderFromFile(getDevice(), filename.data());
+}
+
+void GraphicsPipeline::LoadTessellationShader(std::string_view filename)
+{
+    mTessellationShader = CreateShaderFromFile(getDevice(), filename.data());
+}
+
+void GraphicsPipeline::EnableDepth(bool enable)
+{
+    mDepthEnable = enable;
+}
+
+void GraphicsPipeline::EnableWireframe(bool enable)
+{
+    mWireframeEnable = enable;
+}
+
+void GraphicsPipeline::AddBinding(uint32_t binding, size_t stride, VkVertexInputRate inputRate)
+{
+    VkVertexInputBindingDescription description = 
+    {
+        .binding = binding,
+        .stride = (uint32_t)stride,
+        .inputRate = inputRate,
+    };
+
+    mBindingDescription.push_back(description);
+}
+
+
+void GraphicsPipeline::AddAttribute(uint32_t binding, uint32_t location, VkFormat format, size_t offset)
+{
+    VkVertexInputAttributeDescription description = 
+    {
+        .location = location,
+        .binding = binding,
+        .format = format,
+        .offset = (uint32_t)offset
+    };
+
+    mAttributeDescription.push_back(description);
+}
+
+void GraphicsPipeline::SetCullMode(VkCullModeFlags cullMode)
+{
+    mCullMode = cullMode;
+}
+void GraphicsPipeline::SetPrimitive(VkPrimitiveTopology primitive)
+{
+    mPrimitive = primitive;
+}
+
+void GraphicsPipeline::SetMultisampleCount(uint32_t count)
+{
+    switch (count) 
+    {
+        case 1:
+            mSampleCount = VK_SAMPLE_COUNT_1_BIT;
+            break;
+        case 2:
+            mSampleCount = VK_SAMPLE_COUNT_2_BIT;
+            break;
+        case 4:
+            mSampleCount = VK_SAMPLE_COUNT_4_BIT;
+            break;
+        case 8:
+            mSampleCount = VK_SAMPLE_COUNT_8_BIT;
+            break;
+        case 16:
+            mSampleCount = VK_SAMPLE_COUNT_16_BIT;
+            break;
+    }
+}
+
+void GraphicsPipeline::SetViewport(const VkViewport& viewport)
+{
+    mViewport = viewport;
+}
+
+void GraphicsPipeline::AddColorBlendAttachment()
+{
+    VkPipelineColorBlendAttachmentState state = 
+    {
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_A_BIT, 
+    };
+
+    mColorBlendStates.push_back(state);    
+}
+
+void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
+{
+    if (mVertexShader == VK_NULL_HANDLE || mFragmentShader == VK_NULL_HANDLE)
+    {
+        ERROR("Graphic pipeline: vertex and fragment shader must be provided");
+        return;
+    }
+
+    VkPipelineShaderStageCreateInfo vertexShaderStageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    vertexShaderStageCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertexShaderStageCreateInfo.module = mVertexShader;
+    vertexShaderStageCreateInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragmentShaderStageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    fragmentShaderStageCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragmentShaderStageCreateInfo.module = mFragmentShader;
+    fragmentShaderStageCreateInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
+
+    VkViewport viewport = {};
+    viewport.width = 800;
+    viewport.height = 600;
+    viewport.maxDepth = 1.f;
+    viewport.minDepth = 1.f;
+    VkRect2D scissor = {};
+    scissor.extent = { 800, 600 };
+
+    VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    viewportState.pViewports = &viewport;
+    viewportState.viewportCount = 1;
+    viewportState.pScissors = &scissor;
+    viewportState.scissorCount = 1;
+
+    VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    colorBlendState.attachmentCount = mColorBlendStates.size();
+    colorBlendState.pAttachments = mColorBlendStates.data();
+
+    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+    VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    dynamicState.dynamicStateCount = 2;
+    dynamicState.pDynamicStates = dynamicStates;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    VkPipelineMultisampleStateCreateInfo multisample = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    multisample.rasterizationSamples = mSampleCount;
+
+    VkPipelineRasterizationStateCreateInfo rasterization = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    rasterization.cullMode = VK_CULL_MODE_FRONT_BIT;
+    rasterization.polygonMode = VK_POLYGON_MODE_FILL;
+    if (mWireframeEnable)
+        rasterization.polygonMode = VK_POLYGON_MODE_LINE;
+    rasterization.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterization.lineWidth = 1.f;
+
+    VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    vertexInput.pVertexAttributeDescriptions = mAttributeDescription.data();
+    vertexInput.vertexAttributeDescriptionCount = mAttributeDescription.size();
+    vertexInput.pVertexBindingDescriptions = mBindingDescription.data();
+    vertexInput.vertexBindingDescriptionCount = mBindingDescription.size();
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    depthStencil.minDepthBounds = 0.f;
+    depthStencil.maxDepthBounds = 1.f;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    };
+
+    vkCreatePipelineLayout(getDevice(), &pipelineLayoutCreateInfo, nullptr, &mPipelineLayout);
+
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    pipelineCreateInfo.layout = mPipelineLayout;
+    pipelineCreateInfo.renderPass = renderPass;
+    pipelineCreateInfo.stageCount = 2;
+    pipelineCreateInfo.pStages = shaderStageCreateInfo;
+    pipelineCreateInfo.pColorBlendState = &colorBlendState;
+    pipelineCreateInfo.pDynamicState = &dynamicState;
+    pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    pipelineCreateInfo.pMultisampleState = &multisample;
+    pipelineCreateInfo.pRasterizationState = &rasterization;
+    pipelineCreateInfo.pVertexInputState = &vertexInput;
+    pipelineCreateInfo.pViewportState = &viewportState;
+    pipelineCreateInfo.subpass = subpassIndex;
+
+    if (mDepthEnable)
+        pipelineCreateInfo.pDepthStencilState = &depthStencil;
+
+    vkCreateGraphicsPipelines(getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mHandle);
+}
