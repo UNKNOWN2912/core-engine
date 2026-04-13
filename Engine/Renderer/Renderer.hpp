@@ -1,7 +1,9 @@
 #pragma once
+#include "Renderer/Camera.hpp"
 #include "Renderer/Mesh.hpp"
 #include "GraphicsPipeline.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/UniformBuffer.hpp"
 
 struct Swapchain
 {
@@ -26,6 +28,13 @@ struct CommandBuffers
     VkCommandBuffer renderingCommandBuffer = VK_NULL_HANDLE;
 };
 
+struct UniformData
+{
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 model;
+};
+
 class Renderer
 {
     public:
@@ -38,6 +47,9 @@ class Renderer
         void EndFrame();
 
         void CreateMeshData(StaticMesh& mesh);
+
+        void SetCamera(const Camera& camera) { mCamera = camera; }
+        const Camera& GetCamera() const { return mCamera; }
 
     private:
         void CreateSwapchain();
@@ -52,18 +64,26 @@ class Renderer
         void DestroySwapchainFramebuffers();
         void DestroySemaphores();
         void DestroyCommandBuffers();
+
         
     private:
         GraphicsContext mContext;
+
         Swapchain mSwapchain;
         Semaphores mSemaphores;
         CommandBuffers mCommandBuffers;
-        VkRenderPass mRenderPass;
-        std::vector<VkFramebuffer> mSwapchainFramebuffer;
-        std::vector<StaticMesh*> mMeshQueue;
-        bool mFrameRunning = false;
+        GraphicsPipeline mDefaultPipeline;
 
+        VkRenderPass mRenderPass;
         VkViewport mViewport;
 
-        GraphicsPipeline mDefaultPipeline;
+        std::vector<VkFramebuffer> mSwapchainFramebuffer;
+        std::vector<StaticMesh*> mMeshQueue;
+
+        bool mFrameRunning = false;
+
+        UniformBuffer mUniformBuffer;
+        UniformData mUniformData;
+
+        Camera mCamera;
 };

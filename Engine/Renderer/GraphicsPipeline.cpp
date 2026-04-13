@@ -95,6 +95,11 @@ void GraphicsPipeline::SetViewport(const VkViewport& viewport)
     mViewport = viewport;
 }
 
+void GraphicsPipeline::SetPipelineLayout(VkPipelineLayout layout) 
+{ 
+    mPipelineLayout = layout; 
+}
+
 void GraphicsPipeline::AddColorBlendAttachment()
 {
     VkPipelineColorBlendAttachmentState state = 
@@ -102,7 +107,7 @@ void GraphicsPipeline::AddColorBlendAttachment()
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_A_BIT, 
     };
 
-    mColorBlendStates.push_back(state);    
+    mColorBlendStates.push_back(state);
 }
 
 void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
@@ -156,7 +161,7 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
     multisample.rasterizationSamples = mSampleCount;
 
     VkPipelineRasterizationStateCreateInfo rasterization = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-    rasterization.cullMode = VK_CULL_MODE_FRONT_BIT;
+    rasterization.cullMode = mCullMode;
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;
     if (mWireframeEnable)
         rasterization.polygonMode = VK_POLYGON_MODE_LINE;
@@ -176,13 +181,6 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
     depthStencil.depthTestEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
-    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo =
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    };
-
-    vkCreatePipelineLayout(getDevice(), &pipelineLayoutCreateInfo, nullptr, &mPipelineLayout);
-
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     pipelineCreateInfo.layout = mPipelineLayout;
     pipelineCreateInfo.renderPass = renderPass;
@@ -201,4 +199,9 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
         pipelineCreateInfo.pDepthStencilState = &depthStencil;
 
     vkCreateGraphicsPipelines(getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mHandle);
+}
+
+VkPipelineLayout GraphicsPipeline::GetPipelineLayout() const 
+{
+    return mPipelineLayout;
 }

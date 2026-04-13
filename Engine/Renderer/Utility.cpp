@@ -167,3 +167,67 @@ VkShaderModule CreateShaderFromFile(VkDevice device, const char *filename)
 
     return CreateShaderModuleFromMemory(device, code);
 }
+VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescriptorSetLayoutBinding> bindings) 
+{
+    VkDescriptorSetLayoutCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = (uint32_t)bindings.size(),
+        .pBindings = bindings.begin(),
+    };    
+
+    VkDescriptorSetLayout setLayout;
+    vkCreateDescriptorSetLayout(getDevice(), &createInfo, nullptr, &setLayout);
+    return setLayout;
+}
+
+VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets) 
+{
+    VkDescriptorPoolCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = maxSets,
+        .poolSizeCount = (uint32_t)poolSizes.size(),
+        .pPoolSizes = poolSizes.begin(),
+    };
+
+    VkDescriptorPool descriptorPool;
+    vkCreateDescriptorPool(getDevice(), &createInfo, nullptr, &descriptorPool);
+    return descriptorPool;
+}
+
+VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool)
+{
+    VkDescriptorSetAllocateInfo allocateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = descriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &setLayout,
+    };
+
+    VkDescriptorSet set;
+    vkAllocateDescriptorSets(getDevice(), &allocateInfo, &set);
+    return set;
+}
+
+VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts)
+{
+    std::vector<VkDescriptorSetLayout> setLayoutHandles;
+
+    for (VkDescriptorSetLayout setLayout : setLayouts) 
+    {
+        setLayoutHandles.push_back(setLayout);
+    }
+
+    VkPipelineLayoutCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = (uint32_t)setLayouts.size(),
+        .pSetLayouts = setLayoutHandles.data(),
+    };
+
+    VkPipelineLayout pipelineLayout;
+    vkCreatePipelineLayout(getDevice(), &createInfo, nullptr, &pipelineLayout);
+    return pipelineLayout;
+}

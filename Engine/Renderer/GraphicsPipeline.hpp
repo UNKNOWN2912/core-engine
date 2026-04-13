@@ -24,7 +24,11 @@ class GraphicsPipeline
         void SetMultisampleCount(uint32_t count);
         void SetViewport(const VkViewport& viewport);
 
+        void SetPipelineLayout(VkPipelineLayout layout);
+
         void Create(VkRenderPass renderPass, uint32_t subpassIndex);
+
+        VkPipelineLayout GetPipelineLayout() const;
 
         VkPipeline GetHandle() const { return mHandle; }
     private:
@@ -47,5 +51,4 @@ class GraphicsPipeline
 
         bool mDepthEnable = false;
         bool mWireframeEnable = false;
-
 };

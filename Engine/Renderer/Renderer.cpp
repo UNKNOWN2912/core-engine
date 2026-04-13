@@ -1,6 +1,8 @@
 #include "Renderer.hpp"
+#include "Core/Macro.hpp"
 #include "Utility.hpp"
 #include "GraphicsContext.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 #include <print>
 
 void Renderer::Initialize(const Window& window) 
@@ -11,27 +13,43 @@ void Renderer::Initialize(const Window& window)
     CreateSwapchainFramebuffers();
     CreateSemaphores();
     CreateCommandBuffers();
+    mUniformBuffer.Create(sizeof(UniformData), VK_SHADER_STAGE_VERTEX_BIT, 0);
     CreatePipelines();
 }
 
 void Renderer::Terminate() 
 {
-    vkDeviceWaitIdle(getDevice());
-    DestroyCommandBuffers();
-    DestroySemaphores();
-    DestroySwapchainFramebuffers();
-    DestroyRenderPass();
-    DestroySwapchain();
-    mContext.Destroy();
+    // DestroyCommandBuffers();
+    // DestroySemaphores();
+    // DestroySwapchainFramebuffers();
+    // DestroyRenderPass();
+    // DestroySwapchain();
+    // mContext.Destroy();
 }
 
 void Renderer::DrawMesh(StaticMesh& mesh)
 {
+    if(!mFrameRunning)
+    {
+        WARN("BeginFrame() must be called before Drawing");
+        return;
+    }
+
     mMeshQueue.push_back(&mesh);
 }
 
 void Renderer::BeginFrame() 
 {
+    mMeshQueue.clear();
+    mCamera.Calculate();
+
+    mUniformData.model = glm::translate(glm::mat4(1.f), glm::vec3(0));
+    mUniformData.projection = mCamera.GetProjection();
+    mUniformData.projection[1][1] *= -1; 
+    mUniformData.view = mCamera.GetView();
+    
+    mUniformBuffer.SetData(sizeof(UniformData), &mUniformData);
+
     mFrameRunning = true;
 }
 
@@ -74,10 +92,14 @@ void Renderer::EndFrame()
     for (size_t i = 0; i < mMeshQueue.size(); i++)
     {
         StaticMesh& mesh = *mMeshQueue[i];
+
         VkBuffer vertexBuffers[] = {mesh.mVertexBuffer.handle};
         VkBuffer indexBuffer = mesh.mIndexBuffer.handle;
 
         VkDeviceSize offsets[] = {0};
+
+        VkDescriptorSet descriptorSets[] = {mUniformBuffer.GetDescriptorSet()};
+        vkCmdBindDescriptorSets(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mDefaultPipeline.GetPipelineLayout(), 0, 1, descriptorSets, 0, nullptr);
 
         vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, 1, vertexBuffers, offsets);
         vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
@@ -126,8 +148,6 @@ void Renderer::EndFrame()
     };
 
     vkQueuePresentKHR(getQueues().present, &presentInfo);
-
-    mMeshQueue.clear();
 
     mFrameRunning = false;
 }
@@ -310,11 +330,15 @@ void Renderer::CreatePipelines()
 {
     mDefaultPipeline.AddBinding(0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX);
     mDefaultPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
+    mDefaultPipeline.AddColorBlendAttachment();
     
     mDefaultPipeline.LoadVertexShader("Shader/shader.vert.spv");
     mDefaultPipeline.LoadFragmentShader("Shader/shader.frag.spv");
     
-    mDefaultPipeline.AddColorBlendAttachment();
+    VkPipelineLayout pipelineLayout = CreatePipelineLayout({mUniformBuffer.GetSetLayout()});
+    mDefaultPipeline.SetPipelineLayout(pipelineLayout);
+
+    mDefaultPipeline.SetCullMode(VK_CULL_MODE_NONE);
 
     mDefaultPipeline.Create(mRenderPass, 0);
 }

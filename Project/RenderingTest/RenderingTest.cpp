@@ -44,6 +44,7 @@ class RenderingTest : public Application
 
 	void End() override
 	{
+    	vkDeviceWaitIdle(getDevice());
 		mMesh.Destroy();
 	}
 };
