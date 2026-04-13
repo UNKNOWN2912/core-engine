@@ -2,7 +2,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 void Camera::SetPosition(const glm::vec3 &position) { mPosition = position; }
-void Camera::SetFront(const glm::vec3 &front) { mFront = glm::normalize(front); }
+void Camera::SetFront(const glm::vec3 &front) { mFront = front; }
 void Camera::SetUp(const glm::vec3 &up) { mUp = glm::normalize(up); }
 
 const glm::vec3 &Camera::GetPosition() const { return mPosition; }

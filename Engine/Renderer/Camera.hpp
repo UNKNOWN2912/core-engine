@@ -36,8 +36,8 @@ class Camera
         void CalculateOrthographic();
         void CalculateOrbital();
       
-        glm::vec3 mPosition = glm::vec3(0, 0, 2);
-        glm::vec3 mFront = glm::vec3(0, 0, -2);
+        glm::vec3 mPosition = glm::vec3(0, 0, -1);
+        glm::vec3 mFront = glm::vec3(0, 0, 1);
         glm::vec3 mUp = glm::vec3(0, 1, 0);
 
         glm::mat4 mProjection = glm::mat4(1);

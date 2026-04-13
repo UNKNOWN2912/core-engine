@@ -41,7 +41,6 @@ bool Application::IsRunning()
 	return mRunning;
 }
 
-
 bool Application::WindowEventCallback(uint32_t code, void* data)
 {
 	WindowEvent event = (WindowEvent)code;
@@ -49,8 +48,10 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 	switch (event)
 	{
 		case WindowEvent::WindowClose:
-			Close();
-			break;
+			{
+				Close();
+				break;
+			}
 		case WindowEvent::WindowResize:
 			{
 				glm::uvec2 size = *(glm::uvec2*)data;
@@ -67,8 +68,46 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 			break;
 		case WindowEvent::WindowMaxmimize:
 			break;
-
+		case WindowEvent::WindowMouseMove:
+			{
+				glm::vec2 position = *(glm::vec2*)data;
+				glm::vec2 offset = position - previousMousePos;
+				previousMousePos = position; 
+				OnMouseMove(position, offset);
+				break;
+			}
+		case WindowEvent::WindowScroll:
+			{
+				glm::vec2 scroll = *(glm::vec2*)data;
+				OnScroll(scroll);
+				break;
+			}
+		case WindowEvent::WindowKeyPress:
+			{
+				Key key = *(Key*)data;
+				OnKeyPress(key);
+				break;
+			}
+		case WindowEvent::WindowKeyRepeat:
+			{
+				Key key = *(Key*)data;
+				OnKeyRepeat(key);
+				break;
+			}
+		case WindowEvent::WindowKeyRelease:
+			{
+				Key key = *(Key*)data;
+				OnKeyRelease(key);
+				break;
+			}
+		case WindowEvent::WindowCharacterType:
+			{
+				char ch = *(char*)data;
+				OnCharacterType(ch);
+				break;
+			}
 		}
+		
         return false;
 }
 

@@ -90,6 +90,58 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer)
     vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &commandBuffer);
 }
 
+void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image)
+{
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer();
+    BeginCommandBuffer(commandBuffer, true);
+
+    VkImageMemoryBarrier barrier = 
+    {
+        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+        .oldLayout = oldLayout,
+        .newLayout = newLayout,
+        .image = image.handle,
+        .subresourceRange = 
+        {
+            .aspectMask = aspectMask,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    EndCommandBuffer(commandBuffer);
+    ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
+}
+
+void TransferImageData(const Buffer& srcBuffer, Image& dstImage) 
+{
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer();
+    BeginCommandBuffer(commandBuffer, true);
+
+    VkBufferImageCopy region = 
+    {
+        .bufferOffset = 0,
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageOffset = {0,0,0},
+        .imageExtent = {dstImage.extent.width, dstImage.extent.height, 1},
+    };
+
+    vkCmdCopyBufferToImage(commandBuffer, srcBuffer.handle, dstImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    EndCommandBuffer(commandBuffer);
+    ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
+
+    vkQueueWaitIdle(getQueues().transfer);
+
+    vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &commandBuffer);
+}
+
 
 VkCommandBuffer AllocateCommandBuffer() 
 {
@@ -230,4 +282,67 @@ VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayou
     VkPipelineLayout pipelineLayout;
     vkCreatePipelineLayout(getDevice(), &createInfo, nullptr, &pipelineLayout);
     return pipelineLayout;
+}
+
+Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty)
+{
+    Image image;
+
+    VkImageCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format,
+        .extent = 
+        {
+            .width = size.x,
+            .height = size.y,
+            .depth = 1,
+        },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+    
+    vkCreateImage(getDevice(), &createInfo, nullptr, &image.handle);
+
+    VkImageViewCreateInfo imageViewCreateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image.handle,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange = 
+        {
+            .aspectMask = aspectMask,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+
+    vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &image.view);
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(getDevice(), image.handle, &requirements);
+
+    VkMemoryAllocateInfo allocateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = requirements.size,
+        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, memoryProperty),
+    };
+
+    vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &image.memory);
+    vkBindImageMemory(getDevice(), image.handle, image.memory, 0);
+
+    image.memorySize = requirements.size;
+
+    return image;
 }

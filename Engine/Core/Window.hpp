@@ -16,7 +16,19 @@ enum class WindowEvent
 	WindowResize,
 	WindowMove,
 	WindowMinimize,
-	WindowMaxmimize
+	WindowMaxmimize,
+
+	WindowMouseMove,
+	WindowMouseClick,
+	WindowMouseHold,
+	WindowMouseRelease,
+	WindowScroll,
+
+	WindowKeyPress,
+	WindowKeyRelease,
+	WindowKeyRepeat,
+
+	WindowCharacterType
 };
 
 struct WindowData;
@@ -26,10 +38,12 @@ class Window
 public:
 	void Create(const WindowSpecification &specification);
 	void Destroy();
+
 	glm::uvec2 GetSize() const;
 	glm::uvec2 GetPosition() const;
 	glm::uvec2 GetFrameBufferSize() const;
 	std::string GetTitle() const;
+
 	void SetSize(const glm::uvec2& size);
 	void SetPosition(const glm::uvec2& position);
 	void SetTitle(const std::string& title);
@@ -37,8 +51,7 @@ public:
 	void ProcessEvent();
 	void* GetNativeWindow() const;
 
+
 private:
 	WindowData* mData = nullptr;
 };
-
-

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 
 struct Buffer
 {
@@ -10,9 +11,21 @@ struct Buffer
     void* map = nullptr;
 };
 
+struct Image
+{
+    VkImage handle = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView view = VK_NULL_HANDLE;
+    VkDeviceSize memorySize = 0;
+    VkExtent2D extent = {0, 0};
+};
+
 Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryProperties);
 void DestroyBuffer(Buffer& buffer);
 void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer); 
+
+Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty);
+
 
 VkCommandBuffer AllocateCommandBuffer();
 void BeginCommandBuffer(VkCommandBuffer commandBuffer, bool singleUse);
@@ -25,3 +38,6 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescript
 VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize> sizes, uint32_t maxSets);
 VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool);
 VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts);
+
+void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image);
+void TransferImageData(const Buffer& srcBuffer, Image& dstImage);

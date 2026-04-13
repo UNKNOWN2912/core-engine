@@ -69,7 +69,7 @@ void Renderer::EndFrame()
 
     VkClearValue clearValue = 
     {
-        .color = {1,0,1,1},
+        .color = {0,0,0,1},
     };
 
     VkRenderPassBeginInfo renderPassBeginInfo = 
@@ -88,7 +88,6 @@ void Renderer::EndFrame()
 
     vkCmdBeginRenderPass(mCommandBuffers.renderingCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-
     for (size_t i = 0; i < mMeshQueue.size(); i++)
     {
         StaticMesh& mesh = *mMeshQueue[i];
@@ -100,7 +99,6 @@ void Renderer::EndFrame()
 
         VkDescriptorSet descriptorSets[] = {mUniformBuffer.GetDescriptorSet()};
         vkCmdBindDescriptorSets(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mDefaultPipeline.GetPipelineLayout(), 0, 1, descriptorSets, 0, nullptr);
-
         vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, 1, vertexBuffers, offsets);
         vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdBindPipeline(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mDefaultPipeline.GetHandle());
@@ -113,10 +111,8 @@ void Renderer::EndFrame()
         vkCmdSetViewport(mCommandBuffers.renderingCommandBuffer, 0, 1, &mViewport);
         vkCmdSetScissor(mCommandBuffers.renderingCommandBuffer, 0, 1, &scissor);
 
-        vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, 3, 1, 0, 0, 0);
+        vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, mesh.mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
     }
-
-
     vkCmdEndRenderPass(mCommandBuffers.renderingCommandBuffer);
 
     vkEndCommandBuffer(mCommandBuffers.renderingCommandBuffer);
