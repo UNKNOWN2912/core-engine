@@ -115,11 +115,21 @@ void Material::Create()
     mPipeline.EnableDepthTesting(mSettings.depthTestEnable);
     mPipeline.EnableDepthWrite(mSettings.depthWriteEnable);
     mPipeline.EnableBlending(mSettings.blendEnable);
+    mPipeline.EnableWireframe(mSettings.wireframe);
 
     mPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
     mPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
     mPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
     mPipeline.AddAttribute(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal));
+
+    if(mSettings.enableInstancing)
+    {
+        mPipeline.AddBinding(1, sizeof(glm::mat4), VK_VERTEX_INPUT_RATE_INSTANCE);
+        mPipeline.AddAttribute(1, 3, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 0);
+        mPipeline.AddAttribute(1, 4, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 1);
+        mPipeline.AddAttribute(1, 5, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 2);
+        mPipeline.AddAttribute(1, 6, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 3);
+    }
 
     mPipeline.AddColorBlendAttachment(mSettings.blendEnable);
 

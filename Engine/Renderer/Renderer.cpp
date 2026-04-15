@@ -1,5 +1,6 @@
 #include "Renderer.hpp"
 #include "Core/Macro.hpp"
+#include "GLFW/glfw3.h"
 #include "Renderer/Transform.hpp"
 #include "Utility.hpp"
 #include "GraphicsContext.hpp"
@@ -29,12 +30,30 @@ void Renderer::Terminate()
 }
 
 
-void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform& transform)
+void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform)
 {
-    MeshMap map;
-    map.material = &material;
-    map.transform = &transform;
-    mDrawSubmitInfo.push_back({&mesh, &material, &transform});
+    DrawSubmitInfo submitInfo = 
+    {
+        .mesh = &mesh,
+        .material = &material,
+        .transform = transform,
+    };
+
+    mDrawSubmitInfo.push_back(submitInfo);
+}
+
+void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount)
+{
+    DrawSubmitInfo submitInfo = 
+    {
+        .mesh = &mesh,
+        .material = &material,
+        .instanceBuffer = &instanceBuffer,
+        .instanced = true,
+        .instanceCount = instanceCount,
+    };
+    
+    mDrawSubmitInfo.push_back(submitInfo);
 }
 
 void Renderer::BeginFrame() 
@@ -46,12 +65,16 @@ void Renderer::BeginFrame()
 
 void Renderer::EndFrame() 
 {
+
     mCamera.Calculate();
 
     mUniformData.projection = mCamera.GetProjection();
     mUniformData.projection[1][1] *= -1; 
     mUniformData.view = mCamera.GetView();
+    mUniformData.cameraPosition = mCamera.GetPosition();
+    mUniformData.cameraFront = mCamera.GetFront();
 
+    mUniformData.time = glfwGetTime();
 
     for(auto drawSubmit : mDrawSubmitInfo)
     {
@@ -109,10 +132,18 @@ void Renderer::EndFrame()
     {
         DrawSubmitInfo drawSubmit = mDrawSubmitInfo[i];
 
-        VkBuffer vertexBuffers[] = {drawSubmit.mesh->mVertexBuffer.handle};
+        uint32_t vertexBufferCount = 1;
+
+        VkBuffer vertexBuffers[2] = {drawSubmit.mesh->mVertexBuffer.handle};
+        if(drawSubmit.material->mSettings.enableInstancing)
+        {
+            vertexBufferCount = 2;
+            vertexBuffers[1] = drawSubmit.instanceBuffer->mBuffer.handle;
+        }
+
         VkBuffer indexBuffer = drawSubmit.mesh->mIndexBuffer.handle;
 
-        VkDeviceSize offsets[] = {0};
+        VkDeviceSize offsets[] = {0, 0};
 
         VkDescriptorSet descriptorSets[] = {drawSubmit.material->mDescriptorSet};
 
@@ -125,16 +156,17 @@ void Renderer::EndFrame()
         }
         if(i == 0 || drawSubmit.mesh != mDrawSubmitInfo[previousIndex].mesh)
         {
-            vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, vertexBufferCount, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }
 
-        glm::mat4 model = drawSubmit.transform->GetMatrix();
+        glm::mat4 model = drawSubmit.transform.GetMatrix();
         vkCmdPushConstants(mCommandBuffers.renderingCommandBuffer, drawSubmit.material->mPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
 
-        vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
-
-        
+        if(drawSubmit.material->mSettings.enableInstancing)
+            vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, drawSubmit.mesh->mIndexSize / sizeof(uint32_t), drawSubmit.instanceCount, 0, 0, 0);
+        else
+            vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
     }
     vkCmdEndRenderPass(mCommandBuffers.renderingCommandBuffer);
 

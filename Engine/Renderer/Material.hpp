@@ -28,6 +28,8 @@ struct MaterialSettings
 {
     bool depthTestEnable = true;
     bool depthWriteEnable = true;
+    bool enableInstancing = false;
+    bool wireframe = false;
     bool blendEnable = true;
     CullMode cullMode = CullMode::Back;
     PrimitiveType primitiveType = PrimitiveType::Triangle;

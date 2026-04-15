@@ -1,5 +1,6 @@
 #pragma once
 #include "Renderer/Camera.hpp"
+#include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
 #include "GraphicsPipeline.hpp"
@@ -35,6 +36,12 @@ struct UniformData
 {
     glm::mat4 projection;
     glm::mat4 view;
+    glm::vec3 cameraPosition;
+    float     _pad1;  
+    glm::vec3 cameraFront;
+    float     _pad2;  
+    float time = 0;
+    float     _pad[3];
 };
 
 struct MeshMap
@@ -47,7 +54,10 @@ struct DrawSubmitInfo
 {
     StaticMesh* mesh = nullptr;
     Material* material = nullptr;
-    Transform* transform = nullptr;
+    Transform transform;
+    InstanceBuffer* instanceBuffer = nullptr;
+    bool instanced = false;
+    uint32_t instanceCount = 0;
 };
 
 class Renderer
@@ -57,7 +67,8 @@ class Renderer
         void Terminate();
 
         void DrawMesh(StaticMesh& mesh);
-        void DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform& transform);
+        void DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform);
+        void DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount);
 
         void BeginFrame();
         void EndFrame();

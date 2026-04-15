@@ -5,13 +5,27 @@ layout(location = 0) in vec2 uv;
 
 layout(location = 2) in vec3 fragPos;
 
-const int count = 1000;
+float rand(vec2 co) 
+{
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
 
 void main()
 {
-    vec3 gradient1 = vec3(0.8941, 0.4275, 0.2196);
-    vec3 gradient2 = vec3(0.3922, 0.4157, 0.8275);
 
-    vec3 color = mix(gradient1, gradient2, fragPos.y);
-    outputColor = vec4(color,1);
+    vec3 lightDirection = normalize(vec3(1,1,1));
+    vec3 pos = normalize(fragPos);
+
+    vec3 sunColor = vec3(0.8,0.8,0.8);
+    vec3 skyColor = vec3(0.1254, 0.6431, 0.8313);
+
+    float d = clamp((distance(pos, lightDirection)), 0.0, 1.0);
+
+    vec3 color = skyColor;
+
+    color += sunColor * pow((1 - d), 4);
+
+    outputColor = vec4(color, 1.0);
+
+    outputColor.rgb = vec3(0.1);
 }
