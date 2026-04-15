@@ -1,5 +1,6 @@
 #include "Renderer.hpp"
 #include "Core/Macro.hpp"
+#include "Renderer/Transform.hpp"
 #include "Utility.hpp"
 #include "GraphicsContext.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -8,7 +9,7 @@
 void Renderer::Initialize(const Window& window) 
 {
     mContext.Create(window, true);
-    CreateSwapchain();
+    CreateSwapchain(window.GetSize());
     CreateRenderPass();
     CreateSwapchainFramebuffers();
     CreateSemaphores();
@@ -27,51 +28,59 @@ void Renderer::Terminate()
     // mContext.Destroy();
 }
 
-void Renderer::DrawMesh(StaticMesh& mesh)
-{
-    if(!mFrameRunning)
-    {
-        WARN("BeginFrame() must be called before Drawing");
-        return;
-    }
 
-    mMeshQueue.push_back(&mesh);
+void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform& transform)
+{
+    MeshMap map;
+    map.material = &material;
+    map.transform = &transform;
+    mDrawSubmitInfo.push_back({&mesh, &material, &transform});
 }
 
 void Renderer::BeginFrame() 
 {
-    mMeshQueue.clear();
-    mCamera.Calculate();
-
-    mUniformData.model = glm::translate(glm::mat4(1.f), glm::vec3(0));
-    mUniformData.projection = mCamera.GetProjection();
-    mUniformData.projection[1][1] *= -1; 
-    mUniformData.view = mCamera.GetView();
-    
-    mUniformBuffer.SetData(sizeof(UniformData), &mUniformData);
+    mDrawSubmitInfo.clear();
 
     mFrameRunning = true;
 }
 
 void Renderer::EndFrame() 
 {
-    vkDeviceWaitIdle(getDevice());
+    mCamera.Calculate();
 
+    mUniformData.projection = mCamera.GetProjection();
+    mUniformData.projection[1][1] *= -1; 
+    mUniformData.view = mCamera.GetView();
+
+
+    for(auto drawSubmit : mDrawSubmitInfo)
+    {
+        mUniformBuffer.SetDataToDescriptor(sizeof(UniformData), &mUniformData, drawSubmit.material->mDescriptorSet, 0);
+
+        if(drawSubmit.material->mAlbedo.IsValid())
+            drawSubmit.material->mAlbedo.SetDataToDescriptorSet(drawSubmit.material->mDescriptorSet, 1);
+    }
+
+
+    
+    vkDeviceWaitIdle(getDevice());
+    
     uint32_t imageIndex;
     vkAcquireNextImageKHR(getDevice(), mSwapchain.handle, UINT64_MAX, mSemaphores.imageAcquired, VK_NULL_HANDLE, &imageIndex);
-
+    
     VkCommandBufferBeginInfo beginInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
     };
-
+    
     vkBeginCommandBuffer(mCommandBuffers.renderingCommandBuffer, &beginInfo);
-
-    VkClearValue clearValue = 
+    
+    VkClearValue clearValue[] = 
     {
-        .color = {0,0,0,1},
+        {{0.1,0.1,0.1,1}},
+        {{1,0,0,1},},
     };
-
+    
     VkRenderPassBeginInfo renderPassBeginInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -82,36 +91,50 @@ void Renderer::EndFrame()
             .offset = {0,0},
             .extent = mSwapchain.extent,
         },
-        .clearValueCount = 1,
-        .pClearValues = &clearValue,
+        .clearValueCount = sizeof(clearValue) / sizeof(VkClearValue),
+        .pClearValues = clearValue,
+    };
+    
+    vkCmdBeginRenderPass(mCommandBuffers.renderingCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    
+    VkRect2D scissor = 
+    {
+        .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
     };
 
-    vkCmdBeginRenderPass(mCommandBuffers.renderingCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    for (size_t i = 0; i < mMeshQueue.size(); i++)
+    vkCmdSetViewport(mCommandBuffers.renderingCommandBuffer, 0, 1, &mViewport);
+    vkCmdSetScissor(mCommandBuffers.renderingCommandBuffer, 0, 1, &scissor);
+    
+    for (int i = 0; i < mDrawSubmitInfo.size(); i++)
     {
-        StaticMesh& mesh = *mMeshQueue[i];
+        DrawSubmitInfo drawSubmit = mDrawSubmitInfo[i];
 
-        VkBuffer vertexBuffers[] = {mesh.mVertexBuffer.handle};
-        VkBuffer indexBuffer = mesh.mIndexBuffer.handle;
+        VkBuffer vertexBuffers[] = {drawSubmit.mesh->mVertexBuffer.handle};
+        VkBuffer indexBuffer = drawSubmit.mesh->mIndexBuffer.handle;
 
         VkDeviceSize offsets[] = {0};
 
-        VkDescriptorSet descriptorSets[] = {mUniformBuffer.GetDescriptorSet()};
-        vkCmdBindDescriptorSets(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mDefaultPipeline.GetPipelineLayout(), 0, 1, descriptorSets, 0, nullptr);
-        vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdBindPipeline(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mDefaultPipeline.GetHandle());
+        VkDescriptorSet descriptorSets[] = {drawSubmit.material->mDescriptorSet};
 
-        VkRect2D scissor = 
+        int previousIndex = (i-1 < 0) ? 0 : i - 1;
+
+        if(i == 0 || drawSubmit.material != mDrawSubmitInfo[previousIndex].material)
         {
-            .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
-        };
+            vkCmdBindDescriptorSets(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmit.material->mPipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
+            vkCmdBindPipeline(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmit.material->mPipeline.GetHandle());
+        }
+        if(i == 0 || drawSubmit.mesh != mDrawSubmitInfo[previousIndex].mesh)
+        {
+            vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        }
 
-        vkCmdSetViewport(mCommandBuffers.renderingCommandBuffer, 0, 1, &mViewport);
-        vkCmdSetScissor(mCommandBuffers.renderingCommandBuffer, 0, 1, &scissor);
+        glm::mat4 model = drawSubmit.transform->GetMatrix();
+        vkCmdPushConstants(mCommandBuffers.renderingCommandBuffer, drawSubmit.material->mPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
 
-        vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, mesh.mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
+        vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
+
+        
     }
     vkCmdEndRenderPass(mCommandBuffers.renderingCommandBuffer);
 
@@ -148,11 +171,25 @@ void Renderer::EndFrame()
     mFrameRunning = false;
 }
 
-void Renderer::CreateSwapchain() 
+void Renderer::Resize(const glm::uvec2& size)
+{
+    vkDeviceWaitIdle(getDevice());
+
+    DestroySwapchain();
+    DestroySwapchainFramebuffers();
+    CreateSwapchain(size);
+    CreateSwapchainFramebuffers();
+    mViewport.width = mSwapchain.extent.width;
+    mViewport.height = mSwapchain.extent.height;
+    mViewport.maxDepth = 1.f;
+    mViewport.minDepth = 0.f;
+}
+
+void Renderer::CreateSwapchain(const glm::uvec2& size) 
 {
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(getPhysicalDevice(), getSurface(), &capabilities);
-    mSwapchain.extent = capabilities.currentExtent;
+    mSwapchain.extent = {size.x, size.y};
 
     if(mSwapchain.extent.width > capabilities.maxImageExtent.width || mSwapchain.extent.height > capabilities.maxImageExtent.height)
     {
@@ -234,10 +271,29 @@ void Renderer::CreateRenderPass()
         .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     };
 
+    VkAttachmentDescription depthAttachmentDescription = 
+    {
+        .flags = 0,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    };
+
     VkAttachmentReference swapchainAttachmentReference = 
     {
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    VkAttachmentReference depthAttachmentReference = 
+    {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     };
 
     VkSubpassDescription subpassDescription = 
@@ -245,23 +301,26 @@ void Renderer::CreateRenderPass()
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &swapchainAttachmentReference,
+        .pDepthStencilAttachment = &depthAttachmentReference,
     };
 
     VkSubpassDependency dependencies = 
     {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
         .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
     };
+
+    VkAttachmentDescription attachmentDescriptions[] = {swapchainAttachmentDescription, depthAttachmentDescription};
 
     VkRenderPassCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &swapchainAttachmentDescription,
+        .attachmentCount = 2,
+        .pAttachments = attachmentDescriptions,
         .subpassCount = 1,
         .pSubpasses = &subpassDescription,
         .dependencyCount = 1,
@@ -277,15 +336,18 @@ void Renderer::CreateSwapchainFramebuffers()
     {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = mRenderPass,
-        .attachmentCount = 1,
+        .attachmentCount = 2,
         .width = mSwapchain.extent.width,
         .height = mSwapchain.extent.height,
         .layers = 1,
     };
 
+    mDepthAttachment = CreateImage({mSwapchain.extent.width, mSwapchain.extent.height}, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
     for(VkImageView view : mSwapchain.views)
     {
-        createInfo.pAttachments = &view;
+        VkImageView attachments[] = {view, mDepthAttachment.view};
+        createInfo.pAttachments = attachments;
         VkFramebuffer framebuffer;
         vkCreateFramebuffer(getDevice(), &createInfo, nullptr, &framebuffer);
         mSwapchainFramebuffer.push_back(framebuffer);
@@ -324,19 +386,25 @@ void Renderer::CreateCommandBuffers()
 
 void Renderer::CreatePipelines() 
 {
-    mDefaultPipeline.AddBinding(0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX);
-    mDefaultPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-    mDefaultPipeline.AddColorBlendAttachment();
-    
-    mDefaultPipeline.LoadVertexShader("Shader/shader.vert.spv");
-    mDefaultPipeline.LoadFragmentShader("Shader/shader.frag.spv");
-    
-    VkPipelineLayout pipelineLayout = CreatePipelineLayout({mUniformBuffer.GetSetLayout()});
-    mDefaultPipeline.SetPipelineLayout(pipelineLayout);
+    // mDefaultPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
+    // mDefaultPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
+    // mDefaultPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
+    // mDefaultPipeline.AddAttribute(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal));
+    // mDefaultPipeline.AddColorBlendAttachment();
 
-    mDefaultPipeline.SetCullMode(VK_CULL_MODE_NONE);
+    // mDefaultPipeline.EnableDepth(true);
+    
+    // mDefaultPipeline.LoadVertexShader("Shader/shader.vert.spv");
+    // mDefaultPipeline.LoadFragmentShader("Shader/shader.frag.spv");
 
-    mDefaultPipeline.Create(mRenderPass, 0);
+    // mTexture.Load("Texture/texture_01.png", 1);
+    
+    // VkPipelineLayout pipelineLayout = CreatePipelineLayout({mUniformBuffer.GetSetLayout(), mTexture.GetSetLayout()});
+    // mDefaultPipeline.SetPipelineLayout(pipelineLayout);
+
+    // mDefaultPipeline.SetCullMode(VK_CULL_MODE_NONE);
+
+    // mDefaultPipeline.Create(mRenderPass, 0);
 }
 
 void Renderer::DestroySwapchain() 
@@ -361,7 +429,9 @@ void Renderer::DestroySwapchainFramebuffers()
     for (VkFramebuffer framebuffer : mSwapchainFramebuffer) 
     {
         vkDestroyFramebuffer(getDevice(), framebuffer, nullptr);
-    }    
+    }
+
+    mSwapchainFramebuffer.clear();
 }
 
 void Renderer::DestroySemaphores() 

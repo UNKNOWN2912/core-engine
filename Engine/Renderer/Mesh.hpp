@@ -12,17 +12,23 @@ enum class LayoutType
     IVec4, UVec4, Vec4,
 };
 
+struct Vertex
+{
+    glm::vec3 position;
+    glm::vec2 uv;
+    glm::vec3 normal;
+};
 
 
 class StaticMesh
 {
     public:
         StaticMesh();
-        StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+        StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
         ~StaticMesh();
 
-        void SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
-        void SetLayout(std::initializer_list<LayoutType> layout);
+        void SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+        // void SetLayout(std::initializer_list<LayoutType> layout);
 
         void Destroy();
     private:
@@ -37,6 +43,6 @@ class StaticMesh
         Buffer mVertexBuffer;
         Buffer mIndexBuffer;
 
-        std::vector<VkVertexInputAttributeDescription> mAttributeDescriptions;
-        VkVertexInputBindingDescription mBindingDescription;
+        // std::vector<VkVertexInputAttributeDescription> mAttributeDescriptions;
+        // VkVertexInputBindingDescription mBindingDescription;
 };

@@ -20,11 +20,11 @@ VkFormat vertexLayoutFormat[] =
 
 StaticMesh::StaticMesh()
 {
-    mBindingDescription.binding = 0;
-    mBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    // mBindingDescription.binding = 0;
+    // mBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 }
 
-StaticMesh::StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
+StaticMesh::StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
     SetData(vertices, vertexSize, indices, indexSize);
 }
@@ -34,7 +34,7 @@ StaticMesh::~StaticMesh()
     Destroy();
 }
 
-void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
+void StaticMesh::SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
     if(vertexSize != mVertexSize)
     {
@@ -61,26 +61,28 @@ void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, s
     TransferBufferData(mStagingIndexBuffer, mIndexBuffer);
 }
 
-void StaticMesh::SetLayout(std::initializer_list<LayoutType> layout)
-{
-    uint32_t i = 0;
-    uint32_t offset = 0;
-    for (LayoutType type : layout) 
-    {
-        VkVertexInputAttributeDescription attribute = 
-        {
-            .location = i,
-            .binding = 0,
-            .format = vertexLayoutFormat[(uint32_t)type],
-            .offset = offset,
-        };
+// void StaticMesh::SetLayout(std::initializer_list<LayoutType> layout)
+// {
+//     uint32_t i = 0;
+//     uint32_t offset = 0;
+//     for (LayoutType type : layout) 
+//     {
+//         VkVertexInputAttributeDescription attribute = 
+//         {
+//             .location = i,
+//             .binding = 0,
+//             .format = vertexLayoutFormat[(uint32_t)type],
+//             .offset = offset,
+//         };
 
-        offset += vertexLayoutByteSize[(uint32_t)type];
-        i++;
-    }
+//         mAttributeDescriptions.push_back(attribute);
 
-    mBindingDescription.stride = offset;
-}
+//         offset += vertexLayoutByteSize[(uint32_t)type];
+//         i++;
+//     }
+
+//     mBindingDescription.stride = offset;
+// }
 void StaticMesh::Destroy() 
 {
     DestroyBuffer(mStagingVertexBuffer);

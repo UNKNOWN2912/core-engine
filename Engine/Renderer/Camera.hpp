@@ -21,14 +21,14 @@ class Camera
         float GetFarPlane() const { return mFarPlane; }
         CameraType GetCameraType() const { return mType; }
     
-        void SetPosition(const glm::vec3 &position);
-        void SetFront(const glm::vec3 &front);
-        void SetUp(const glm::vec3 &up);
-        void SetFov(float fov) { mFov = fov; }
-        void SetAspectRatio(float aspectRatio) { mAspectRatio = aspectRatio; }
-        void SetNearPlane(float nearPlane) { mNearPlane = nearPlane; }
-        void SetFarPlane(float farPlane) { mFarPlane = farPlane; }
-        void SetCameraType(CameraType type) { mType = type; }
+        Camera& SetPosition(const glm::vec3 &position);
+        Camera& SetFront(const glm::vec3 &front);
+        Camera& SetUp(const glm::vec3 &up);
+        Camera& SetFov(float fov) { mFov = fov; return *this; }
+        Camera& SetAspectRatio(float aspectRatio) { mAspectRatio = aspectRatio; return *this; }
+        Camera& SetNearPlane(float nearPlane) { mNearPlane = nearPlane; return *this; }
+        Camera& SetFarPlane(float farPlane) { mFarPlane = farPlane; return *this; }
+        Camera& SetCameraType(CameraType type) { mType = type; return *this; }
 
         void Calculate();
     private:

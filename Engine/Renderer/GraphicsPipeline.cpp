@@ -23,9 +23,19 @@ void GraphicsPipeline::LoadTessellationShader(std::string_view filename)
     mTessellationShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
-void GraphicsPipeline::EnableDepth(bool enable)
+void GraphicsPipeline::EnableDepthTesting(bool enable)
 {
-    mDepthEnable = enable;
+    mDepthTestEnable = enable;
+}
+
+void GraphicsPipeline::EnableDepthWrite(bool enable)
+{
+    mDepthWriteEnable = enable;
+}
+
+void GraphicsPipeline::EnableBlending(bool enable)
+{
+    mBlendEnable = enable;
 }
 
 void GraphicsPipeline::EnableWireframe(bool enable)
@@ -100,10 +110,17 @@ void GraphicsPipeline::SetPipelineLayout(VkPipelineLayout layout)
     mPipelineLayout = layout; 
 }
 
-void GraphicsPipeline::AddColorBlendAttachment()
+void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
 {
     VkPipelineColorBlendAttachmentState state = 
     {
+        .blendEnable = enableBlending,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_A_BIT, 
     };
 
@@ -148,7 +165,7 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
     colorBlendState.attachmentCount = mColorBlendStates.size();
     colorBlendState.pAttachments = mColorBlendStates.data();
 
-    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE };
 
     VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamicState.dynamicStateCount = 2;
@@ -177,8 +194,8 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
     VkPipelineDepthStencilStateCreateInfo depthStencil = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
     depthStencil.minDepthBounds = 0.f;
     depthStencil.maxDepthBounds = 1.f;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = mDepthWriteEnable;
+    depthStencil.depthTestEnable = mDepthTestEnable;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
@@ -194,9 +211,8 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
     pipelineCreateInfo.pVertexInputState = &vertexInput;
     pipelineCreateInfo.pViewportState = &viewportState;
     pipelineCreateInfo.subpass = subpassIndex;
+    pipelineCreateInfo.pDepthStencilState = &depthStencil;
 
-    if (mDepthEnable)
-        pipelineCreateInfo.pDepthStencilState = &depthStencil;
 
     vkCreateGraphicsPipelines(getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mHandle);
 }

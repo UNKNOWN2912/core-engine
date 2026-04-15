@@ -1,8 +1,11 @@
 #pragma once
 #include "Renderer/Camera.hpp"
+#include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
 #include "GraphicsPipeline.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/Texture.hpp"
+#include "Renderer/Transform.hpp"
 #include "Renderer/UniformBuffer.hpp"
 
 struct Swapchain
@@ -32,7 +35,19 @@ struct UniformData
 {
     glm::mat4 projection;
     glm::mat4 view;
-    glm::mat4 model;
+};
+
+struct MeshMap
+{
+    Material* material;
+    Transform* transform;
+};
+
+struct DrawSubmitInfo
+{
+    StaticMesh* mesh = nullptr;
+    Material* material = nullptr;
+    Transform* transform = nullptr;
 };
 
 class Renderer
@@ -42,6 +57,7 @@ class Renderer
         void Terminate();
 
         void DrawMesh(StaticMesh& mesh);
+        void DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform& transform);
 
         void BeginFrame();
         void EndFrame();
@@ -51,8 +67,12 @@ class Renderer
         void SetCamera(const Camera& camera) { mCamera = camera; }
         const Camera& GetCamera() const { return mCamera; }
 
+        void Resize(const glm::uvec2& size);
+
+        VkRenderPass GetMainRenderPass() const { return mRenderPass; }
+
     private:
-        void CreateSwapchain();
+        void CreateSwapchain(const glm::uvec2& size);
         void CreateRenderPass();
         void CreateSwapchainFramebuffers();
         void CreateSemaphores();
@@ -78,12 +98,17 @@ class Renderer
         VkViewport mViewport;
 
         std::vector<VkFramebuffer> mSwapchainFramebuffer;
-        std::vector<StaticMesh*> mMeshQueue;
+
+        std::vector<DrawSubmitInfo> mDrawSubmitInfo;
 
         bool mFrameRunning = false;
 
         UniformBuffer mUniformBuffer;
         UniformData mUniformData;
 
+        Texture mTexture;
+
         Camera mCamera;
+
+        Image mDepthAttachment;
 };

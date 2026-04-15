@@ -19,8 +19,7 @@ enum class WindowEvent
 	WindowMaxmimize,
 
 	WindowMouseMove,
-	WindowMouseClick,
-	WindowMouseHold,
+	WindowMousePress,
 	WindowMouseRelease,
 	WindowScroll,
 
@@ -51,7 +50,18 @@ public:
 	void ProcessEvent();
 	void* GetNativeWindow() const;
 
+	bool isFullscreen();
+	void SetFullscreen(bool fullscreen);
+
+	void HideCursor();
+	void ShowCursor();
+	bool isCursorHidden();
+
+
 
 private:
 	WindowData* mData = nullptr;
 };
+
+
+

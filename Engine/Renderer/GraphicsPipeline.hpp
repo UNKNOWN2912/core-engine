@@ -12,12 +12,14 @@ class GraphicsPipeline
         void LoadGeometryShader(std::string_view filename);
         void LoadTessellationShader(std::string_view filename);
 
-        void EnableDepth(bool enable);
+        void EnableDepthTesting(bool enable);
+        void EnableDepthWrite(bool enable);
+        void EnableBlending(bool enable);
         void EnableWireframe(bool enable);
 
         void AddBinding(uint32_t binding, size_t stride, VkVertexInputRate inputRate);
         void AddAttribute(uint32_t binding, uint32_t location, VkFormat format, size_t offset);
-        void AddColorBlendAttachment();
+        void AddColorBlendAttachment(bool enableBlending);
 
         void SetCullMode(VkCullModeFlags cullMode);
         void SetPrimitive(VkPrimitiveTopology primitive);
@@ -49,6 +51,8 @@ class GraphicsPipeline
         VkSampleCountFlagBits mSampleCount = VK_SAMPLE_COUNT_1_BIT;
         VkViewport mViewport = {};
 
-        bool mDepthEnable = false;
+        bool mDepthTestEnable = false;
+        bool mDepthWriteEnable = false;
+        bool mBlendEnable = false;
         bool mWireframeEnable = false;
 };

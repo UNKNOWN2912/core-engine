@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Window.hpp"
 #include "Input/Keyboard.hpp"
+#include "Input/Mouse.hpp"
 #include "Renderer/Renderer.hpp"
 
 class Application
@@ -11,10 +12,15 @@ public:
 	virtual void Update() {}
 	virtual void End() {}
 
+	virtual void OnWindowClose() { Close(); }
 	virtual void OnWindowMove(const glm::uvec2& position) {}
 	virtual void OnWindowResize(const glm::uvec2& size) {}
+	
 	virtual void OnMouseMove(const glm::vec2& position, const glm::vec2& offset) {}
+	virtual void OnMouseButtonPress(MouseButton button) {}
+	virtual void OnMouseButtonRelease(MouseButton button) {}
 	virtual void OnScroll(const glm::vec2& scroll) {}
+
 
 	virtual void OnKeyPress(Key key) {}
 	virtual void OnKeyRepeat(Key key) {}
@@ -26,12 +32,18 @@ public:
 	void TerminateApplication();
 	void RunApplication();
 
+	void HideCursor();
+	void ToggleCursor();
+	bool IsCursorHidden();
+
 	void Close();
 	bool IsRunning();
 
 	bool WindowEventCallback(uint32_t code, void* data);
 
 	Window& GetWindowRef() { return mWindow; }
+
+	Renderer& GetRendererRef() { return mRenderer; }
 
 	static Application* Create();
 	static Application* GetInstance() { return instance; }

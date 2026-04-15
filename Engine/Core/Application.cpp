@@ -1,4 +1,5 @@
 #include "Application.hpp"
+#include "Input/Mouse.hpp"
 #include <cassert>
 #include <print>
 
@@ -49,7 +50,7 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 	{
 		case WindowEvent::WindowClose:
 			{
-				Close();
+				OnWindowClose();
 				break;
 			}
 		case WindowEvent::WindowResize:
@@ -62,6 +63,18 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 			{
 				glm::uvec2 position = *(glm::uvec2*)data;
 				OnWindowMove(position);
+				break;
+			}
+		case WindowEvent::WindowMousePress:
+			{
+				MouseButton button = *(MouseButton*)data;
+				OnMouseButtonPress(button);
+				break;
+			}
+		case WindowEvent::WindowMouseRelease:
+			{
+				MouseButton button = *(MouseButton*)data;
+				OnMouseButtonRelease(button);
 				break;
 			}
 		case WindowEvent::WindowMinimize:
@@ -115,6 +128,8 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 Application::Application()
 {
 	assert(instance == nullptr);
+
+	instance = this;
 }
 
 Application::~Application()
@@ -130,5 +145,22 @@ void Application::MainLoop()
 	}
 }
 
+void Application::HideCursor()
+{
+	mWindow.HideCursor();
+}
+
+void Application::ToggleCursor()
+{
+	if(mWindow.isCursorHidden())
+		mWindow.ShowCursor();
+	else
+	 	mWindow.HideCursor();
+}
+
+bool Application::IsCursorHidden()
+{
+	return mWindow.isCursorHidden();
+}
 
 Application* Application::instance = nullptr;

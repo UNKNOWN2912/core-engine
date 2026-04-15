@@ -1,9 +1,9 @@
 #include "Camera.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
-void Camera::SetPosition(const glm::vec3 &position) { mPosition = position; }
-void Camera::SetFront(const glm::vec3 &front) { mFront = front; }
-void Camera::SetUp(const glm::vec3 &up) { mUp = glm::normalize(up); }
+Camera& Camera::SetPosition(const glm::vec3 &position) { mPosition = position; return *this; }
+Camera& Camera::SetFront(const glm::vec3 &front) { mFront = front; return *this; }
+Camera& Camera::SetUp(const glm::vec3 &up) { mUp = glm::normalize(up); return *this; }
 
 const glm::vec3 &Camera::GetPosition() const { return mPosition; }
 const glm::vec3 &Camera::GetFront() const { return mFront; }

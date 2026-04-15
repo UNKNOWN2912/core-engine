@@ -14,14 +14,15 @@ class Texture
         VkDescriptorSet GetDescriptorSet() const;
         VkDescriptorSetLayout GetSetLayout() const;
 
+        void SetDataToDescriptorSet(VkDescriptorSet descriptorSet, uint32_t binding);
+
+        bool IsValid() const { return mIsValid; }
+
       private:
+        bool mIsValid = false;
         Image mImage;
         Buffer mStagingBuffer;
 
         VkSampler mSampler;
 
-        VkDescriptorSetLayout mSetLayout;
-        VkDescriptorSet mDescriptorSet;
-
-        static VkDescriptorPool sDescriptorPool;
 };

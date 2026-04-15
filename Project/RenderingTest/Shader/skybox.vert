@@ -25,5 +25,6 @@ void main()
     uv = aUv;
     normal = aNormal;
     fragPos = (pushConstant.model * vec4(aPosition, 1.0)).xyz;
-    gl_Position = uniformData.projection * uniformData.view * pushConstant.model * vec4(aPosition, 1.0);
+    mat4 view = mat4(mat3(uniformData.view));
+    gl_Position = uniformData.projection * view  * vec4(aPosition, 1.0);
 }

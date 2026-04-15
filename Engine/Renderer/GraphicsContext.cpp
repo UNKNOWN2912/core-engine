@@ -8,14 +8,22 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 
-        uint32_t extensionCount;
-        const char** extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
+        uint32_t glfwExtensionCount;
+        const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+        std::vector<const char*> extensions;
+
+        for (uint32_t i = 0; i < glfwExtensionCount; i++)
+        {
+            extensions.push_back(glfwExtensions[i]);
+        }
+
 
         uint32_t layerCount = 1;
         const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
 
-        createInfo.enabledExtensionCount = extensionCount;
-        createInfo.ppEnabledExtensionNames = extensions;
+        createInfo.enabledExtensionCount = extensions.size();
+        createInfo.ppEnabledExtensionNames = extensions.data();
 
         createInfo.enabledLayerCount = layerCount;
         createInfo.ppEnabledLayerNames = layers;
@@ -85,10 +93,11 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
         VkDeviceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-        const char* extension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
-        createInfo.enabledExtensionCount = 1;
-        createInfo.ppEnabledExtensionNames = &extension;
+        std::vector<const char*> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+        createInfo.enabledExtensionCount = extensions.size();
+        createInfo.ppEnabledExtensionNames = extensions.data();
 
         std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
 

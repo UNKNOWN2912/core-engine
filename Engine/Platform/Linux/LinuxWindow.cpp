@@ -1,4 +1,5 @@
 #include "Input/Keyboard.hpp"
+#include "Input/Mouse.hpp"
 #define GLFW_INCLUDE_VULKAN
 #include <Core/Window.hpp>
 #include <GLFW/glfw3.h>
@@ -42,7 +43,23 @@ void mouseMoveCallback(GLFWwindow* window, double x, double y)
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
 	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	MouseButton mouseButton;
 
+	if(button == GLFW_MOUSE_BUTTON_LEFT)
+		mouseButton = MouseButton::Left;
+	else if(button == GLFW_MOUSE_BUTTON_RIGHT)
+		mouseButton = MouseButton::Right;
+	else if(button == GLFW_MOUSE_BUTTON_MIDDLE)
+		mouseButton = MouseButton::Middle;
+
+	if(action == GLFW_PRESS)
+	{
+		platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMousePress, &mouseButton);
+	}
+	else if(action == GLFW_RELEASE)
+	{
+		platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMouseRelease, &mouseButton);
+	}
 }
 
 void mouseScrollCallback(GLFWwindow* window, double x, double y)
@@ -459,9 +476,6 @@ void Window::Create(const WindowSpecification& specification)
 {
 	mData = new WindowData();
 
-#if UNIX
-	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
-#endif
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -486,6 +500,12 @@ void Window::Create(const WindowSpecification& specification)
 	glfwSetKeyCallback(mData->window, keyCallback);
 	glfwSetCharCallback(mData->window, characterCallback);
 }
+
+void Window::HideCursor()
+{
+	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
 
 void Window::Destroy()
 {
@@ -553,4 +573,31 @@ void Window::ProcessEvent()
 void* Window::GetNativeWindow() const
 {
 	return mData->window;
+}
+
+
+void Window::ShowCursor()
+{
+	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+bool Window::isCursorHidden()
+{
+	return glfwGetInputMode(mData->window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
+}
+bool Window::isFullscreen()
+{
+	return glfwGetWindowMonitor(mData->window) == glfwGetPrimaryMonitor();
+}
+
+void Window::SetFullscreen(bool fullscreen)
+{
+
+	if(fullscreen)
+	{
+		glfwSetWindowMonitor(mData->window, glfwGetPrimaryMonitor(), 0, 0, 1920, 1080, 0);
+	}
+	else 
+	{
+		glfwSetWindowMonitor(mData->window, nullptr, 0, 0, 800, 600, 0);
+	}
 }
