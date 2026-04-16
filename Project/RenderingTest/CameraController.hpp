@@ -23,6 +23,13 @@ class CameraController
         void OnScroll(const glm::vec2& scroll);
 
         bool WindowEventCallback(uint32_t code, void* data);
+
+        float GetSensitivity() const { return mSensitivity; }
+        float GetSpeed() const { return mSpeed; }
+
+        void SetSpeed(float speed) { mSpeed = speed; }
+        void SetSensitivity(float sensitivity) { mSensitivity = sensitivity; }
+
     private:
         glm::vec2 previousMousePos;
         Camera* mCamera = nullptr;
@@ -35,4 +42,8 @@ class CameraController
         bool mMoveDown = false;
 
         float mYaw = 0, mPitch = 0;
+
+        float mSpeed = 0.05f;
+        float mSensitivity = 0.4;
+
 };

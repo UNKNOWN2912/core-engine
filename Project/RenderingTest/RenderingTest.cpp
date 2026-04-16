@@ -30,6 +30,7 @@ class RenderingTest : public Application
 		GetWindowRef().SetFullscreen(true);
 
 		mCameraController.SetCamera(mCamera, GetWindowRef());
+		mCameraController.SetSensitivity(0.3);
 
 		CreateMaterials();
 		CreateMeshes();

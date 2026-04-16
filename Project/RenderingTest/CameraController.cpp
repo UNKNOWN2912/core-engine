@@ -26,7 +26,6 @@ void CameraController::Update()
     glm::vec3 cameraPosition = mCamera->GetPosition();
     glm::vec3 cameraFront = mCamera->GetFront();
 
-    float speed = 0.05f;
 
     mCamera->SetCameraType(CameraType::Perspective);
 
@@ -40,27 +39,27 @@ void CameraController::Update()
 
     if(mMoveForward)
     {
-        cameraPosition +=  forward * speed;
+        cameraPosition +=  forward * mSpeed;
     }
     if(mMoveBackward)
     {
-        cameraPosition -= forward * speed;
+        cameraPosition -= forward * mSpeed;
     }
     if(mMoveLeft)
     {
-        cameraPosition -= side * speed;
+        cameraPosition -= side * mSpeed;
     }
     if(mMoveRight)
     {
-        cameraPosition += side * speed;
+        cameraPosition += side * mSpeed;
     }
     if(mMoveUp)
     {
-        cameraPosition += mCamera->GetUp() * speed;
+        cameraPosition += mCamera->GetUp() * mSpeed;
     }
     if(mMoveDown)
     {
-        cameraPosition -= mCamera->GetUp() * speed;
+        cameraPosition -= mCamera->GetUp() * mSpeed;
     }
 
 
@@ -103,8 +102,8 @@ void CameraController::OnMouseMove(const glm::vec2& position, const glm::vec2& o
 
     if(!Application::GetInstance()->IsCursorHidden())
         return;
-    mYaw -= offset.x;
-    mPitch += offset.y;
+    mYaw -= offset.x * mSensitivity;
+    mPitch += offset.y * mSensitivity;
 
     mPitch = glm::clamp(mPitch, -89.f, 89.f);
 }
