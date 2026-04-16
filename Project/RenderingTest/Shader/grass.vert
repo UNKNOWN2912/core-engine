@@ -29,6 +29,8 @@ layout(location = 4) out vec3 cameraFront;
 
 layout(location = 5) out float time;
 
+layout(location = 6) flat out int instanceIndex;
+
 
 // Gradient function to generate random unit vectors
 vec2 grad(vec2 p) {
@@ -53,6 +55,7 @@ float perlinNoise(vec2 p) {
 
 void main()
 {
+    instanceIndex = gl_InstanceIndex;
     cameraPosition = uniformData.cameraPosition;
     cameraFront = uniformData.cameraFront;
 
@@ -69,8 +72,7 @@ void main()
 
     vec4 modelPosition = instanceModelMatrix * vec4(position, 1.0);
 
-
-    float windDir = perlinNoise(modelPosition.xz * 0.2 +  0.5 * time) * 2.5;
+    float windDir = perlinNoise(modelPosition.xz * 0.2 +  0.5 * time) * 5;
 
     modelPosition.z += windDir * pow(uv.y, 2);
 

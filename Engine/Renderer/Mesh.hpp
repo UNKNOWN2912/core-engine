@@ -17,6 +17,9 @@ struct Vertex
     glm::vec3 position;
     glm::vec2 uv;
     glm::vec3 normal;
+
+    Vertex(glm::vec3 position, glm::vec2 uv, glm::vec3 normal): position(position), uv(uv), normal(normal) {}
+    Vertex(){}
 };
 
 
@@ -25,7 +28,6 @@ class StaticMesh
     public:
         StaticMesh();
         StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
-        ~StaticMesh();
 
         void SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
         // void SetLayout(std::initializer_list<LayoutType> layout);

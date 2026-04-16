@@ -8,6 +8,8 @@ layout(location = 0) out vec2 uv;
 layout(location = 1) out vec3 normal;
 layout(location = 2) out vec3 fragPos;
 
+layout(location = 3) out float time;
+
 layout(push_constant) uniform PushConstant
 {
     mat4 model;
@@ -17,11 +19,18 @@ layout(binding = 0) uniform UniformData
 {
     mat4 projection;
     mat4 view;
+    vec3 cameraPosition;
+    float     _pad1;  
+    vec3 cameraFront;
+    float     _pad2;  
+    float time;
+    float     _pad[3];
     
 } uniformData;
 
 void main()
 {
+    time = uniformData.time;
     uv = aUv;
     normal = aNormal;
     fragPos = (pushConstant.model * vec4(aPosition, 1.0)).xyz;

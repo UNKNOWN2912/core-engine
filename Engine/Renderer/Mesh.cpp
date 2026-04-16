@@ -29,11 +29,6 @@ StaticMesh::StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, s
     SetData(vertices, vertexSize, indices, indexSize);
 }
 
-StaticMesh::~StaticMesh()
-{
-    Destroy();
-}
-
 void StaticMesh::SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
     if(vertexSize != mVertexSize)

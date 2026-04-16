@@ -27,7 +27,7 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer);
 Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty);
 
 
-VkCommandBuffer AllocateCommandBuffer();
+VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool);
 void BeginCommandBuffer(VkCommandBuffer commandBuffer, bool singleUse);
 void EndCommandBuffer(VkCommandBuffer commandBuffer);
 void ExecuteCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue);

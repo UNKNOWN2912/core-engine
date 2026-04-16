@@ -119,9 +119,9 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 				OnCharacterType(ch);
 				break;
 			}
-		}
+	}
 		
-        return false;
+	return false;
 }
 
 

@@ -68,9 +68,22 @@ void DestroyBuffer(Buffer& buffer)
     buffer = {};
 }
 
+VkCommandPool CreateCommandPool()
+{
+    VkCommandPoolCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    };
+
+    VkCommandPool commandPool;
+    vkCreateCommandPool(getDevice(), &createInfo, nullptr, &commandPool);
+    return commandPool;
+}
+
 void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer) 
 {
-    VkCommandBuffer commandBuffer = AllocateCommandBuffer();
+    VkCommandPool commandPool = CreateCommandPool(); 
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer(commandPool);
     BeginCommandBuffer(commandBuffer, true);
 
     VkBufferCopy region = 
@@ -87,12 +100,14 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer)
 
     vkQueueWaitIdle(getQueues().transfer);
 
-    vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &commandBuffer);
+    vkFreeCommandBuffers(getDevice(), commandPool, 1, &commandBuffer);
+
+    vkDestroyCommandPool(getDevice(), commandPool, nullptr);
 }
 
 void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image)
 {
-    VkCommandBuffer commandBuffer = AllocateCommandBuffer();
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
     BeginCommandBuffer(commandBuffer, true);
 
     VkImageMemoryBarrier barrier = 
@@ -121,7 +136,7 @@ void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkI
 
 void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFlags aspectMask) 
 {
-    VkCommandBuffer commandBuffer = AllocateCommandBuffer();
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
     BeginCommandBuffer(commandBuffer, true);
 
     VkBufferImageCopy region = 
@@ -151,12 +166,12 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
 }
 
 
-VkCommandBuffer AllocateCommandBuffer() 
+VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool) 
 {
         VkCommandBufferAllocateInfo allocateInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = getCommandPool(),
+        .commandPool = commandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };    

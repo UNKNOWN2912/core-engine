@@ -154,7 +154,7 @@ void Renderer::EndFrame()
             vkCmdBindDescriptorSets(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmit.material->mPipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
             vkCmdBindPipeline(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmit.material->mPipeline.GetHandle());
         }
-        if(i == 0 || drawSubmit.mesh != mDrawSubmitInfo[previousIndex].mesh)
+        if(i == 0 || drawSubmit.mesh != mDrawSubmitInfo[previousIndex].mesh || drawSubmit.instanceBuffer != mDrawSubmitInfo[previousIndex].instanceBuffer)
         {
             vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, vertexBufferCount, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);

@@ -14,7 +14,7 @@ void main()
 
     float diffuse = max(dot(lightDirection, normal), 0.0);
 
-    outputColor = vec4(vec3(0.0078, 0.1294, 0.0078) * 0.1 * diffuse, 1);
+    outputColor = vec4(vec3(0.0078, 0.1294, 0.0078) * 0.8 * diffuse, 1);
 
     float d = gl_FragCoord.z / gl_FragCoord.w;
 
