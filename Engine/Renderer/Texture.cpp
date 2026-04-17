@@ -1,4 +1,5 @@
 #include "Texture.hpp"
+#include "Core/Macro.hpp"
 #include "Renderer/GraphicsContext.hpp"
 #include <memory.h>
 
@@ -7,6 +8,7 @@
 
 void Texture::Create(void* data, VkFormat format, const glm::uvec2& size, uint32_t binding)
 {
+    CHROME_TRACE_FUNCTION();
     mImage = CreateImage(size, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     mStagingBuffer = CreateBuffer(mImage.memorySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(mStagingBuffer.map, data, mImage.memorySize);
@@ -44,6 +46,7 @@ void Texture::Create(void* data, VkFormat format, const glm::uvec2& size, uint32
 
 void Texture::Load(std::string_view filename, uint32_t binding)
 {
+    CHROME_TRACE_FUNCTION();
     int width, height;
     stbi_uc* data = stbi_load(filename.data(), &width, &height, nullptr, 4);
 
@@ -53,6 +56,7 @@ void Texture::Load(std::string_view filename, uint32_t binding)
 
 void Texture::SetDataToDescriptorSet(VkDescriptorSet descriptorSet, uint32_t binding)
 {
+    CHROME_TRACE_FUNCTION();
     VkDescriptorImageInfo imageInfo = 
     {
         .sampler = mSampler,

@@ -6,9 +6,15 @@ layout(location = 0) in vec3 fragPos;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
 
+layout(location = 3) in vec3 cameraPosition;
+layout(location = 4) in vec3 cameraFront;
+
+
 layout(location = 5) in float time;
 
 layout(location = 6) flat in int instanceIndex;
+
+
 
 // Gradient function to generate random unit vectors
 vec2 grad(vec2 p) {

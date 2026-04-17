@@ -1,6 +1,6 @@
 #include "CameraController.hpp"
 #include "Core/Macro.hpp"
-#include "GLFW/glfw3.h"
+#include "Core/Timer.hpp"
 #include "Renderer/Texture.hpp"
 #include <Engine.hpp>
 #include <Renderer/Renderer.hpp>
@@ -22,11 +22,14 @@ class RenderingTest : public Application
 	GrassChunkManager mGrassChunkManager;
 	TerrainChunkManager mTerrainChunkManager;
 
-	uint32_t mRenderDistance = 3;
+	uint32_t mRenderDistance = 2;
 
 
 	void Start() override
 	{
+		CHROME_TRACE_FUNCTION();
+
+		ToggleCursor();
 		GetWindowRef().SetFullscreen(true);
 
 		mCameraController.SetCamera(mCamera, GetWindowRef());
@@ -46,6 +49,8 @@ class RenderingTest : public Application
 
 	void Update() override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mCameraController.Update();
 
 		mRenderer.SetCamera(mCamera);
@@ -56,6 +61,8 @@ class RenderingTest : public Application
 
 	void OnRender()
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mRenderer.DrawMeshWithMaterial(mMesh, mSkyMaterial, Transform());
 		mGrassChunkManager.Draw(mGrassBlade, mGrassMaterial);
 		mTerrainChunkManager.Draw(mMaterial);
@@ -63,6 +70,8 @@ class RenderingTest : public Application
 	
 	void End() override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		vkDeviceWaitIdle(getDevice());
 		mMesh.Destroy();
 	}
@@ -70,7 +79,8 @@ class RenderingTest : public Application
 
 	void GenerateWorldAtRenderDistance(uint32_t renderDistance)
 	{
-		float t = glfwGetTime();
+		CHROME_TRACE_FUNCTION();
+		
 		glm::ivec2 topLeft 		= 	glm::ivec2(-renderDistance,-renderDistance);
 		glm::ivec2 topRight 	= 	glm::ivec2(-renderDistance, renderDistance);
 		glm::ivec2 bottomLeft 	= 	glm::ivec2( renderDistance,-renderDistance);
@@ -99,24 +109,29 @@ class RenderingTest : public Application
 			mGrassChunkManager.GenerateChunk({bottomRight.x, i});
 			mTerrainChunkManager.GenerateChunk({bottomRight.x, i});
 		}
-		LOG("Generation Time[{}]: {}", renderDistance, glfwGetTime() - t);
 	}
 
 
 	void OnWindowResize(const glm::uvec2 &size) override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mRenderer.Resize(size);
 		mCamera.SetAspectRatio(float(size.x) / float(size.y));
 	}
 
 	void ResizeView(const glm::uvec2 &size)
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mRenderer.Resize(size);
 		mCamera.SetAspectRatio(float(size.x) / float(size.y));
 	}
 	
 	void OnKeyPress(Key key) override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		if(key == Key::E)
 			ToggleCursor();
 		if(key == Key::Escape)
@@ -141,6 +156,9 @@ class RenderingTest : public Application
 
 	void CreateGrassBladeMesh(StaticMesh& mesh)
 	{
+		CHROME_TRACE_FUNCTION();
+
+
 		Vertex vertices[] = 
 		{
 			{glm::vec3( -0.000000, 2.000000, 0.000000), glm::vec2(0,1), glm::vec3(1,0,0)},
@@ -177,12 +195,14 @@ class RenderingTest : public Application
 	}
 	void CreateMeshes()
 	{
+		CHROME_TRACE_FUNCTION();
 		CreateGrassBladeMesh(mGrassBlade);
 		CreateCubeMesh(mMesh);
 	}
 
 	void CreateCubeMesh(StaticMesh& mesh)
 	{
+		CHROME_TRACE_FUNCTION();
 		Vertex vertices[] =
 		{
 			// Front face (z = +0.5)
@@ -238,6 +258,7 @@ class RenderingTest : public Application
 
 	void CreateMaterials()
 	{
+		CHROME_TRACE_FUNCTION();
 		mGrassMaterial.LoadShaders("Shader/grass.vert.spv", "Shader/grass.frag.spv");
 		mGrassMaterial.GetSettingsRef().cullMode = CullMode::None;
 		mGrassMaterial.GetSettingsRef().enableInstancing = true;

@@ -1,4 +1,5 @@
 #include "Mesh.hpp"
+#include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
 #include <memory.h>
 
@@ -20,17 +21,20 @@ VkFormat vertexLayoutFormat[] =
 
 StaticMesh::StaticMesh()
 {
+    CHROME_TRACE_FUNCTION();
     // mBindingDescription.binding = 0;
     // mBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 }
 
 StaticMesh::StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
+    CHROME_TRACE_FUNCTION();
     SetData(vertices, vertexSize, indices, indexSize);
 }
 
 void StaticMesh::SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
+    CHROME_TRACE_FUNCTION();
     if(vertexSize != mVertexSize)
     {
         DestroyBuffer(mStagingVertexBuffer);
@@ -80,6 +84,7 @@ void StaticMesh::SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices,
 // }
 void StaticMesh::Destroy() 
 {
+    CHROME_TRACE_FUNCTION();
     DestroyBuffer(mStagingVertexBuffer);
     DestroyBuffer(mVertexBuffer);
     DestroyBuffer(mStagingIndexBuffer);

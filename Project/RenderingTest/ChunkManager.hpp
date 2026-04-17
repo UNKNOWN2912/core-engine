@@ -5,8 +5,7 @@
 #include "Core/Application.hpp"
 #include <glm/glm.hpp>
 
-float perlin(glm::vec3 p);
-float sin2d(glm::vec3 st);
+// float perlin(glm::vec3 p);
 float combinedPerlin(glm::vec3 st);
 
 struct GrassChunk
@@ -23,6 +22,7 @@ struct TerrainChunk
 class GrassChunkManager
 {
 	public:
+		GrassChunkManager();
 		void GenerateChunk(const glm::ivec2& position);
 		const std::vector<GrassChunk>& GetChunks() const { return mChunks; }
 		void Draw(StaticMesh& mesh, Material& material);

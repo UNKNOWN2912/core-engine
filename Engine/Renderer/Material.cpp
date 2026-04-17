@@ -5,17 +5,20 @@
 
 void Material::LoadAlbedo(std::string_view filename)
 {
+    CHROME_TRACE_FUNCTION();
     mAlbedo.Load(filename, 0);
 }
 
 void Material::LoadShaders(std::string_view vertexShader, std::string_view fragmentShader)
 {
+    CHROME_TRACE_FUNCTION();
     mPipeline.LoadVertexShader(vertexShader);
     mPipeline.LoadFragmentShader(fragmentShader);
 }
 
 VkCullModeFlags GetCullMode(CullMode mode)
 {
+    CHROME_TRACE_FUNCTION();
     switch (mode) 
     {
         case CullMode::None:
@@ -32,6 +35,7 @@ VkCullModeFlags GetCullMode(CullMode mode)
 
 VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
 {
+    CHROME_TRACE_FUNCTION();
     switch (primitive)
     {
         case PrimitiveType::None:
@@ -51,6 +55,7 @@ VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
 
 VkFrontFace GetFrontFace(FrontFace face)
 {
+    CHROME_TRACE_FUNCTION();
     switch (face) 
     {
         case FrontFace::None:
@@ -67,6 +72,7 @@ VkFrontFace GetFrontFace(FrontFace face)
 
 void Material::Create()
 {
+    CHROME_TRACE_FUNCTION();
  
     VkDescriptorPoolSize uniformPoolSize = 
     {
@@ -153,5 +159,6 @@ void Material::Create()
 
 MaterialSettings& Material::GetSettingsRef()
 {
+    CHROME_TRACE_FUNCTION();
     return mSettings;
 }

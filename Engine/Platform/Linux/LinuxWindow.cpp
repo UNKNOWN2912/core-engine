@@ -474,6 +474,7 @@ void characterCallback(GLFWwindow* window, unsigned int codepoint)
 
 void Window::Create(const WindowSpecification& specification)
 {
+    CHROME_TRACE_FUNCTION();
 	mData = new WindowData();
 
 	glfwInit();
@@ -503,12 +504,14 @@ void Window::Create(const WindowSpecification& specification)
 
 void Window::HideCursor()
 {
+    CHROME_TRACE_FUNCTION();
 	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 
 void Window::Destroy()
 {
+    CHROME_TRACE_FUNCTION();
 	assert(mData->window != nullptr);
 	glfwDestroyWindow(mData->window);
 
@@ -517,6 +520,7 @@ void Window::Destroy()
 
 glm::uvec2 Window::GetSize() const
 {
+    CHROME_TRACE_FUNCTION();
 	int width, height;
 	glfwGetWindowSize(mData->window, &width, &height);
 
@@ -525,6 +529,7 @@ glm::uvec2 Window::GetSize() const
 
 glm::uvec2 Window::GetFrameBufferSize() const
 {
+    CHROME_TRACE_FUNCTION();
 	int width, height;
 	glfwGetFramebufferSize(mData->window, &width, &height);
 
@@ -533,6 +538,7 @@ glm::uvec2 Window::GetFrameBufferSize() const
 
 glm::uvec2 Window::GetPosition() const
 {
+    CHROME_TRACE_FUNCTION();
 	int x, y;
 	glfwGetWindowPos(mData->window, &x, &y);
 
@@ -541,56 +547,67 @@ glm::uvec2 Window::GetPosition() const
 
 std::string Window::GetTitle() const
 {
+    CHROME_TRACE_FUNCTION();
 	return glfwGetWindowTitle(mData->window);
 }
 
 
 void Window::SetSize(const glm::uvec2& size)
 {
+    CHROME_TRACE_FUNCTION();
 	glfwSetWindowSize(mData->window, size.x, size.y);
 }
 
 void Window::SetPosition(const glm::uvec2& position)
 {
+    CHROME_TRACE_FUNCTION();
 	glfwSetWindowPos(mData->window, position.x, position.y);
 }
 
 void Window::SetTitle(const std::string& title)
 {
+    CHROME_TRACE_FUNCTION();
 	glfwSetWindowTitle(mData->window, title.c_str());
 }
 
 void Window::AddListener(std::function<bool(uint32_t code, void* data)> listener)
 {
+    CHROME_TRACE_FUNCTION();
 	mData->dispatcher.AddListener(listener);
 }
 
 void Window::ProcessEvent()
 {
+    CHROME_TRACE_FUNCTION();
 	glfwPollEvents();
 }
 
 void* Window::GetNativeWindow() const
 {
+    CHROME_TRACE_FUNCTION();
 	return mData->window;
 }
 
 
 void Window::ShowCursor()
 {
+    CHROME_TRACE_FUNCTION();
 	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 bool Window::isCursorHidden()
 {
+    CHROME_TRACE_FUNCTION();
 	return glfwGetInputMode(mData->window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
 }
 bool Window::isFullscreen()
 {
+    CHROME_TRACE_FUNCTION();
 	return glfwGetWindowMonitor(mData->window) == glfwGetPrimaryMonitor();
 }
 
 void Window::SetFullscreen(bool fullscreen)
 {
+    CHROME_TRACE_FUNCTION();
 
 	if(fullscreen)
 	{

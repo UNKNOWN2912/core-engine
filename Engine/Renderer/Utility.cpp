@@ -4,6 +4,8 @@
 
 uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties)
 {
+    CHROME_TRACE_FUNCTION();
+
     VkPhysicalDeviceMemoryProperties properties;
     vkGetPhysicalDeviceMemoryProperties(getPhysicalDevice(), &properties);
 
@@ -23,6 +25,7 @@ uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProp
 
 Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryProperties) 
 {
+    CHROME_TRACE_FUNCTION();
     Buffer buffer;
 
     VkBufferCreateInfo createInfo = 
@@ -61,6 +64,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
 
 void DestroyBuffer(Buffer& buffer) 
 {
+    CHROME_TRACE_FUNCTION();
     if(buffer.handle == VK_NULL_HANDLE)
         return;
     vkDestroyBuffer(getDevice(), buffer.handle, nullptr);
@@ -70,6 +74,8 @@ void DestroyBuffer(Buffer& buffer)
 
 VkCommandPool CreateCommandPool()
 {
+    CHROME_TRACE_FUNCTION();
+
     VkCommandPoolCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -82,6 +88,7 @@ VkCommandPool CreateCommandPool()
 
 void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer) 
 {
+    CHROME_TRACE_FUNCTION();
     VkCommandPool commandPool = CreateCommandPool(); 
     VkCommandBuffer commandBuffer = AllocateCommandBuffer(commandPool);
     BeginCommandBuffer(commandBuffer, true);
@@ -107,6 +114,8 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer)
 
 void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image)
 {
+    CHROME_TRACE_FUNCTION();
+
     VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
     BeginCommandBuffer(commandBuffer, true);
 
@@ -136,6 +145,7 @@ void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkI
 
 void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFlags aspectMask) 
 {
+    CHROME_TRACE_FUNCTION();
     VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
     BeginCommandBuffer(commandBuffer, true);
 
@@ -168,6 +178,7 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool) 
 {
+    CHROME_TRACE_FUNCTION();
         VkCommandBufferAllocateInfo allocateInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -183,6 +194,7 @@ VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool)
 
 void BeginCommandBuffer(VkCommandBuffer commandBuffer, bool singleUse) 
 {
+    CHROME_TRACE_FUNCTION();
     VkCommandBufferBeginInfo beginInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -194,11 +206,14 @@ void BeginCommandBuffer(VkCommandBuffer commandBuffer, bool singleUse)
 
 void EndCommandBuffer(VkCommandBuffer commandBuffer) 
 {
+    CHROME_TRACE_FUNCTION();
     vkEndCommandBuffer(commandBuffer);    
 }
 
 void ExecuteCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue)
 {
+    CHROME_TRACE_FUNCTION();
+
     VkSubmitInfo submitInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -212,6 +227,8 @@ void ExecuteCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue)
 
 VkShaderModule CreateShaderModuleFromMemory(VkDevice device, const std::vector<char> &code)
 {
+    CHROME_TRACE_FUNCTION();
+
     VkShaderModuleCreateInfo createInfo = 
     { 
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -226,6 +243,8 @@ VkShaderModule CreateShaderModuleFromMemory(VkDevice device, const std::vector<c
 
 VkShaderModule CreateShaderFromFile(VkDevice device, const char *filename)
 {
+    CHROME_TRACE_FUNCTION();
+
     std::vector<char> code;
     FILE *fp = fopen(filename, "rb");
     if (fp == nullptr)
@@ -244,6 +263,7 @@ VkShaderModule CreateShaderFromFile(VkDevice device, const char *filename)
 }
 VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescriptorSetLayoutBinding> bindings) 
 {
+    CHROME_TRACE_FUNCTION();
     VkDescriptorSetLayoutCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -258,6 +278,7 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescript
 
 VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets) 
 {
+    CHROME_TRACE_FUNCTION();
     VkDescriptorPoolCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -273,6 +294,8 @@ VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize
 
 VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool)
 {
+    CHROME_TRACE_FUNCTION();
+
     VkDescriptorSetAllocateInfo allocateInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -288,6 +311,8 @@ VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescrip
 
 VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts, std::initializer_list<VkPushConstantRange> pushConstant)
 {
+    CHROME_TRACE_FUNCTION();
+
     VkPipelineLayoutCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -304,6 +329,8 @@ VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayou
 
 Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty)
 {
+    CHROME_TRACE_FUNCTION();
+
     Image image;
 
     VkImageCreateInfo createInfo = 

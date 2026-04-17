@@ -1,6 +1,6 @@
 ﻿find_package(Vulkan REQUIRED)
 
-file(GLOB sources "Core/*.cpp" "Maths/*.cpp" "Renderer/*.cpp" "Renderer/Vulkan/*.cpp" "Assets/*.cpp")
+file(GLOB sources "Core/*.cpp" "Maths/*.cpp" "Renderer/*.cpp" "Renderer/Vulkan/*.cpp" "Assets/*.cpp" "Profiler/*.cpp")
 
 include_directories("$ENV{VULKAN_SDK}/Include/")
 

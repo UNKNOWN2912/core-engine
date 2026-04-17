@@ -5,46 +5,55 @@
 
 void GraphicsPipeline::LoadVertexShader(std::string_view filename)
 {
+    CHROME_TRACE_FUNCTION();
     mVertexShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::LoadFragmentShader(std::string_view filename)
 {
+    CHROME_TRACE_FUNCTION();
     mFragmentShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::LoadGeometryShader(std::string_view filename)
 {
+    CHROME_TRACE_FUNCTION();
     mGeometryShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::LoadTessellationShader(std::string_view filename)
 {
+    CHROME_TRACE_FUNCTION();
     mTessellationShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::EnableDepthTesting(bool enable)
 {
+    CHROME_TRACE_FUNCTION();
     mDepthTestEnable = enable;
 }
 
 void GraphicsPipeline::EnableDepthWrite(bool enable)
 {
+    CHROME_TRACE_FUNCTION();
     mDepthWriteEnable = enable;
 }
 
 void GraphicsPipeline::EnableBlending(bool enable)
 {
+    CHROME_TRACE_FUNCTION();
     mBlendEnable = enable;
 }
 
 void GraphicsPipeline::EnableWireframe(bool enable)
 {
+    CHROME_TRACE_FUNCTION();
     mWireframeEnable = enable;
 }
 
 void GraphicsPipeline::AddBinding(uint32_t binding, size_t stride, VkVertexInputRate inputRate)
 {
+    CHROME_TRACE_FUNCTION();
     VkVertexInputBindingDescription description = 
     {
         .binding = binding,
@@ -58,6 +67,7 @@ void GraphicsPipeline::AddBinding(uint32_t binding, size_t stride, VkVertexInput
 
 void GraphicsPipeline::AddAttribute(uint32_t binding, uint32_t location, VkFormat format, size_t offset)
 {
+    CHROME_TRACE_FUNCTION();
     VkVertexInputAttributeDescription description = 
     {
         .location = location,
@@ -71,15 +81,18 @@ void GraphicsPipeline::AddAttribute(uint32_t binding, uint32_t location, VkForma
 
 void GraphicsPipeline::SetCullMode(VkCullModeFlags cullMode)
 {
+    CHROME_TRACE_FUNCTION();
     mCullMode = cullMode;
 }
 void GraphicsPipeline::SetPrimitive(VkPrimitiveTopology primitive)
 {
+    CHROME_TRACE_FUNCTION();
     mPrimitive = primitive;
 }
 
 void GraphicsPipeline::SetMultisampleCount(uint32_t count)
 {
+    CHROME_TRACE_FUNCTION();
     switch (count) 
     {
         case 1:
@@ -102,16 +115,19 @@ void GraphicsPipeline::SetMultisampleCount(uint32_t count)
 
 void GraphicsPipeline::SetViewport(const VkViewport& viewport)
 {
+    CHROME_TRACE_FUNCTION();
     mViewport = viewport;
 }
 
 void GraphicsPipeline::SetPipelineLayout(VkPipelineLayout layout) 
 { 
+    CHROME_TRACE_FUNCTION();
     mPipelineLayout = layout; 
 }
 
 void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
 {
+    CHROME_TRACE_FUNCTION();
     VkPipelineColorBlendAttachmentState state = 
     {
         .blendEnable = enableBlending,
@@ -129,6 +145,7 @@ void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
 
 void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
 {
+    CHROME_TRACE_FUNCTION();
     if (mVertexShader == VK_NULL_HANDLE || mFragmentShader == VK_NULL_HANDLE)
     {
         ERROR("Graphic pipeline: vertex and fragment shader must be provided");
@@ -219,5 +236,6 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
 
 VkPipelineLayout GraphicsPipeline::GetPipelineLayout() const 
 {
+    CHROME_TRACE_FUNCTION();
     return mPipelineLayout;
 }

@@ -3,6 +3,8 @@
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Core/Macro.hpp"
+
 
 class Application
 {
@@ -42,7 +44,6 @@ public:
 	bool WindowEventCallback(uint32_t code, void* data);
 
 	Window& GetWindowRef() { return mWindow; }
-
 	Renderer& GetRendererRef() { return mRenderer; }
 
 	static Application* Create();
@@ -59,6 +60,5 @@ private:
 	void MainLoop();
 
 	glm::vec2 previousMousePos = glm::vec2(0);
-
 	Window mWindow;
 };
