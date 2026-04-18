@@ -38,11 +38,30 @@ struct MaterialSettings
     int sampleCount = 1; 
 };
 
+enum class AttributeType
+{
+    Int, UInt, Float,
+    IVec2, UVec2, Vec2,
+    IVec3, UVec3, Vec3,
+    IVec4, UVec4, Vec4,
+};
+
+enum class InputRate
+{
+    None = 0,
+    Vertex,
+    Instance
+};
+
 class Material
 {
     public:
+        Material();
         void LoadAlbedo(std::string_view filename);
         void LoadShaders(std::string_view vertexShader, std::string_view fragmentShader);
+
+        void ClearBindingAttribute();
+        void SetBindingAttribute(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> layout);
 
         void Create();
 
@@ -60,4 +79,6 @@ class Material
         VkPipelineLayout mPipelineLayout;
 
         VkDescriptorPool mDescriptorPool;
+
+        uint32_t mFinalLocation = 0;
 };

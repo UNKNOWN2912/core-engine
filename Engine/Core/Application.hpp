@@ -10,9 +10,9 @@ class Application
 {
 public:
 	virtual void Initialize() {}
-	virtual void Start() {}
-	virtual void Update() {}
-	virtual void End() {}
+	virtual void OnStart() {}
+	virtual void OnUpdate() {}
+	virtual void OnEnd() {}
 
 	virtual void OnWindowClose() { Close(); }
 	virtual void OnWindowMove(const glm::uvec2& position) {}
@@ -54,6 +54,8 @@ public:
 
 	Renderer mRenderer;
 
+	float GetDeltaTime();
+
 private:
 	bool mRunning = true;
 	static Application* instance;
@@ -61,4 +63,8 @@ private:
 
 	glm::vec2 previousMousePos = glm::vec2(0);
 	Window mWindow;
+
+	Timer mDeltaTimer;
+
+	float mDeltaTime = 0;
 };

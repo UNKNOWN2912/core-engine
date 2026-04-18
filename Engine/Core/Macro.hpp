@@ -59,5 +59,7 @@
 inline ChromeTraceProfiler __global_profiler__("profile.json");
 
 #define CHROME_TRACE_FUNCTION() ChromeFunctionTrace __function_trace__ = __global_profiler__.ProfileFunction(__FNNAME__, 0, 0)
+#define CHROME_ENABLE_TRACING() __global_profiler__.EnableTracing(true)
+#define CHROME_DISABLE_TRACING() __global_profiler__.EnableTracing(false)
 
 #endif

@@ -29,9 +29,9 @@ void Application::RunApplication()
 {
 	CHROME_TRACE_FUNCTION();
 	InitializeApplication();
-	Start();
+	OnStart();
 	MainLoop();
-	End();
+	OnEnd();
 	TerminateApplication();
 }
 
@@ -147,14 +147,25 @@ Application::~Application()
 	CHROME_TRACE_FUNCTION();
 }
 
+float Application::GetDeltaTime() 
+{
+	return mDeltaTime;
+}
+
 void Application::MainLoop()
 {
 	CHROME_TRACE_FUNCTION();
+
+	
 	while (mRunning)
 	{
+		mDeltaTimer.Start();
 		mWindow.ProcessEvent();
-		Update();
+		OnUpdate();
+		mDeltaTimer.Stop();
+		mDeltaTime = mDeltaTimer.GetDuration();
 	}
+
 }
 
 void Application::HideCursor()

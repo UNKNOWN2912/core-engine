@@ -185,49 +185,40 @@ void GraphicsContext::Destroy()
 
 void GraphicsContext::SetAsCurrentContext() 
 {
-    CHROME_TRACE_FUNCTION();
     sCurrentContext = this;
 }
 
 GraphicsContext& GraphicsContext::GetCurrentContext() 
 {
-    CHROME_TRACE_FUNCTION();
     return *sCurrentContext;
 }
 
 VkInstance GraphicsContext::GetInstance()
 {
-    CHROME_TRACE_FUNCTION();
     return mInstance;
 }
 VkPhysicalDevice GraphicsContext::GetPhysicalDevice()
 {
-    CHROME_TRACE_FUNCTION();
     return mPhysicalDevice;
 }
 VkDevice GraphicsContext::GetDevice()
 {
-    CHROME_TRACE_FUNCTION();
     return mDevice;
 }
 VkSurfaceKHR GraphicsContext::GetSurface()
 {
-    CHROME_TRACE_FUNCTION();
     return mSurface;
 }
 QueueIndices GraphicsContext::GetQueueIndices()
 {
-    CHROME_TRACE_FUNCTION();
     return mQueueIndices;
 }
 Queues GraphicsContext::GetQueues()
 {
-    CHROME_TRACE_FUNCTION();
     return mQueues;
 }
 VkCommandPool GraphicsContext::GetCommandPool()
 {
-    CHROME_TRACE_FUNCTION();
     return mCommandPool;
 }
 
@@ -236,36 +227,29 @@ GraphicsContext* GraphicsContext::sCurrentContext = nullptr;
 
 VkInstance getInstance()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetInstance();
 }
 VkPhysicalDevice getPhysicalDevice()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetPhysicalDevice();
 }
 VkDevice getDevice()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetDevice();
 }
 VkSurfaceKHR getSurface()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetSurface();
 }
 QueueIndices getQueueIndices()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetQueueIndices();
 }
 Queues getQueues()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetQueues();
 }
 VkCommandPool getCommandPool()
 {
-    CHROME_TRACE_FUNCTION();
     return GraphicsContext::GetCurrentContext().GetCommandPool();
 }

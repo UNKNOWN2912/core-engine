@@ -33,6 +33,8 @@ class GraphicsPipeline
         VkPipelineLayout GetPipelineLayout() const;
 
         VkPipeline GetHandle() const { return mHandle; }
+
+        void ClearAttributesAndBinding();
     private:
         VkShaderModule mVertexShader = VK_NULL_HANDLE;
         VkShaderModule mFragmentShader = VK_NULL_HANDLE;

@@ -5,8 +5,6 @@
 
 float PerlinNoise(const glm::vec3& p) 
 {
-    // CHROME_TRACE_FUNCTION();
-
     auto fade = [](float t) 
     {
         return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);

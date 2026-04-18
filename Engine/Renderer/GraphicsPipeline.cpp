@@ -239,3 +239,9 @@ VkPipelineLayout GraphicsPipeline::GetPipelineLayout() const
     CHROME_TRACE_FUNCTION();
     return mPipelineLayout;
 }
+
+void GraphicsPipeline::ClearAttributesAndBinding() 
+{
+    mAttributeDescription.clear();
+    mBindingDescription.clear();
+}
