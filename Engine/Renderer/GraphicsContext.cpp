@@ -4,6 +4,7 @@
 
 void GraphicsContext::Create(const Window& window, bool setAsCurrentContext) 
 {
+    CHROME_TRACE_FUNCTION();
     {
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -170,6 +171,7 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
 
 void GraphicsContext::Destroy() 
 {
+    CHROME_TRACE_FUNCTION();
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroyDevice(mDevice, nullptr);
 	vkDestroySurfaceKHR(mInstance, mSurface, nullptr);

@@ -52,7 +52,6 @@ float perlinNoise(vec2 p) {
                    dot(grad(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x), u.y);
 }
 
-
 void main()
 {
     instanceIndex = gl_InstanceIndex;
@@ -66,16 +65,18 @@ void main()
     fragPos = (instanceModelMatrix * vec4(aPosition, 1.0)).xyz;
 
     vec3 position = aPosition;
+    float cameraDistance = distance(uniformData.cameraPosition, position);
 
     position.z += sqrt((1-uv.y) * 0.2);
 
-
     vec4 modelPosition = instanceModelMatrix * vec4(position, 1.0);
+    float windDir = perlinNoise(modelPosition.xz * 0.09 +  0.5 * time) * 5;
 
-    float windDir = perlinNoise(modelPosition.xz * 0.2 +  0.5 * time) * 5;
-
-    modelPosition.z += windDir * pow(uv.y, 2);
+    modelPosition.z += (windDir + clamp(1 - cameraDistance, 0, 1)) * pow(uv.y, 2);
 
     gl_Position = uniformData.projection * uniformData.view * modelPosition;
 
+    
+
+    // gl_Position = uniformData.projection * uniformData.view * instanceModelMatrix * vec4(aPosition, 1.0);
 }

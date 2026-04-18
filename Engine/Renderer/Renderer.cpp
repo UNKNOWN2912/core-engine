@@ -9,6 +9,7 @@
 
 void Renderer::Initialize(const Window& window) 
 {
+    CHROME_TRACE_FUNCTION();
     mContext.Create(window, true);
     CreateSwapchain(window.GetSize());
     CreateRenderPass();
@@ -21,6 +22,7 @@ void Renderer::Initialize(const Window& window)
 
 void Renderer::Terminate() 
 {
+    CHROME_TRACE_FUNCTION();
     // DestroyCommandBuffers();
     // DestroySemaphores();
     // DestroySwapchainFramebuffers();
@@ -32,6 +34,7 @@ void Renderer::Terminate()
 
 void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform)
 {
+    CHROME_TRACE_FUNCTION();
     DrawSubmitInfo submitInfo = 
     {
         .mesh = &mesh,
@@ -44,6 +47,7 @@ void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transf
 
 void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount)
 {
+    CHROME_TRACE_FUNCTION();
     DrawSubmitInfo submitInfo = 
     {
         .mesh = &mesh,
@@ -58,6 +62,7 @@ void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& materia
 
 void Renderer::BeginFrame() 
 {
+    CHROME_TRACE_FUNCTION();
     mDrawSubmitInfo.clear();
 
     mFrameRunning = true;
@@ -65,6 +70,7 @@ void Renderer::BeginFrame()
 
 void Renderer::EndFrame() 
 {
+    CHROME_TRACE_FUNCTION();
 
     mCamera.Calculate();
 
@@ -205,6 +211,7 @@ void Renderer::EndFrame()
 
 void Renderer::Resize(const glm::uvec2& size)
 {
+    CHROME_TRACE_FUNCTION();
     vkDeviceWaitIdle(getDevice());
 
     DestroySwapchain();
@@ -219,6 +226,7 @@ void Renderer::Resize(const glm::uvec2& size)
 
 void Renderer::CreateSwapchain(const glm::uvec2& size) 
 {
+    CHROME_TRACE_FUNCTION();
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(getPhysicalDevice(), getSurface(), &capabilities);
     mSwapchain.extent = {size.x, size.y};
@@ -290,6 +298,7 @@ void Renderer::CreateSwapchain(const glm::uvec2& size)
 
 void Renderer::CreateRenderPass()
 {
+    CHROME_TRACE_FUNCTION();
     VkAttachmentDescription swapchainAttachmentDescription = 
     {
         .flags = 0,
@@ -364,6 +373,7 @@ void Renderer::CreateRenderPass()
 
 void Renderer::CreateSwapchainFramebuffers() 
 {
+    CHROME_TRACE_FUNCTION();
     VkFramebufferCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -394,6 +404,7 @@ void Renderer::CreateSwapchainFramebuffers()
 
 void Renderer::CreateSemaphores() 
 {
+    CHROME_TRACE_FUNCTION();
     VkSemaphoreCreateInfo createInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -405,6 +416,7 @@ void Renderer::CreateSemaphores()
 
 void Renderer::CreateCommandBuffers() 
 {
+    CHROME_TRACE_FUNCTION();
     VkCommandBufferAllocateInfo allocateInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -418,6 +430,7 @@ void Renderer::CreateCommandBuffers()
 
 void Renderer::CreatePipelines() 
 {
+    CHROME_TRACE_FUNCTION();
     // mDefaultPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
     // mDefaultPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
     // mDefaultPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
@@ -441,6 +454,7 @@ void Renderer::CreatePipelines()
 
 void Renderer::DestroySwapchain() 
 {
+    CHROME_TRACE_FUNCTION();
     for (VkImageView view : mSwapchain.views) 
     {
         vkDestroyImageView(getDevice(), view, nullptr);
@@ -453,11 +467,13 @@ void Renderer::DestroySwapchain()
 
 void Renderer::DestroyRenderPass() 
 {
+    CHROME_TRACE_FUNCTION();
     vkDestroyRenderPass(getDevice(), mRenderPass, nullptr);    
 }
 
 void Renderer::DestroySwapchainFramebuffers() 
 {
+    CHROME_TRACE_FUNCTION();
     for (VkFramebuffer framebuffer : mSwapchainFramebuffer) 
     {
         vkDestroyFramebuffer(getDevice(), framebuffer, nullptr);
@@ -468,11 +484,13 @@ void Renderer::DestroySwapchainFramebuffers()
 
 void Renderer::DestroySemaphores() 
 {
+    CHROME_TRACE_FUNCTION();
     vkDestroySemaphore(getDevice(), mSemaphores.imageAcquired, nullptr);    
     vkDestroySemaphore(getDevice(), mSemaphores.renderingFinish, nullptr);    
 }
 
 void Renderer::DestroyCommandBuffers() 
 {
+    CHROME_TRACE_FUNCTION();
     vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &mCommandBuffers.renderingCommandBuffer);    
 }

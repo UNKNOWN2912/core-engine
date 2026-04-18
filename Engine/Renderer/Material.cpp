@@ -3,19 +3,33 @@
 #include "Core/Application.hpp"
 
 
-void Material::LoadAlbedo(std::string_view filename)
+size_t attributeTypeSize[] = 
 {
-    mAlbedo.Load(filename, 0);
-}
+    4 * 1, 4 * 1, 4 * 1,
+    4 * 2, 4 * 2, 4 * 2,
+    4 * 3, 4 * 3, 4 * 3,
+    4 * 4, 4 * 4, 4 * 4,
+};
 
-void Material::LoadShaders(std::string_view vertexShader, std::string_view fragmentShader)
+VkVertexInputRate vulkanVertexInputRate[]  = 
 {
-    mPipeline.LoadVertexShader(vertexShader);
-    mPipeline.LoadFragmentShader(fragmentShader);
-}
+    VK_VERTEX_INPUT_RATE_MAX_ENUM,
+    VK_VERTEX_INPUT_RATE_VERTEX,
+    VK_VERTEX_INPUT_RATE_INSTANCE
+};
+
+VkFormat vulkanAttributeFormat[] = 
+{
+    VK_FORMAT_R32_SINT,             VK_FORMAT_R32_UINT,             VK_FORMAT_R32_SFLOAT,
+    VK_FORMAT_R32G32_SINT,          VK_FORMAT_R32G32_UINT,          VK_FORMAT_R32G32_SFLOAT,
+    VK_FORMAT_R32G32B32_SINT,       VK_FORMAT_R32G32B32_UINT,       VK_FORMAT_R32G32B32_SFLOAT,
+    VK_FORMAT_R32G32B32A32_SINT,    VK_FORMAT_R32G32B32A32_UINT,    VK_FORMAT_R32G32B32A32_SFLOAT,
+};
+
 
 VkCullModeFlags GetCullMode(CullMode mode)
 {
+    CHROME_TRACE_FUNCTION();
     switch (mode) 
     {
         case CullMode::None:
@@ -32,6 +46,7 @@ VkCullModeFlags GetCullMode(CullMode mode)
 
 VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
 {
+    CHROME_TRACE_FUNCTION();
     switch (primitive)
     {
         case PrimitiveType::None:
@@ -51,6 +66,7 @@ VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
 
 VkFrontFace GetFrontFace(FrontFace face)
 {
+    CHROME_TRACE_FUNCTION();
     switch (face) 
     {
         case FrontFace::None:
@@ -65,8 +81,67 @@ VkFrontFace GetFrontFace(FrontFace face)
     }
 }
 
+Material::Material()
+{
+    mPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
+    mPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
+    mPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
+    mPipeline.AddAttribute(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal));
+
+    if(mSettings.enableInstancing)
+    {
+        mPipeline.AddBinding(1, sizeof(glm::mat4), VK_VERTEX_INPUT_RATE_INSTANCE);
+        mPipeline.AddAttribute(1, 3, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 0);
+        mPipeline.AddAttribute(1, 4, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 1);
+        mPipeline.AddAttribute(1, 5, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 2);
+        mPipeline.AddAttribute(1, 6, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 3);
+    }
+}
+
+void Material::LoadAlbedo(std::string_view filename)
+{
+    CHROME_TRACE_FUNCTION();
+    mAlbedo.Load(filename, 0);
+}
+
+void Material::LoadShaders(std::string_view vertexShader, std::string_view fragmentShader)
+{
+    CHROME_TRACE_FUNCTION();
+    mPipeline.LoadVertexShader(vertexShader);
+    mPipeline.LoadFragmentShader(fragmentShader);
+}
+
+void Material::ClearBindingAttribute() 
+{
+    mPipeline.ClearAttributesAndBinding();
+}
+
+void Material::SetBindingAttribute(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> layout) 
+{
+    size_t stride = 0;
+
+    for(AttributeType type : layout)
+    {
+        stride += attributeTypeSize[(uint32_t)type];
+    }
+
+    mPipeline.AddBinding(binding, stride, vulkanVertexInputRate[(uint32_t)inputRate]);
+
+    int i = mFinalLocation;
+    size_t offset = 0;
+    for(AttributeType type : layout)
+    {
+        mPipeline.AddAttribute(binding, i, vulkanAttributeFormat[(uint32_t)type], offset);
+        offset += attributeTypeSize[(uint32_t)type];
+        i++;
+    }
+    mFinalLocation = i;
+}
+
+
 void Material::Create()
 {
+    CHROME_TRACE_FUNCTION();
  
     VkDescriptorPoolSize uniformPoolSize = 
     {
@@ -117,20 +192,6 @@ void Material::Create()
     mPipeline.EnableBlending(mSettings.blendEnable);
     mPipeline.EnableWireframe(mSettings.wireframe);
 
-    mPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
-    mPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
-    mPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
-    mPipeline.AddAttribute(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal));
-
-    if(mSettings.enableInstancing)
-    {
-        mPipeline.AddBinding(1, sizeof(glm::mat4), VK_VERTEX_INPUT_RATE_INSTANCE);
-        mPipeline.AddAttribute(1, 3, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 0);
-        mPipeline.AddAttribute(1, 4, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 1);
-        mPipeline.AddAttribute(1, 5, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 2);
-        mPipeline.AddAttribute(1, 6, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 3);
-    }
-
     mPipeline.AddColorBlendAttachment(mSettings.blendEnable);
 
     mPipeline.SetCullMode(GetCullMode(mSettings.cullMode));
@@ -153,5 +214,6 @@ void Material::Create()
 
 MaterialSettings& Material::GetSettingsRef()
 {
+    CHROME_TRACE_FUNCTION();
     return mSettings;
 }

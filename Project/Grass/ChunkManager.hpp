@@ -5,12 +5,12 @@
 #include "Core/Application.hpp"
 #include <glm/glm.hpp>
 
-float perlin(glm::vec3 p);
-float sin2d(glm::vec3 st);
+// float perlin(glm::vec3 p);
 float combinedPerlin(glm::vec3 st);
 
 struct GrassChunk
 {
+	glm::ivec2 position;
 	InstanceBuffer instanceBuffer;
 	int instanceCount = 0;
 };
@@ -19,6 +19,9 @@ struct TerrainChunk
 {
 	StaticMesh mesh;
 };
+
+inline std::mutex bufferWriteMutex;
+
 
 class GrassChunkManager
 {
@@ -30,7 +33,10 @@ class GrassChunkManager
 
 		void Clear();
 
+		std::mutex& GetDrawingMutex() { return mDrawingMutex; }
+
 	private:
+		std::mutex mDrawingMutex;
 		std::vector<GrassChunk> mChunks;
 		glm::uvec2 mCellCount = {100, 100};
 		glm::vec2 mCellSize = {0.2f, 0.2f};
@@ -45,7 +51,11 @@ class TerrainChunkManager
 		void Draw(Material& material);
 		glm::vec2 GetChunkSize() const;
 
+		std::mutex& GetDrawingMutex() { return mDrawingMutex; }
+
 	private:
+		std::mutex mDrawingMutex;
+
 		std::vector<TerrainChunk> mChunks; 
 		glm::uvec2 mCellCount = {100, 100};
 		glm::vec2 mCellSize = {0.2f, 0.2f};

@@ -1,9 +1,11 @@
 #include "CameraController.hpp"
 #include "Input/Mouse.hpp"
 #include "Core/Application.hpp"
+#include "Maths/Noise.hpp"
 
 void CameraController::SetCamera(Camera& camera, Window& window)
 {
+    CHROME_TRACE_FUNCTION();
     mCamera = &camera;
 
     mCamera->SetCameraType(CameraType::Orbital)
@@ -17,12 +19,36 @@ void CameraController::SetCamera(Camera& camera, Window& window)
 }
 const Camera& CameraController::GetCamera() const 
 {
+    CHROME_TRACE_FUNCTION();
     return *mCamera;    
+}
+
+
+static float combinedPerlin(glm::vec3 st)
+{
+    CHROME_TRACE_FUNCTION();
+
+	float l = 2.9;
+	float p = 6.3;	
+	float result = 0;
+	float k = 0.01;
+
+	float a = 10;
+	
+	for (int i = 0; i < 10; i++)
+	{
+		float fi = i;
+		result += (PerlinNoise(st * glm::pow(l,fi) * k) * a) / pow(p,fi);
+	}
+
+	return result;
 }
 
 
 void CameraController::Update()
 {
+    CHROME_TRACE_FUNCTION();
+
     glm::vec3 cameraPosition = mCamera->GetPosition();
     glm::vec3 cameraFront = mCamera->GetFront();
 
@@ -39,28 +65,31 @@ void CameraController::Update()
 
     if(mMoveForward)
     {
-        cameraPosition +=  forward * mSpeed;
+        cameraPosition +=  forward * mSpeed * Application::GetInstance()->GetDeltaTime();
     }
     if(mMoveBackward)
     {
-        cameraPosition -= forward * mSpeed;
+        cameraPosition -= forward * mSpeed * Application::GetInstance()->GetDeltaTime();
     }
     if(mMoveLeft)
     {
-        cameraPosition -= side * mSpeed;
+        cameraPosition -= side * mSpeed * Application::GetInstance()->GetDeltaTime();
     }
     if(mMoveRight)
     {
-        cameraPosition += side * mSpeed;
+        cameraPosition += side * mSpeed * Application::GetInstance()->GetDeltaTime();
     }
     if(mMoveUp)
     {
-        cameraPosition += mCamera->GetUp() * mSpeed;
+        cameraPosition += mCamera->GetUp() * mSpeed * Application::GetInstance()->GetDeltaTime();
     }
     if(mMoveDown)
     {
-        cameraPosition -= mCamera->GetUp() * mSpeed;
+        cameraPosition -= mCamera->GetUp() * mSpeed * Application::GetInstance()->GetDeltaTime();
     }
+
+    // cameraPosition.y = 0;
+    // cameraPosition.y = combinedPerlin(cameraPosition) + 2.5;
 
 
     mCamera->SetFront(cameraFront);
@@ -69,6 +98,7 @@ void CameraController::Update()
 
 void CameraController::OnKeyPress(Key key)
 {
+    CHROME_TRACE_FUNCTION();
     if(key == Key::W)
         mMoveForward = true;
     if(key == Key::S)
@@ -81,9 +111,12 @@ void CameraController::OnKeyPress(Key key)
         mMoveUp = true;
     if(key == Key::LeftShift)
         mMoveDown = true;
+    if(key == Key::LeftControl)
+        mSpeed *= 5;
 }
 void CameraController::OnKeyRelease(Key key)
 {
+    CHROME_TRACE_FUNCTION();
     if(key == Key::W)
         mMoveForward = false;
     if(key == Key::S)
@@ -96,9 +129,13 @@ void CameraController::OnKeyRelease(Key key)
         mMoveUp = false;
     if(key == Key::LeftShift)
         mMoveDown = false;
+    if(key == Key::LeftControl)
+        mSpeed /= 5;
 }
 void CameraController::OnMouseMove(const glm::vec2& position, const glm::vec2& offset)
 {
+    CHROME_TRACE_FUNCTION();
+
 
     if(!Application::GetInstance()->IsCursorHidden())
         return;
@@ -109,31 +146,43 @@ void CameraController::OnMouseMove(const glm::vec2& position, const glm::vec2& o
 }
 void CameraController::OnWindowResize(const glm::vec2& size)
 {
+    CHROME_TRACE_FUNCTION();
+
     mCamera->SetAspectRatio(float(size.x) / float(size.y));
 }
 
-void CameraController::OnMouseButtonPress(MouseButton button) 
+void CameraController::OnMouseButtonPress(MouseButton button)
 {
+    CHROME_TRACE_FUNCTION();
+
     
 }
 
-void CameraController::OnMouseButtonRelease(MouseButton button) 
+void CameraController::OnMouseButtonRelease(MouseButton button)
 {
+    CHROME_TRACE_FUNCTION();
+
     
 }
 
-void CameraController::OnScroll(const glm::vec2& scroll) 
+void CameraController::OnScroll(const glm::vec2& scroll)
 {
+    CHROME_TRACE_FUNCTION();
+
     
 }
 
-void CameraController::ConnectWindow(Window& window) 
+void CameraController::ConnectWindow(Window& window)
 {
+    CHROME_TRACE_FUNCTION();
+
     window.AddListener(BindMember(CameraController::WindowEventCallback));
 }
 
-bool CameraController::WindowEventCallback(uint32_t code, void* data) 
+bool CameraController::WindowEventCallback(uint32_t code, void* data)
 {
+    CHROME_TRACE_FUNCTION();
+
     WindowEvent event = (WindowEvent)code;
 
     switch (event)

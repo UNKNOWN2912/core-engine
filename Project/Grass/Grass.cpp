@@ -1,12 +1,12 @@
 #include "CameraController.hpp"
 #include "Core/Macro.hpp"
-#include "GLFW/glfw3.h"
+#include "Core/Timer.hpp"
 #include "Renderer/Texture.hpp"
 #include <Engine.hpp>
 #include <Renderer/Renderer.hpp>
 #include "ChunkManager.hpp"
 
-class RenderingTest : public Application
+class GrassRender : public Application
 {
 	StaticMesh mMesh;
 	StaticMesh mGrassBlade;
@@ -22,55 +22,103 @@ class RenderingTest : public Application
 	GrassChunkManager mGrassChunkManager;
 	TerrainChunkManager mTerrainChunkManager;
 
-	uint32_t mRenderDistance = 3;
+	uint32_t mRenderDistance = 4;
 
-
-	void Start() override
+	void OnStart() override
 	{
+		CHROME_TRACE_FUNCTION();
+		CHROME_ENABLE_TRACING();
+
+		ToggleCursor();
 		GetWindowRef().SetFullscreen(true);
 
 		mCameraController.SetCamera(mCamera, GetWindowRef());
+		mCameraController.SetSpeed(2);
 		mCameraController.SetSensitivity(0.3);
 
 		CreateMaterials();
 		CreateMeshes();
 
-		for(int i = 0; i <= mRenderDistance; i++)
-		{
-			GenerateWorldAtRenderDistance(i);
-		}
+		uint32_t rd = mRenderDistance;
+
+		std::thread threads([this, rd]{
+			GenerateWorldAsync(mRenderDistance);
+		});	
+
+
+		threads.detach();
 
 		mTransform.position = glm::vec3(0,0,0);
 		mTransform.scale = glm::vec3(1);
+		CHROME_DISABLE_TRACING();
+
 	}
 
-	void Update() override
+	void OnUpdate() override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mCameraController.Update();
 
 		mRenderer.SetCamera(mCamera);
 		mRenderer.BeginFrame();
 		OnRender();
+
+		std::lock_guard<std::mutex> lock4(mTerrainChunkManager.GetDrawingMutex());
+		std::lock_guard<std::mutex> lock2(mGrassChunkManager.GetDrawingMutex());
+		std::lock_guard<std::mutex>	lock1(bufferWriteMutex);
 		mRenderer.EndFrame();
 	}
 
 	void OnRender()
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mRenderer.DrawMeshWithMaterial(mMesh, mSkyMaterial, Transform());
 		mGrassChunkManager.Draw(mGrassBlade, mGrassMaterial);
 		mTerrainChunkManager.Draw(mMaterial);
 	}
 	
-	void End() override
+	void OnEnd() override
 	{
+		CHROME_TRACE_FUNCTION();
+
+		
 		vkDeviceWaitIdle(getDevice());
 		mMesh.Destroy();
 	}
 
+	void GenerateWorldAsync(uint32_t renderDistance)
+	{
+		int threadCount = 0;
+		const int asyncLimit = 12;
+
+		std::thread threads[asyncLimit];
+
+		for (int i = 0; i <= renderDistance; i++)
+		{
+			int threadIndex = i % asyncLimit;
+			if(threads[threadIndex].joinable())
+				threads[threadIndex].join();
+
+			threads[threadIndex] = std::thread([i, this](){
+				GenerateWorldAtRenderDistance(i);
+			});
+
+		}
+
+		for (int i = 0; i < asyncLimit; i++)
+		{
+			if(threads[i].joinable())
+				threads[i].join();
+		}
+
+	}
 
 	void GenerateWorldAtRenderDistance(uint32_t renderDistance)
 	{
-		float t = glfwGetTime();
+		CHROME_TRACE_FUNCTION();
+		
 		glm::ivec2 topLeft 		= 	glm::ivec2(-renderDistance,-renderDistance);
 		glm::ivec2 topRight 	= 	glm::ivec2(-renderDistance, renderDistance);
 		glm::ivec2 bottomLeft 	= 	glm::ivec2( renderDistance,-renderDistance);
@@ -81,42 +129,44 @@ class RenderingTest : public Application
 			mGrassChunkManager.GenerateChunk({topLeft.x, i});
 			mTerrainChunkManager.GenerateChunk({topLeft.x, i});
 		}
-
-		for (int i = topLeft.x + 1; i <= bottomLeft.x; i++)
-		{
-			mGrassChunkManager.GenerateChunk({i, topLeft.y});
-			mTerrainChunkManager.GenerateChunk({i, topLeft.y});
-		}
-
 		for (int i = topRight.x + 1; i <= bottomRight.x; i++)
 		{
 			mGrassChunkManager.GenerateChunk({i, topRight.y});
 			mTerrainChunkManager.GenerateChunk({i, topRight.y});
 		}
-
+		for (int i = topLeft.x + 1; i <= bottomLeft.x; i++)
+		{
+			mGrassChunkManager.GenerateChunk({i, topLeft.y});
+			mTerrainChunkManager.GenerateChunk({i, topLeft.y});
+		}
 		for (int i = bottomLeft.y + 1; i < bottomRight.y; i++)
 		{
 			mGrassChunkManager.GenerateChunk({bottomRight.x, i});
 			mTerrainChunkManager.GenerateChunk({bottomRight.x, i});
 		}
-		LOG("Generation Time[{}]: {}", renderDistance, glfwGetTime() - t);
 	}
 
 
 	void OnWindowResize(const glm::uvec2 &size) override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mRenderer.Resize(size);
 		mCamera.SetAspectRatio(float(size.x) / float(size.y));
 	}
 
 	void ResizeView(const glm::uvec2 &size)
 	{
+		CHROME_TRACE_FUNCTION();
+
 		mRenderer.Resize(size);
 		mCamera.SetAspectRatio(float(size.x) / float(size.y));
 	}
 	
 	void OnKeyPress(Key key) override
 	{
+		CHROME_TRACE_FUNCTION();
+
 		if(key == Key::E)
 			ToggleCursor();
 		if(key == Key::Escape)
@@ -129,7 +179,11 @@ class RenderingTest : public Application
 		if(key == Key::Equal)
 		{
 			mRenderDistance++;
-			GenerateWorldAtRenderDistance(mRenderDistance);
+			std::thread t([&](){
+				GenerateWorldAtRenderDistance(mRenderDistance);
+			});
+
+			t.detach();
 		}
 		if(key == Key::Minus)
 		{
@@ -141,6 +195,9 @@ class RenderingTest : public Application
 
 	void CreateGrassBladeMesh(StaticMesh& mesh)
 	{
+		CHROME_TRACE_FUNCTION();
+
+
 		Vertex vertices[] = 
 		{
 			{glm::vec3( -0.000000, 2.000000, 0.000000), glm::vec2(0,1), glm::vec3(1,0,0)},
@@ -177,12 +234,14 @@ class RenderingTest : public Application
 	}
 	void CreateMeshes()
 	{
+		CHROME_TRACE_FUNCTION();
 		CreateGrassBladeMesh(mGrassBlade);
 		CreateCubeMesh(mMesh);
 	}
 
 	void CreateCubeMesh(StaticMesh& mesh)
 	{
+		CHROME_TRACE_FUNCTION();
 		Vertex vertices[] =
 		{
 			// Front face (z = +0.5)
@@ -238,9 +297,15 @@ class RenderingTest : public Application
 
 	void CreateMaterials()
 	{
+		CHROME_TRACE_FUNCTION();
 		mGrassMaterial.LoadShaders("Shader/grass.vert.spv", "Shader/grass.frag.spv");
 		mGrassMaterial.GetSettingsRef().cullMode = CullMode::None;
 		mGrassMaterial.GetSettingsRef().enableInstancing = true;
+		mGrassMaterial.ClearBindingAttribute();
+		mGrassMaterial.SetBindingAttribute(0, InputRate::Vertex, 
+			{AttributeType::Vec3, AttributeType::Vec2, AttributeType::Vec3});
+		mGrassMaterial.SetBindingAttribute(1, InputRate::Instance, 
+			{AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4});
 		mGrassMaterial.Create();
 
 		mMaterial.LoadShaders("Shader/shader.vert.spv", "Shader/shader.frag.spv");
@@ -258,4 +323,4 @@ class RenderingTest : public Application
 	Transform mTransform1;
 };
 
-Application *Application::Create() { return new RenderingTest(); }
+Application *Application::Create() { return new GrassRender(); }

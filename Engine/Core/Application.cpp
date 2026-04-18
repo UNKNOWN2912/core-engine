@@ -5,6 +5,8 @@
 
 void Application::InitializeApplication()
 {
+	CHROME_TRACE_FUNCTION();
+
 	WindowSpecification windowSpecification;
 	windowSpecification.size = glm::uvec2(800, 600);
 	windowSpecification.title = "world";
@@ -18,32 +20,37 @@ void Application::InitializeApplication()
 
 void Application::TerminateApplication()
 {
+	CHROME_TRACE_FUNCTION();
 	mRenderer.Terminate();
 	mWindow.Destroy();
 }
 
 void Application::RunApplication()
 {
+	CHROME_TRACE_FUNCTION();
 	InitializeApplication();
-	Start();
+	OnStart();
 	MainLoop();
-	End();
+	OnEnd();
 	TerminateApplication();
 }
 
 void Application::Close()
 {
+	CHROME_TRACE_FUNCTION();
 	mRunning = false;
 }
 
 
 bool Application::IsRunning()
 {
+	CHROME_TRACE_FUNCTION();
 	return mRunning;
 }
 
 bool Application::WindowEventCallback(uint32_t code, void* data)
 {
+	CHROME_TRACE_FUNCTION();
 	WindowEvent event = (WindowEvent)code;
 
 	switch (event)
@@ -127,31 +134,50 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 
 Application::Application()
 {
+	CHROME_TRACE_FUNCTION();
 	assert(instance == nullptr);
 
 	instance = this;
+
+
 }
 
 Application::~Application()
 {
+	CHROME_TRACE_FUNCTION();
+}
+
+float Application::GetDeltaTime() 
+{
+	return mDeltaTime;
 }
 
 void Application::MainLoop()
 {
+	CHROME_TRACE_FUNCTION();
+
+	
 	while (mRunning)
 	{
+		mDeltaTimer.Start();
 		mWindow.ProcessEvent();
-		Update();
+		OnUpdate();
+		mDeltaTimer.Stop();
+		mDeltaTime = mDeltaTimer.GetDuration();
 	}
+
 }
 
 void Application::HideCursor()
 {
+	CHROME_TRACE_FUNCTION();
 	mWindow.HideCursor();
 }
 
 void Application::ToggleCursor()
 {
+	CHROME_TRACE_FUNCTION();
+
 	if(mWindow.isCursorHidden())
 		mWindow.ShowCursor();
 	else
@@ -160,6 +186,7 @@ void Application::ToggleCursor()
 
 bool Application::IsCursorHidden()
 {
+	CHROME_TRACE_FUNCTION();
 	return mWindow.isCursorHidden();
 }
 

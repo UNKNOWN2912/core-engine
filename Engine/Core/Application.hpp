@@ -3,14 +3,16 @@
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Core/Macro.hpp"
+
 
 class Application
 {
 public:
 	virtual void Initialize() {}
-	virtual void Start() {}
-	virtual void Update() {}
-	virtual void End() {}
+	virtual void OnStart() {}
+	virtual void OnUpdate() {}
+	virtual void OnEnd() {}
 
 	virtual void OnWindowClose() { Close(); }
 	virtual void OnWindowMove(const glm::uvec2& position) {}
@@ -42,7 +44,6 @@ public:
 	bool WindowEventCallback(uint32_t code, void* data);
 
 	Window& GetWindowRef() { return mWindow; }
-
 	Renderer& GetRendererRef() { return mRenderer; }
 
 	static Application* Create();
@@ -53,12 +54,17 @@ public:
 
 	Renderer mRenderer;
 
+	float GetDeltaTime();
+
 private:
 	bool mRunning = true;
 	static Application* instance;
 	void MainLoop();
 
 	glm::vec2 previousMousePos = glm::vec2(0);
-
 	Window mWindow;
+
+	Timer mDeltaTimer;
+
+	float mDeltaTime = 0;
 };
