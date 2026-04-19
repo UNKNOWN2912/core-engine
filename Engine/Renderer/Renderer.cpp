@@ -84,6 +84,8 @@ void Renderer::EndFrame()
 
     for(auto drawSubmit : mDrawSubmitInfo)
     {
+        assert(drawSubmit.mesh->IsValid());
+        assert(drawSubmit.material->IsValid());
         mUniformBuffer.SetDataToDescriptor(sizeof(UniformData), &mUniformData, drawSubmit.material->mDescriptorSet, 0);
 
         if(drawSubmit.material->mAlbedo.IsValid())

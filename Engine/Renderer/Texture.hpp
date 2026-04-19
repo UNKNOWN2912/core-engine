@@ -18,11 +18,13 @@ class Texture
 
         bool IsValid() const { return mIsValid; }
 
+        void SetSampler(VkFilter minFilter, VkFilter magFilter, const std::array<VkSamplerAddressMode, 3>& addressMode);
+
       private:
         bool mIsValid = false;
         Image mImage;
         Buffer mStagingBuffer;
 
-        VkSampler mSampler;
+        VkSampler mSampler = VK_NULL_HANDLE;
 
 };

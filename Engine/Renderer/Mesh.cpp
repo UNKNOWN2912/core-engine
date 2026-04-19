@@ -26,13 +26,13 @@ StaticMesh::StaticMesh()
     // mBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 }
 
-StaticMesh::StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
+StaticMesh::StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();
     SetData(vertices, vertexSize, indices, indexSize);
 }
 
-void StaticMesh::SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
+void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();
     if(vertexSize != mVertexSize)
@@ -58,6 +58,8 @@ void StaticMesh::SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices,
 
     TransferBufferData(mStagingVertexBuffer, mVertexBuffer);
     TransferBufferData(mStagingIndexBuffer, mIndexBuffer);
+
+    mIsValid = true;
 }
 
 // void StaticMesh::SetLayout(std::initializer_list<LayoutType> layout)

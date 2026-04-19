@@ -53,6 +53,20 @@ enum class InputRate
     Instance
 };
 
+enum class Filter
+{
+    None = 0,
+    Nearest,
+    Linear
+};
+
+enum class AddressMode
+{
+    None = 0,
+    Repeat,
+    MirrorRepeat
+};
+
 class Material
 {
     public:
@@ -66,6 +80,10 @@ class Material
         void Create();
 
         MaterialSettings& GetSettingsRef();
+
+        void SetAlbedoSampler(Filter mag, Filter min, std::array<AddressMode, 3> addressModes);
+
+        bool IsValid() const { return mIsValid; }
     private:
         friend class Renderer;
 
@@ -81,4 +99,6 @@ class Material
         VkDescriptorPool mDescriptorPool;
 
         uint32_t mFinalLocation = 0;
+
+        bool mIsValid = false;
 };

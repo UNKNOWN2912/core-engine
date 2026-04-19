@@ -62,7 +62,7 @@ void Camera::CalculateOrthographic()
 {
     CHROME_TRACE_FUNCTION();
     mView = glm::lookAt(mPosition, mFront + mPosition, mUp);
-    mProjection = glm::ortho(-mAspectRatio, mAspectRatio, -1.f, 1.f, mNearPlane, mFarPlane);
+    mProjection = glm::ortho(-mAspectRatio * mZoom, mAspectRatio * mZoom, -1.f * mZoom, 1.f * mZoom, mNearPlane, mFarPlane);
 }
 
 void Camera::CalculateOrbital()

@@ -42,6 +42,8 @@ VkCullModeFlags GetCullMode(CullMode mode)
             return VK_CULL_MODE_BACK_BIT;
             break;
     }
+    ERROR("Invalid cull mode");
+    return  VK_CULL_MODE_FLAG_BITS_MAX_ENUM;
 }
 
 VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
@@ -62,6 +64,9 @@ VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
             return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
             break;
     };
+
+    ERROR("Invalid primitive");
+    return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 }
 
 VkFrontFace GetFrontFace(FrontFace face)
@@ -79,6 +84,9 @@ VkFrontFace GetFrontFace(FrontFace face)
             return VK_FRONT_FACE_COUNTER_CLOCKWISE;
             break;
     }
+
+    ERROR("Invalid front face");
+    return VK_FRONT_FACE_MAX_ENUM;
 }
 
 Material::Material()
@@ -210,10 +218,32 @@ void Material::Create()
 
     if(mAlbedo.IsValid())
         mAlbedo.SetDataToDescriptorSet(mDescriptorSet, 1);
+
+
+    mIsValid = true;
 }
 
 MaterialSettings& Material::GetSettingsRef()
 {
     CHROME_TRACE_FUNCTION();
     return mSettings;
+}
+
+VkFilter vulkanFilter[]
+{
+    VK_FILTER_MAX_ENUM,
+    VK_FILTER_NEAREST,
+    VK_FILTER_LINEAR
+};
+
+VkSamplerAddressMode vulkanAddressMode[]
+{
+    VK_SAMPLER_ADDRESS_MODE_MAX_ENUM,
+    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+    VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
+};
+
+void Material::SetAlbedoSampler(Filter mag, Filter min, std::array<AddressMode, 3> addressModes) 
+{
+    mAlbedo.SetSampler(vulkanFilter[(uint32_t)min], vulkanFilter[(uint32_t)mag], {vulkanAddressMode[(uint32_t)addressModes[0]], vulkanAddressMode[(uint32_t)addressModes[0]], vulkanAddressMode[(uint32_t)addressModes[0]]});
 }

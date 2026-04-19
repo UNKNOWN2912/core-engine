@@ -30,8 +30,8 @@ void Texture::Create(void* data, VkFormat format, const glm::uvec2& size, uint32
     VkSamplerCreateInfo samplerCreateInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
         .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
         .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
         .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
@@ -76,4 +76,24 @@ void Texture::SetDataToDescriptorSet(VkDescriptorSet descriptorSet, uint32_t bin
     };
 
     vkUpdateDescriptorSets(getDevice(), 1, &write, 0, nullptr);
+}
+
+void Texture::SetSampler(VkFilter minFilter, VkFilter magFilter, const std::array<VkSamplerAddressMode, 3>& addressMode) 
+{
+    if(mSampler != VK_NULL_HANDLE)
+        vkDestroySampler(getDevice(), mSampler, nullptr);
+
+    VkSamplerCreateInfo samplerCreateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = magFilter,
+        .minFilter = minFilter,
+        .addressModeU = addressMode[0],
+        .addressModeV = addressMode[1],
+        .addressModeW = addressMode[2],
+        .minLod = 1,
+        .maxLod = 1,
+    };
+
+    vkCreateSampler(getDevice(), &samplerCreateInfo, nullptr, &mSampler);
 }

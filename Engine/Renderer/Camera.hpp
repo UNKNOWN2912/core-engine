@@ -20,6 +20,7 @@ class Camera
         float GetNearPlane() const { return mNearPlane; }
         float GetFarPlane() const { return mFarPlane; }
         CameraType GetCameraType() const { return mType; }
+        float GetZoom() const { return mZoom; }
     
         Camera& SetPosition(const glm::vec3 &position);
         Camera& SetFront(const glm::vec3 &front);
@@ -29,12 +30,15 @@ class Camera
         Camera& SetNearPlane(float nearPlane) { mNearPlane = nearPlane; return *this; }
         Camera& SetFarPlane(float farPlane) { mFarPlane = farPlane; return *this; }
         Camera& SetCameraType(CameraType type) { mType = type; return *this; }
+        Camera& SetZoom(float zoom) { mZoom = zoom; return *this; }
 
         void Calculate();
     private:
         void CalculatePerspective();
         void CalculateOrthographic();
         void CalculateOrbital();
+
+        float mZoom = 1.f;
       
         glm::vec3 mPosition = glm::vec3(0, 0, -1);
         glm::vec3 mFront = glm::vec3(0, 0, 1);

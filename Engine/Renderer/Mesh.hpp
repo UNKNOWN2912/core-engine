@@ -27,9 +27,11 @@ class StaticMesh
 {
     public:
         StaticMesh();
-        StaticMesh(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+        StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
 
-        void SetData(Vertex* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+        void SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+
+        bool IsValid() const { return mIsValid; }
         // void SetLayout(std::initializer_list<LayoutType> layout);
 
         void Destroy();
@@ -44,6 +46,8 @@ class StaticMesh
         
         Buffer mVertexBuffer;
         Buffer mIndexBuffer;
+
+        bool mIsValid = false;
 
         // std::vector<VkVertexInputAttributeDescription> mAttributeDescriptions;
         // VkVertexInputBindingDescription mBindingDescription;
