@@ -25,6 +25,7 @@ void DestroyBuffer(Buffer& buffer);
 void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer); 
 
 Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty);
+void DestroyImage(Image& image);
 
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool);

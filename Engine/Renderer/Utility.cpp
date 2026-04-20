@@ -393,3 +393,11 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
 
     return image;
 }
+void DestroyImage(Image& image) 
+{
+    vkDestroyImageView(getDevice(), image.view, nullptr);
+    vkDestroyImage(getDevice(), image.handle, nullptr);    
+    vkFreeMemory(getDevice(), image.memory, nullptr);
+
+    image = Image();
+}
