@@ -1,6 +1,8 @@
 #include "Utility.hpp"
 #include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/Converter.hpp"
+#include "Renderer/Types.hpp"
 
 uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties)
 {
@@ -400,4 +402,28 @@ void DestroyImage(Image& image)
     vkFreeMemory(getDevice(), image.memory, nullptr);
 
     image = Image();
+}
+
+VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect)
+{
+    VkImageViewCreateInfo imageViewCreateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = GetVulkanImageFormat(format),
+        .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange = 
+        {
+            .aspectMask = GetVulkanImageAspect(aspect),
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+
+    VkImageView view;
+    vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &view);
+    return view;
 }

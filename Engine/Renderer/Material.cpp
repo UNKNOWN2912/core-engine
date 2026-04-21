@@ -1,4 +1,5 @@
 #include "Material.hpp"
+#include "Renderer/Converter.hpp"
 #include "Renderer/Mesh.hpp"
 #include "Core/Application.hpp"
 
@@ -245,5 +246,5 @@ VkSamplerAddressMode vulkanAddressMode[]
 
 void Material::SetAlbedoSampler(Filter mag, Filter min, std::array<AddressMode, 3> addressModes) 
 {
-    mAlbedo.SetSampler(vulkanFilter[(uint32_t)min], vulkanFilter[(uint32_t)mag], {vulkanAddressMode[(uint32_t)addressModes[0]], vulkanAddressMode[(uint32_t)addressModes[0]], vulkanAddressMode[(uint32_t)addressModes[0]]});
+    mAlbedo.SetSampler(GetVulkanFilter(mag), GetVulkanFilter(min), {GetVulkanAddressMode(addressModes[0]), GetVulkanAddressMode(addressModes[0]), GetVulkanAddressMode(addressModes[0])});
 }

@@ -102,51 +102,60 @@ VkImageLayout GetVulkanImageLayout(ImageLayout imageLayout)
 
 VkImageUsageFlags GetVulkanImageUsage(ImageUsage imageUsage)
 {
-    switch (imageUsage)
-    {
-        case ImageUsage::None:
-            return 0;
-        case ImageUsage::Color:
-            return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        case ImageUsage::DepthStencil:
-            return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        case ImageUsage::Sampler:
-            return VK_IMAGE_USAGE_SAMPLED_BIT;
-        case ImageUsage::TransferSource:
-            return VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        case ImageUsage::TransferDestination:
-            return VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        case ImageUsage::Storage:
-            return VK_IMAGE_USAGE_STORAGE_BIT;
-    }
-    ERROR("Invalid image usage: {}", (uint32_t)imageUsage);
+    VkImageUsageFlags usage = 0;
 
-    return 0;
+    if((ImageUsage::None & imageUsage) == ImageUsage::None)
+        usage |= 0;
 
+    if((ImageUsage::Color & imageUsage) == ImageUsage::Color)
+        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    if((ImageUsage::DepthStencil & imageUsage) == ImageUsage::DepthStencil)
+        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    if((ImageUsage::Sampler & imageUsage) == ImageUsage::Sampler)
+        usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    if((ImageUsage::TransferSource & imageUsage) == ImageUsage::TransferSource)
+        usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    if((ImageUsage::TransferDestination & imageUsage) == ImageUsage::TransferDestination)
+        usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+    if((ImageUsage::Storage & imageUsage) == ImageUsage::Storage)
+        usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+
+    return usage;
 }
 
 VkBufferUsageFlags GetVulkanBufferUsage(BufferUsage bufferUsage)
 {
-    switch (bufferUsage)
-    {
-        case BufferUsage::None:
-            return 0;
-        case BufferUsage::VertexBuffer:
-            return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        case BufferUsage::IndexBuffer:
-            return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        case BufferUsage::UniformBuffer:
-            return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        case BufferUsage::TransferSource:
-            return VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        case BufferUsage::TransferDestination:
-            return VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        case BufferUsage::Storage:
-            return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    }
-    ERROR("Invalid buffer usage: {}", (uint32_t)bufferUsage);
+    VkBufferUsageFlags usage;
 
-    return 0;
+    if((BufferUsage::None & bufferUsage) == BufferUsage::None)
+        usage |= 0;
+
+    if((BufferUsage::VertexBuffer & bufferUsage) == BufferUsage::VertexBuffer)
+        usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+    if((BufferUsage::IndexBuffer & bufferUsage) == BufferUsage::IndexBuffer)
+        usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+    if((BufferUsage::UniformBuffer & bufferUsage) == BufferUsage::UniformBuffer)
+        usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+    if((BufferUsage::TransferSource & bufferUsage) == BufferUsage::TransferSource)
+        usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    if((BufferUsage::TransferDestination & bufferUsage) == BufferUsage::TransferDestination)
+        usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    if((BufferUsage::Storage & bufferUsage) == BufferUsage::Storage)
+        usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+
+    return usage;
 }
 
 VkImageAspectFlags GetVulkanImageAspect(ImageAspect imageAspect)
@@ -220,49 +229,64 @@ VkDescriptorType GetVulkanDescriptorType(DescriptorType descriptorType)
 
 VkPipelineStageFlags GetVulkanPipelineStage(PipelineStage pipelineStage)
 {
-    switch (pipelineStage)
-    {
-        case PipelineStage::None:
-            return VK_PIPELINE_STAGE_NONE;
-        case PipelineStage::TopOfPipe:
-            return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        case PipelineStage::DrawIndirect:
-            return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
-        case PipelineStage::VertexInput:
-            return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-        case PipelineStage::VertexShader:
-            return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-        case PipelineStage::TessellationControlShader:
-            return VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
-        case PipelineStage::TessellationEvaluationShader:
-            return VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
-        case PipelineStage::GeometryShader:
-            return VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
-        case PipelineStage::FragmentShader:
-            return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        case PipelineStage::EarlyFragmentTests:
-            return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        case PipelineStage::LateFragmentTests:
-            return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        case PipelineStage::ColorAttachmentOutput:
-            return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        case PipelineStage::ComputeShader:
-            return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        case PipelineStage::Transfer:
-            return VK_PIPELINE_STAGE_TRANSFER_BIT;
-        case PipelineStage::BottomOfPipe:
-            return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        case PipelineStage::Host:
-            return VK_PIPELINE_STAGE_HOST_BIT;
-        case PipelineStage::AllGraphics:
-            return VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-        case PipelineStage::AllCommands:
-            return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    }
+    VkPipelineStageFlags stage = 0;
 
-    ERROR("Invalid pipeline stage: {}", (uint32_t)pipelineStage);
+    if((PipelineStage::None & pipelineStage) == PipelineStage::None)
+        stage |= VK_PIPELINE_STAGE_NONE;
 
-    return 0;
+    if((PipelineStage::TopOfPipe & pipelineStage) == PipelineStage::TopOfPipe)
+        stage |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    if((PipelineStage::DrawIndirect & pipelineStage) == PipelineStage::DrawIndirect)
+        stage |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+    if((PipelineStage::VertexInput & pipelineStage) == PipelineStage::VertexInput)
+        stage |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+    if((PipelineStage::VertexShader & pipelineStage) == PipelineStage::VertexShader)
+        stage |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+
+    if((PipelineStage::TessellationControlShader & pipelineStage) == PipelineStage::TessellationControlShader)
+        stage |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+
+    if((PipelineStage::TessellationEvaluationShader & pipelineStage) == PipelineStage::TessellationEvaluationShader)
+        stage |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+
+    if((PipelineStage::GeometryShader & pipelineStage) == PipelineStage::GeometryShader)
+        stage |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+
+    if((PipelineStage::FragmentShader & pipelineStage) == PipelineStage::FragmentShader)
+        stage |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+    if((PipelineStage::EarlyFragmentTests & pipelineStage) == PipelineStage::EarlyFragmentTests)
+        stage |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+    if((PipelineStage::LateFragmentTests & pipelineStage) == PipelineStage::LateFragmentTests)
+        stage |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+    if((PipelineStage::ColorAttachmentOutput & pipelineStage) == PipelineStage::ColorAttachmentOutput)
+        stage |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    if((PipelineStage::ComputeShader & pipelineStage) == PipelineStage::ComputeShader)
+        stage |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+    if((PipelineStage::Transfer & pipelineStage) == PipelineStage::Transfer)
+        stage |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    if((PipelineStage::BottomOfPipe & pipelineStage) == PipelineStage::BottomOfPipe)
+        stage |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    if((PipelineStage::Host & pipelineStage) == PipelineStage::Host)
+        stage |= VK_PIPELINE_STAGE_HOST_BIT;
+
+    if((PipelineStage::AllGraphics & pipelineStage) == PipelineStage::AllGraphics)
+        stage |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+
+    if((PipelineStage::AllCommands & pipelineStage) == PipelineStage::AllCommands)
+        stage |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+
+    return stage;
 }
 
 VkShaderStageFlags GetVulkanShaderStage(ShaderStage shaderStage)
@@ -287,7 +311,7 @@ VkShaderStageFlags GetVulkanShaderStage(ShaderStage shaderStage)
     return 0;
 }
 
-VkSampleCountFlags GetVulkanSampleCount(SampleCount sampleCount)
+VkSampleCountFlagBits GetVulkanSampleCount(SampleCount sampleCount)
 {
     switch (sampleCount)
     {
@@ -308,7 +332,7 @@ VkSampleCountFlags GetVulkanSampleCount(SampleCount sampleCount)
     }
     ERROR("Invalid sample count: {}", (uint32_t)sampleCount);
 
-    return 0;
+    return VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
 }
 
 VkMemoryPropertyFlags GetVulkanMemoryProperty(MemoryProperty memoryProperty)

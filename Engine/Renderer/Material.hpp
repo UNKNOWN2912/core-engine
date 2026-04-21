@@ -1,6 +1,7 @@
 #pragma once
 #include "Renderer/GraphicsPipeline.hpp"
 #include "Renderer/Texture.hpp"
+#include "Renderer/Types.hpp"
 
 enum class CullMode
 {
@@ -53,19 +54,6 @@ enum class InputRate
     Instance
 };
 
-enum class Filter
-{
-    None = 0,
-    Nearest,
-    Linear
-};
-
-enum class AddressMode
-{
-    None = 0,
-    Repeat,
-    MirrorRepeat
-};
 
 class Material
 {

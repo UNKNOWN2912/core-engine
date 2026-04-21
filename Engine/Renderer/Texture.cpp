@@ -19,14 +19,6 @@ void Texture::Create(void* data, VkFormat format, const glm::uvec2& size, uint32
 
     TransitionImageLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, mImage);
 
-    VkDescriptorSetLayoutBinding setLayoutBinding = 
-    {
-        .binding = binding,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    };
-
     VkSamplerCreateInfo samplerCreateInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,

@@ -1,4 +1,5 @@
 #pragma once
+#include "Renderer/Types.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
@@ -26,6 +27,8 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer);
 
 Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty);
 void DestroyImage(Image& image);
+
+VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect);
 
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool);

@@ -1,7 +1,6 @@
 #include "CameraController.hpp"
 #include "Input/Mouse.hpp"
 #include "Core/Application.hpp"
-#include "Maths/Noise.hpp"
 
 void CameraController::SetCamera(Camera& camera, Window& window)
 {
@@ -22,28 +21,6 @@ const Camera& CameraController::GetCamera() const
     CHROME_TRACE_FUNCTION();
     return *mCamera;    
 }
-
-
-static float combinedPerlin(glm::vec3 st)
-{
-    CHROME_TRACE_FUNCTION();
-
-	float l = 2.9;
-	float p = 6.3;	
-	float result = 0;
-	float k = 0.01;
-
-	float a = 10;
-	
-	for (int i = 0; i < 10; i++)
-	{
-		float fi = i;
-		result += (PerlinNoise(st * glm::pow(l,fi) * k) * a) / pow(p,fi);
-	}
-
-	return result;
-}
-
 
 void CameraController::Update()
 {

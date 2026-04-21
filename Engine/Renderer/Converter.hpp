@@ -12,7 +12,7 @@ VkAttachmentStoreOp GetVulkanStoreOperation(StoreOperation storeOperation);
 VkDescriptorType GetVulkanDescriptorType(DescriptorType descriptorType);
 VkPipelineStageFlags GetVulkanPipelineStage(PipelineStage pipelineStage);
 VkShaderStageFlags GetVulkanShaderStage(ShaderStage shaderStage);
-VkSampleCountFlags GetVulkanSampleCount(SampleCount sampleCount);
+VkSampleCountFlagBits GetVulkanSampleCount(SampleCount sampleCount);
 VkMemoryPropertyFlags GetVulkanMemoryProperty(MemoryProperty memoryProperty);
 VkPhysicalDeviceType GetVulkanDeviceType(DeviceType deviceType);
 VkFilter GetVulkanFilter(Filter filter);

@@ -1,10 +1,12 @@
 #pragma once
 #include "Renderer/Camera.hpp"
+#include "Renderer/CommandBuffer.hpp"
 #include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
 #include "GraphicsPipeline.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/RenderPass.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/Transform.hpp"
 #include "Renderer/UniformBuffer.hpp"
@@ -29,7 +31,9 @@ struct Semaphores
 
 struct CommandBuffers
 {
-    VkCommandBuffer renderingCommandBuffer = VK_NULL_HANDLE;
+    // VkCommandBuffer renderingCommandBuffer = VK_NULL_HANDLE;
+
+    CommandBuffer render;
 };
 
 struct UniformData
@@ -80,7 +84,7 @@ class Renderer
 
         void Resize(const glm::uvec2& size);
 
-        VkRenderPass GetMainRenderPass() const { return mRenderPass; }
+        VkRenderPass GetMainRenderPass() const { return mRenderPass.GetHandle(); }
 
     private:
         void CreateSwapchain(const glm::uvec2& size);
@@ -88,7 +92,6 @@ class Renderer
         void CreateSwapchainFramebuffers();
         void CreateSemaphores();
         void CreateCommandBuffers();
-        void CreatePipelines();
         
         void DestroySwapchain();
         void DestroyRenderPass();
@@ -96,19 +99,30 @@ class Renderer
         void DestroySemaphores();
         void DestroyCommandBuffers();
 
+        void SetUniformCameraData(UniformData& data, const Camera& camera);
+        void UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData);
+
+        void CmdDrawSubmitBindDescriptorSet(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+        void CmdDrawSubmitBindPipeline(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+        void CmdDrawSubmitBindVertexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+        void CmdDrawSubmitBindIndexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+
+        void RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubmitInfos);
+
+        void PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore);
         
     private:
         GraphicsContext mContext;
 
         Swapchain mSwapchain;
+        std::vector<VkFramebuffer> mSwapchainFramebuffer;
+
         Semaphores mSemaphores;
         CommandBuffers mCommandBuffers;
-        GraphicsPipeline mDefaultPipeline;
 
-        VkRenderPass mRenderPass;
+        RenderPass mRenderPass;
+
         VkViewport mViewport;
-
-        std::vector<VkFramebuffer> mSwapchainFramebuffer;
 
         std::vector<DrawSubmitInfo> mDrawSubmitInfo;
 

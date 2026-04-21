@@ -362,6 +362,7 @@ class CoreCraft : public Application
         mCamera.SetFov(fov);
 
         mController.Update();
+
         
         GetRendererRef().SetCamera(mCamera);
         GetRendererRef().BeginFrame();
@@ -492,6 +493,7 @@ class CoreCraft : public Application
         if(key == Key::L)
         {
             LOG("Camera Position: {} {} {}", mCamera.GetPosition().x, mCamera.GetPosition().y, mCamera.GetPosition().z);
+            LOG("Camera Front: {} {} {}", mCamera.GetFront().x, mCamera.GetFront().y, mCamera.GetFront().z);
         }
 
         if(key == Key::C)

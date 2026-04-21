@@ -51,7 +51,9 @@ void Camera::Calculate()
         case CameraType::Light:
             CalculateLight();
             break;
-        }
+    }
+
+    mProjection[1][1] *= -1;
 }
 
 void Camera::CalculatePerspective()
