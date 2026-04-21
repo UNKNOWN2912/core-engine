@@ -337,20 +337,16 @@ VkSampleCountFlagBits GetVulkanSampleCount(SampleCount sampleCount)
 
 VkMemoryPropertyFlags GetVulkanMemoryProperty(MemoryProperty memoryProperty)
 {
-    switch (memoryProperty)
-    {
-        case MemoryProperty::None:
-            return  VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM;
-        case MemoryProperty::DeviceLocal:
-            return  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        case MemoryProperty::HostVisible:
-            return  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        case MemoryProperty::HostCoherent:
-            return  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    }
-    ERROR("Invalid memory property: {}", (uint32_t)memoryProperty);
+    VkMemoryPropertyFlags property = 0;
 
-    return VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM;
+    if((MemoryProperty::DeviceLocal & memoryProperty) == MemoryProperty::DeviceLocal)
+        property |=  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if((MemoryProperty::HostVisible & memoryProperty) == MemoryProperty::HostVisible)
+        property |=  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    if((MemoryProperty::HostCoherent & memoryProperty) == MemoryProperty::HostCoherent)
+        property |=  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+    return property;
 }
 
 VkPhysicalDeviceType GetVulkanDeviceType(DeviceType deviceType)
@@ -408,3 +404,100 @@ VkSamplerAddressMode GetVulkanAddressMode(AddressMode addressMode)
     return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
 }
 
+VkPresentModeKHR GetVulkanPresentMode(PresentMode presentMode) 
+{
+    switch (presentMode) 
+    {
+        case PresentMode::None:
+            return VK_PRESENT_MODE_MAX_ENUM_KHR;
+        case PresentMode::Fifo:
+            return VK_PRESENT_MODE_FIFO_KHR;
+        case PresentMode::Mailbox:
+            return VK_PRESENT_MODE_MAILBOX_KHR;
+        case PresentMode::Immediate:
+            return VK_PRESENT_MODE_IMMEDIATE_KHR;
+    }
+
+    ERROR("Invalid present mode");
+    
+    return VK_PRESENT_MODE_MAX_ENUM_KHR;
+}
+
+
+VkCullModeFlags GetVulkanCullMode(CullMode mode)
+{
+    CHROME_TRACE_FUNCTION();
+    switch (mode) 
+    {
+        case CullMode::None:
+            return VK_CULL_MODE_NONE;
+            break;
+        case CullMode::Front:
+            return VK_CULL_MODE_FRONT_BIT;
+            break;
+        case CullMode::Back:
+            return VK_CULL_MODE_BACK_BIT;
+            break;
+    }
+    ERROR("Invalid cull mode");
+    return  VK_CULL_MODE_FLAG_BITS_MAX_ENUM;
+}
+
+VkVertexInputRate GetVulkanInputRate(InputRate inputRate) 
+{
+    switch (inputRate) 
+    {
+        case InputRate::None:
+            return VK_VERTEX_INPUT_RATE_MAX_ENUM;
+        case InputRate::Vertex:
+            return VK_VERTEX_INPUT_RATE_VERTEX;
+        case InputRate::Instance:
+            return VK_VERTEX_INPUT_RATE_INSTANCE;
+    }
+    ERROR("Invalid input rate");
+
+    return VK_VERTEX_INPUT_RATE_MAX_ENUM;
+}
+
+VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive)
+{
+    CHROME_TRACE_FUNCTION();
+    switch (primitive)
+    {
+        case PrimitiveType::None:
+            return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+            break;
+        case PrimitiveType::Triangle:
+            return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+        case PrimitiveType::Line:
+            return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            break;
+        case PrimitiveType::Point:
+            return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            break;
+    };
+
+    ERROR("Invalid primitive");
+    return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+}
+
+VkFrontFace GetVulkanFrontsFace(FrontFace face)
+{
+    CHROME_TRACE_FUNCTION();
+    switch (face) 
+    {
+        case FrontFace::None:
+            return VK_FRONT_FACE_MAX_ENUM;
+            break;
+        case FrontFace::Clockwise:
+            return VK_FRONT_FACE_CLOCKWISE;
+            break;
+        case FrontFace::CounterClockwise:
+            return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            break;
+    }
+
+    ERROR("Invalid front face");
+    return VK_FRONT_FACE_MAX_ENUM;
+}

@@ -133,7 +133,7 @@ void RenderPass::AddDependency(uint32_t sourceSubpass, uint32_t destinationSubpa
     mDependencies.push_back(dependency);
 }
 
-void RenderPass::CmdBeginRenderPass(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues) 
+void RenderPass::CmdBeginRenderPass(const CommandBuffer& commandBuffer, VkFramebuffer framebuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues) 
 {
     VkRenderPassBeginInfo beginInfo = 
     {
@@ -145,12 +145,12 @@ void RenderPass::CmdBeginRenderPass(VkCommandBuffer commandBuffer, VkFramebuffer
         .pClearValues = clearValues.begin(),
     };
 
-    vkCmdBeginRenderPass(commandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer.GetHandle(), &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void RenderPass::CmdEndRenderPass(VkCommandBuffer commandBuffer) 
+void RenderPass::CmdEndRenderPass(const CommandBuffer& commandBuffer) 
 {
-    vkCmdEndRenderPass(commandBuffer);
+    vkCmdEndRenderPass(commandBuffer.GetHandle());
 }
 
 void RenderPass::Create() 

@@ -5,6 +5,8 @@
 #include <initializer_list>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include "Renderer/CommandBuffer.hpp"
+
 
 struct RenderPassAttachment
 {
@@ -20,7 +22,7 @@ struct RenderPassAttachment
 class RenderPass
 {
     public:
-        const uint32_t ExternalSubpass = UINT32_MAX;
+        static const uint32_t ExternalSubpass = UINT32_MAX;
         
         void AddAttachment(ImageFormat format, ImageLayout finalLayout, LoadOperation loadOp, StoreOperation storeOp, LoadOperation stencilLoadOp = LoadOperation::DontCare, StoreOperation stencilStoreOp = StoreOperation::DontCare, SampleCount sampleCount = SampleCount::One);
         void AddSubpass(std::initializer_list<uint32_t> colorAttachments, std::initializer_list<uint32_t> inputAttachments, uint32_t depthAttachment = UINT32_MAX);
@@ -28,8 +30,8 @@ class RenderPass
 
         VkRenderPass GetHandle() const { return mHandle; }
 
-        void CmdBeginRenderPass(VkCommandBuffer commandBuffer, VkFramebuffer framebuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues);
-        void CmdEndRenderPass(VkCommandBuffer commandBuffer);
+        void CmdBeginRenderPass(const CommandBuffer& commandBuffer, VkFramebuffer framebuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues);
+        void CmdEndRenderPass(const CommandBuffer& commandBuffer);
 
         void Create();
         void Destroy();

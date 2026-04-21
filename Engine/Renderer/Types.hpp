@@ -201,3 +201,40 @@ enum class AddressMode
     MirroredRepeat,
     Border,
 };
+
+enum class PresentMode
+{
+    None = 0,
+    Fifo,
+    Mailbox,
+    Immediate,
+};
+
+enum class CullMode
+{
+    None = 0,
+    Front,
+    Back,
+};
+
+enum class FrontFace
+{
+    None = 0,
+    Clockwise, 
+    CounterClockwise,
+};
+
+enum class PrimitiveType
+{
+    None = 0,
+    Triangle, 
+    Line, 
+    Point,
+};
+
+enum class InputRate
+{
+    None = 0,
+    Vertex,
+    Instance
+};

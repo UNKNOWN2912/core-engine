@@ -1,6 +1,7 @@
 #include "GraphicsPipeline.hpp"
 #include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/Converter.hpp"
 #include "Utility.hpp"
 
 void GraphicsPipeline::LoadVertexShader(std::string_view filename)
@@ -51,66 +52,49 @@ void GraphicsPipeline::EnableWireframe(bool enable)
     mWireframeEnable = enable;
 }
 
-void GraphicsPipeline::AddBinding(uint32_t binding, size_t stride, VkVertexInputRate inputRate)
+void GraphicsPipeline::AddBinding(uint32_t binding, size_t stride, InputRate inputRate)
 {
     CHROME_TRACE_FUNCTION();
     VkVertexInputBindingDescription description = 
     {
         .binding = binding,
         .stride = (uint32_t)stride,
-        .inputRate = inputRate,
+        .inputRate = GetVulkanInputRate(inputRate),
     };
 
     mBindingDescription.push_back(description);
 }
 
 
-void GraphicsPipeline::AddAttribute(uint32_t binding, uint32_t location, VkFormat format, size_t offset)
+void GraphicsPipeline::AddAttribute(uint32_t binding, uint32_t location, ImageFormat format, size_t offset)
 {
     CHROME_TRACE_FUNCTION();
     VkVertexInputAttributeDescription description = 
     {
         .location = location,
         .binding = binding,
-        .format = format,
+        .format = GetVulkanImageFormat(format),
         .offset = (uint32_t)offset
     };
 
     mAttributeDescription.push_back(description);
 }
 
-void GraphicsPipeline::SetCullMode(VkCullModeFlags cullMode)
+void GraphicsPipeline::SetCullMode(CullMode cullMode)
 {
     CHROME_TRACE_FUNCTION();
-    mCullMode = cullMode;
+    mCullMode = GetVulkanCullMode(cullMode);
 }
-void GraphicsPipeline::SetPrimitive(VkPrimitiveTopology primitive)
+void GraphicsPipeline::SetPrimitive(PrimitiveType primitive)
 {
     CHROME_TRACE_FUNCTION();
-    mPrimitive = primitive;
+    mPrimitive = GetVulkanPrimitive(primitive);
 }
 
-void GraphicsPipeline::SetMultisampleCount(uint32_t count)
+void GraphicsPipeline::SetMultisampleCount(SampleCount count)
 {
     CHROME_TRACE_FUNCTION();
-    switch (count) 
-    {
-        case 1:
-            mSampleCount = VK_SAMPLE_COUNT_1_BIT;
-            break;
-        case 2:
-            mSampleCount = VK_SAMPLE_COUNT_2_BIT;
-            break;
-        case 4:
-            mSampleCount = VK_SAMPLE_COUNT_4_BIT;
-            break;
-        case 8:
-            mSampleCount = VK_SAMPLE_COUNT_8_BIT;
-            break;
-        case 16:
-            mSampleCount = VK_SAMPLE_COUNT_16_BIT;
-            break;
-    }
+    mSampleCount = GetVulkanSampleCount(count);
 }
 
 void GraphicsPipeline::SetViewport(const VkViewport& viewport)
@@ -143,7 +127,7 @@ void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
     mColorBlendStates.push_back(state);
 }
 
-void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
+void GraphicsPipeline::Create(const RenderPass& renderPass, uint32_t subpassIndex)
 {
     CHROME_TRACE_FUNCTION();
     if (mVertexShader == VK_NULL_HANDLE || mFragmentShader == VK_NULL_HANDLE)
@@ -217,7 +201,7 @@ void GraphicsPipeline::Create(VkRenderPass renderPass, uint32_t subpassIndex)
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     pipelineCreateInfo.layout = mPipelineLayout;
-    pipelineCreateInfo.renderPass = renderPass;
+    pipelineCreateInfo.renderPass = renderPass.GetHandle();
     pipelineCreateInfo.stageCount = 2;
     pipelineCreateInfo.pStages = shaderStageCreateInfo;
     pipelineCreateInfo.pColorBlendState = &colorBlendState;

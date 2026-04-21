@@ -4,19 +4,20 @@
 #include "Renderer/Transform.hpp"
 #include "Utility.hpp"
 #include "GraphicsContext.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include <print>
+#include <glm/gtc/matrix_transform.hpp>
 
 void Renderer::Initialize(const Window& window) 
 {
     CHROME_TRACE_FUNCTION();
+
     mContext.Create(window, true);
-    CreateSwapchain(window.GetSize());
+    mSwapchain.Create(window.GetSize(), PresentMode::Fifo);
     CreateRenderPass();
     CreateSwapchainFramebuffers();
+    CreateShadowMapObjects();
     CreateSemaphores();
     CreateCommandBuffers();
-    mUniformBuffer.Create(sizeof(UniformData), VK_SHADER_STAGE_VERTEX_BIT, 0);
+    mUniformBuffer.Create(sizeof(UniformData));
 }
 
 void Renderer::Terminate() 
@@ -66,6 +67,12 @@ void Renderer::EndFrame()
 
     mCamera.Calculate();
     SetUniformCameraData(mUniformData, mCamera);
+
+    // mUniformData.view = glm::lookAt(glm::vec3(100.f), glm::vec3(0,64,0), glm::vec3(0,1,0));
+    // mUniformData.projection = glm::ortho(-50.f, 50.f, -50.f, 50.f, -150.f, 150.f);
+    // mUniformData.projection[1][1] *= -1;
+
+    
     mUniformData.time = glfwGetTime();
 
     UpdateMaterialDescriptorSet(mDrawSubmitInfo, mUniformBuffer, mUniformData);
@@ -73,24 +80,12 @@ void Renderer::EndFrame()
     vkDeviceWaitIdle(getDevice());
     
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(getDevice(), mSwapchain.handle, UINT64_MAX, mSemaphores.imageAcquired, VK_NULL_HANDLE, &imageIndex);
+    vkAcquireNextImageKHR(getDevice(), mSwapchain.GetHandle(), UINT64_MAX, mSemaphores.imageAcquired, VK_NULL_HANDLE, &imageIndex);
 
     mCommandBuffers.render.BeginRecording();
     
-
-    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render.GetHandle(), mSwapchainFramebuffer[imageIndex], {mSwapchain.extent.width, mSwapchain.extent.height}, {{1,0,1,1}, {1,0,0,1}});
-    
-    VkRect2D scissor = 
-    {
-        .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
-    };
-
-    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &mViewport);
-    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
-    
-    RenderDrawSubmitInfos(mDrawSubmitInfo);
-
-    mRenderPass.CmdEndRenderPass(mCommandBuffers.render.GetHandle());
+    CmdShadowRenderPass();
+    CmdMainRenderPass(imageIndex);
     
     mCommandBuffers.render.EndRecording();
 
@@ -106,72 +101,145 @@ void Renderer::Resize(const glm::uvec2& size)
     CHROME_TRACE_FUNCTION();
     vkDeviceWaitIdle(getDevice());
 
-    DestroySwapchain();
+    mSwapchain.Destroy();
     DestroySwapchainFramebuffers();
-    CreateSwapchain(size);
+    mSwapchain.Create(size, PresentMode::Fifo);
     CreateSwapchainFramebuffers();
-    mViewport.width = mSwapchain.extent.width;
-    mViewport.height = mSwapchain.extent.height;
+
+    mViewport = {};
+    mViewport.width = mSwapchain.GetSize().x;
+    mViewport.height = mSwapchain.GetSize().y;
     mViewport.maxDepth = 1.f;
     mViewport.minDepth = 0.f;
 }
 
-void Renderer::CreateSwapchain(const glm::uvec2& size) 
+void Renderer::CmdMainRenderPass(uint32_t imageIndex) 
 {
     CHROME_TRACE_FUNCTION();
-    VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(getPhysicalDevice(), getSurface(), &capabilities);
-    mSwapchain.extent = {size.x, size.y};
 
-    if(mSwapchain.extent.width > capabilities.maxImageExtent.width || mSwapchain.extent.height > capabilities.maxImageExtent.height)
-    {
-        mSwapchain.extent = {800, 600};
-    }
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(getPhysicalDevice(), getSurface(), &formatCount, nullptr);
-    std::vector<VkSurfaceFormatKHR> formats(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(getPhysicalDevice(), getSurface(), &formatCount, formats.data());
-
-    for (VkSurfaceFormatKHR format : formats)
-    {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            mSwapchain.format = VK_FORMAT_B8G8R8A8_SRGB;
-            mSwapchain.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-        }
-    }
-
-    mSwapchain.imageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
-
-    VkSwapchainCreateInfoKHR createInfo = { };
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.clipped = VK_TRUE;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageColorSpace = mSwapchain.colorSpace;
-    createInfo.imageFormat = mSwapchain.format;
-    createInfo.imageExtent = mSwapchain.extent;
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    createInfo.minImageCount = mSwapchain.imageCount;
-    createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    createInfo.preTransform = capabilities.currentTransform;
-    createInfo.surface = getSurface();
-
-    vkCreateSwapchainKHR(getDevice(), &createInfo, nullptr, &mSwapchain.handle);
-
-    vkGetSwapchainImagesKHR(getDevice(), mSwapchain.handle, &mSwapchain.imageCount, nullptr);
-    mSwapchain.images.resize(mSwapchain.imageCount);
-    vkGetSwapchainImagesKHR(getDevice(), mSwapchain.handle, &mSwapchain.imageCount, mSwapchain.images.data());
-
+    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render, mSwapchainFramebuffer[imageIndex], {mSwapchain.GetSize().x, mSwapchain.GetSize().y}, {{1,1,1,1}, {1,0,0,1}});
     
-
-    for (VkImage image : mSwapchain.images)
+    VkRect2D scissor = 
     {
-        VkImageView view = CreateImageView(image, ImageFormat::BGRA8, ImageAspect::Color);
-        mSwapchain.views.push_back(view);
-    } 
+        .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
+    };
+
+    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &mViewport);
+    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
+    
+    RenderDrawSubmitInfos(mDrawSubmitInfo);
+
+    mRenderPass.CmdEndRenderPass(mCommandBuffers.render);
+}
+
+void Renderer::CmdShadowRenderPass() 
+{
+    // lightDirection = glm::vec3(sin(glfwGetTime() * 0.05), cos(glfwGetTime() * 0.05), 0);
+    mShadowObjects.uniformData.view = glm::lookAt(lightDirection + mCamera.GetPosition(), glm::vec3(0,0,0) + mCamera.GetPosition(), glm::vec3(0,1,0));
+    mShadowObjects.uniformData.projection = glm::ortho(-50.f, 50.f, -50.f, 50.f, -150.f, 150.f);
+    mShadowObjects.uniformData.projection[1][1] *= -1;
+
+    mShadowObjects.uniformBuffer.SetData(sizeof(ShadowUniformData), &mShadowObjects.uniformData);
+    mShadowObjects.uniformBuffer.UpdateDescriptor(mShadowObjects.descriptorSet, 0);
+
+    mShadowObjects.renderPass.CmdBeginRenderPass(mCommandBuffers.render, mShadowObjects.framebuffer, mShadowObjects.image.size, {{1,0,0,1}});
+
+        VkViewport viewport = 
+    {
+        .x = 0,
+        .y = 0,
+        .width = (float)mShadowObjects.image.size.x,
+        .height = (float)mShadowObjects.image.size.y,
+        .minDepth = 0.f,
+        .maxDepth = 1.f,
+    };
+
+    VkRect2D scissor = 
+    {
+        .extent = {(uint32_t)viewport.width, (uint32_t)viewport.height},
+    };
+
+
+    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &viewport);
+    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
+
+
+    RenderDrawSubmitInfosForShadowMap(mDrawSubmitInfo);
+    
+    mShadowObjects.renderPass.CmdEndRenderPass(mCommandBuffers.render);
+}
+
+void Renderer::CreateShadowMapObjects() 
+{
+    CHROME_TRACE_FUNCTION();
+
+
+    VkSamplerCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+        .minLod = 1,
+        .maxLod = 1,
+        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+    };
+
+    vkCreateSampler(getDevice(), &createInfo, nullptr, &mShadowObjects.sampler);
+
+    mShadowObjects.renderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mShadowObjects.renderPass.AddSubpass({}, {}, 0);
+    mShadowObjects.renderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests, PipelineStage::LateFragmentTests);
+    mShadowObjects.renderPass.Create();
+
+    mShadowObjects.image = CreateImage({2048, 2048}, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal);
+    mShadowObjects.framebuffer = CreateFramebuffer({mShadowObjects.image.size}, {mShadowObjects.image}, mShadowObjects.renderPass);
+
+    VkDescriptorSetLayoutBinding shadowUniformBinding = 
+    {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    };
+
+    VkDescriptorPoolSize uniformBinding = 
+    {
+        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+    };
+
+    VkPushConstantRange pushConstantRange = 
+    {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(glm::mat4),
+    };
+
+    mShadowObjects.setLayout = CreateDescriptorSetLayout({shadowUniformBinding});
+    mShadowObjects.descriptorPool = CreateDescriptorPool({uniformBinding}, 1);
+    mShadowObjects.descriptorSet = AllocateDescriptorSet(mShadowObjects.setLayout, mShadowObjects.descriptorPool);
+
+    mShadowObjects.pipeline.AddBinding(0, sizeof(Vertex), InputRate::Vertex);
+    mShadowObjects.pipeline.AddAttribute(0, 0, ImageFormat::RGB32, offsetof(Vertex, position));
+    mShadowObjects.pipeline.AddAttribute(0, 1, ImageFormat::RG32, offsetof(Vertex, uv));
+    mShadowObjects.pipeline.AddAttribute(0, 2, ImageFormat::RGB32, offsetof(Vertex, normal));
+    mShadowObjects.pipeline.AddBinding(1, sizeof(glm::mat4), InputRate::Instance);
+    mShadowObjects.pipeline.AddAttribute(1, 3, ImageFormat::RGBA32, sizeof(glm::vec4) * 0);
+    mShadowObjects.pipeline.AddAttribute(1, 4, ImageFormat::RGBA32, sizeof(glm::vec4) * 1);
+    mShadowObjects.pipeline.AddAttribute(1, 5, ImageFormat::RGBA32, sizeof(glm::vec4) * 2);
+    mShadowObjects.pipeline.AddAttribute(1, 6, ImageFormat::RGBA32, sizeof(glm::vec4) * 3);
+    mShadowObjects.pipeline.SetPipelineLayout(CreatePipelineLayout({mShadowObjects.setLayout}, {pushConstantRange}));
+    mShadowObjects.pipeline.EnableDepthTesting(true);
+    mShadowObjects.pipeline.EnableDepthWrite(true);
+    mShadowObjects.pipeline.LoadVertexShader("Shaders/shadow.vert.spv");
+    mShadowObjects.pipeline.LoadFragmentShader("Shaders/shadow.frag.spv");
+    mShadowObjects.pipeline.SetCullMode(CullMode::None);
+    mShadowObjects.pipeline.Create(mShadowObjects.renderPass, 0);
+
+    mShadowObjects.uniformBuffer.Create(sizeof(mShadowObjects.uniformData));
 }
 
 void Renderer::CreateRenderPass()
@@ -183,34 +251,24 @@ void Renderer::CreateRenderPass()
     mRenderPass.AddSubpass({0}, {}, 1);
     mRenderPass.AddDependency(mRenderPass.ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
     mRenderPass.Create();
+
+    
 }
 
 void Renderer::CreateSwapchainFramebuffers() 
 {
     CHROME_TRACE_FUNCTION();
-    VkFramebufferCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .renderPass = mRenderPass.GetHandle(),
-        .attachmentCount = 2,
-        .width = mSwapchain.extent.width,
-        .height = mSwapchain.extent.height,
-        .layers = 1,
-    };
 
-    mDepthAttachment = CreateImage({mSwapchain.extent.width, mSwapchain.extent.height}, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    mDepthAttachment = CreateImage(mSwapchain.GetSize(), ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
 
-    for(VkImageView view : mSwapchain.views)
+    for(Image image : mSwapchain.GetImages())
     {
-        VkImageView attachments[] = {view, mDepthAttachment.view};
-        createInfo.pAttachments = attachments;
-        VkFramebuffer framebuffer;
-        vkCreateFramebuffer(getDevice(), &createInfo, nullptr, &framebuffer);
+        VkFramebuffer framebuffer = CreateFramebuffer(mSwapchain.GetSize(), {image, mDepthAttachment}, mRenderPass);
         mSwapchainFramebuffer.push_back(framebuffer);
     }
 
-    mViewport.width = mSwapchain.extent.width;
-    mViewport.height = mSwapchain.extent.height;
+    mViewport.width = mSwapchain.GetSize().x;
+    mViewport.height = mSwapchain.GetSize().y;
     mViewport.maxDepth = 1.f;
     mViewport.minDepth = 0.f;
 
@@ -234,18 +292,7 @@ void Renderer::CreateCommandBuffers()
     mCommandBuffers.render.Create();
 }
 
-void Renderer::DestroySwapchain() 
-{
-    CHROME_TRACE_FUNCTION();
-    for (VkImageView view : mSwapchain.views) 
-    {
-        vkDestroyImageView(getDevice(), view, nullptr);
-    }
 
-    vkDestroySwapchainKHR(getDevice(), mSwapchain.handle, nullptr);
-
-    mSwapchain = {};
-}
 
 void Renderer::DestroyRenderPass() 
 {
@@ -287,15 +334,41 @@ void Renderer::SetUniformCameraData(UniformData& data, const Camera& camera)
 
 void Renderer::UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData) 
 {
+    uniformData.time = glfwGetTime();
+
+    uniformBuffer.SetData(sizeof(UniformData), &uniformData);
+
     for(auto drawSubmit : drawSubmitInfos)
     {
         assert(drawSubmit.mesh->IsValid());
         assert(drawSubmit.material->IsValid());
 
-        uniformBuffer.SetDataToDescriptor(sizeof(UniformData), &uniformData, drawSubmit.material->mDescriptorSet, 0);
+        uniformBuffer.UpdateDescriptor(drawSubmit.material->mDescriptorSet, 0);
 
         if(drawSubmit.material->mAlbedo.IsValid())
-            drawSubmit.material->mAlbedo.SetDataToDescriptorSet(drawSubmit.material->mDescriptorSet, 1);
+            drawSubmit.material->mAlbedo.UpdateDescriptorSet(drawSubmit.material->mDescriptorSet, 1);
+
+        mShadowObjects.uniformBuffer.UpdateDescriptor(drawSubmit.material->mDescriptorSet, 2);
+
+        VkDescriptorImageInfo imageInfo = 
+        {
+            .sampler = mShadowObjects.sampler,
+            .imageView = mShadowObjects.image.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+
+        VkWriteDescriptorSet write = 
+        {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = drawSubmit.material->mDescriptorSet,
+            .dstBinding = 3,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+        };
+
+        vkUpdateDescriptorSets(getDevice(), 1, &write, 0, nullptr);
     }
 }
 
@@ -358,9 +431,46 @@ void Renderer::RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubm
     }
 }
 
+void Renderer::RenderDrawSubmitInfosForShadowMap(const std::vector<DrawSubmitInfo>& drawSubmitInfos) 
+{
+    // CmdDrawSubmitBindDescriptorSet(mCommandBuffers.render.GetHandle(), drawSubmit);
+    // CmdDrawSubmitBindPipeline(mCommandBuffers.render.GetHandle(), drawSubmit);
+
+
+    vkCmdBindDescriptorSets(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, mShadowObjects.pipeline.GetPipelineLayout(), 0, 1, &mShadowObjects.descriptorSet, 0, nullptr);
+    vkCmdBindPipeline(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, mShadowObjects.pipeline.GetHandle());
+
+
+
+
+    for (int i = 0; i < drawSubmitInfos.size(); i++)
+    {
+        DrawSubmitInfo drawSubmit = drawSubmitInfos[i];
+
+        int previousIndex = glm::clamp(i - 1, 0, INT32_MAX);
+
+        if(i == 0 || drawSubmit.mesh != drawSubmitInfos[previousIndex].mesh || drawSubmit.instanceBuffer != drawSubmitInfos[previousIndex].instanceBuffer)
+        {
+            CmdDrawSubmitBindVertexBuffer(mCommandBuffers.render.GetHandle(), drawSubmit);
+            CmdDrawSubmitBindIndexBuffer(mCommandBuffers.render.GetHandle(), drawSubmit);
+        }
+
+        glm::mat4 model = drawSubmit.transform.GetMatrix();
+        vkCmdPushConstants(mCommandBuffers.render.GetHandle(), drawSubmit.material->mPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+
+        
+
+        if(drawSubmit.material->mSettings.enableInstancing)
+            vkCmdDrawIndexed(mCommandBuffers.render.GetHandle(), drawSubmit.mesh->mIndexSize / sizeof(uint32_t), drawSubmit.instanceCount, 0, 0, 0);
+        else
+            vkCmdDrawIndexed(mCommandBuffers.render.GetHandle(), drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
+    }
+}
+
 void Renderer::PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore) 
 {
     uint32_t waitSemaphoreCount = (waitSemaphore == VK_NULL_HANDLE) ? 0 : 1;
+    VkSwapchainKHR swapchains[] = {swapchain.GetHandle()};
 
     VkPresentInfoKHR presentInfo = 
     {
@@ -368,7 +478,7 @@ void Renderer::PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t 
         .waitSemaphoreCount = waitSemaphoreCount,
         .pWaitSemaphores = &waitSemaphore,
         .swapchainCount = 1,
-        .pSwapchains = &swapchain.handle,
+        .pSwapchains = swapchains,
         .pImageIndices = &imageIndex,
     };
 

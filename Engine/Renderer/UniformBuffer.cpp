@@ -14,19 +14,22 @@ UniformBuffer::~UniformBuffer()
     CHROME_TRACE_FUNCTION();
 }
 
-void UniformBuffer::Create(VkDeviceSize capacity, VkShaderStageFlags shaderStage, uint32_t binding) 
+void UniformBuffer::Create(size_t capacity) 
 {
     CHROME_TRACE_FUNCTION();
     mBuffer = CreateBuffer(capacity, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
-void UniformBuffer::SetDataToDescriptor(VkDeviceSize size, void* data, VkDescriptorSet descriptorSet, int binding)
+void UniformBuffer::SetData(size_t size, void* data)
 {
     CHROME_TRACE_FUNCTION();
     vkDeviceWaitIdle(getDevice());
     
     memcpy(mBuffer.map, data, size);
+}
 
+void UniformBuffer::UpdateDescriptor(VkDescriptorSet descriptorSet, int binding) 
+{
     VkDescriptorBufferInfo bufferInfo = {};
     bufferInfo.buffer = mBuffer.handle;
     bufferInfo.offset = 0;

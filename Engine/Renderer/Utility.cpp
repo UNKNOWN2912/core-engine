@@ -2,6 +2,7 @@
 #include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
 #include "Renderer/Converter.hpp"
+#include "Renderer/RenderPass.hpp"
 #include "Renderer/Types.hpp"
 
 uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties)
@@ -164,7 +165,7 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
             .layerCount = 1,
         },
         .imageOffset = {0,0,0},
-        .imageExtent = {dstImage.extent.width, dstImage.extent.height, 1},
+        .imageExtent = {dstImage.size.x, dstImage.size.y, 1},
     };
 
     vkCmdCopyBufferToImage(commandBuffer, srcBuffer.handle, dstImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -329,7 +330,7 @@ VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayou
     return pipelineLayout;
 }
 
-Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty)
+Image CreateImage(const glm::uvec2& size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -339,7 +340,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = format,
+        .format = GetVulkanImageFormat(format),
         .extent = 
         {
             .width = size.x,
@@ -350,7 +351,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = usage,
+        .usage = GetVulkanImageUsage(usage),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
@@ -364,7 +365,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = requirements.size,
-        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, memoryProperty),
+        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperty)),
     };
 
     vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &image.memory);
@@ -377,11 +378,11 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image.handle,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = format,
+        .format = GetVulkanImageFormat(format),
         .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
         .subresourceRange = 
         {
-            .aspectMask = aspectMask,
+            .aspectMask = GetVulkanImageAspect(aspect),
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
@@ -389,7 +390,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
         },
     };
 
-    image.extent = {size.x, size.y};
+    image.size = {size.x, size.y};
 
     vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &image.view);
 
@@ -426,4 +427,29 @@ VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspec
     VkImageView view;
     vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &view);
     return view;
+}
+
+VkFramebuffer CreateFramebuffer(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass)
+{
+    VkImageView views[16];
+
+    for (int i = 0; i < attachments.size(); i++)
+    {
+        views[i] = (attachments.begin() + i)->view;
+    }
+
+    VkFramebufferCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .renderPass = renderPass.GetHandle(),
+        .attachmentCount = (uint32_t)attachments.size(),
+        .pAttachments = views,
+        .width = size.x,
+        .height = size.y,
+        .layers = 1,
+    };
+
+    VkFramebuffer frameBuffer;
+    vkCreateFramebuffer(getDevice(), &createInfo, nullptr, &frameBuffer);
+    return frameBuffer;
 }

@@ -3,27 +3,6 @@
 #include "Renderer/Texture.hpp"
 #include "Renderer/Types.hpp"
 
-enum class CullMode
-{
-    None = 0,
-    Front,
-    Back,
-};
-
-enum class FrontFace
-{
-    None = 0,
-    Clockwise, 
-    CounterClockwise,
-};
-
-enum class PrimitiveType
-{
-    None = 0,
-    Triangle, 
-    Line, 
-    Point,
-};
 
 struct MaterialSettings
 {
@@ -36,7 +15,7 @@ struct MaterialSettings
     PrimitiveType primitiveType = PrimitiveType::Triangle;
     FrontFace frontFace = FrontFace::Clockwise;
     float lineWidth = 1.f;
-    int sampleCount = 1; 
+    SampleCount sampleCount = SampleCount::One; 
 };
 
 enum class AttributeType
@@ -45,13 +24,6 @@ enum class AttributeType
     IVec2, UVec2, Vec2,
     IVec3, UVec3, Vec3,
     IVec4, UVec4, Vec4,
-};
-
-enum class InputRate
-{
-    None = 0,
-    Vertex,
-    Instance
 };
 
 

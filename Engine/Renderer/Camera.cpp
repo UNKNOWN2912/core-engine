@@ -80,5 +80,5 @@ void Camera::CalculateLight()
 {
     CHROME_TRACE_FUNCTION();
     mView = glm::lookAt(mPosition, mFront, mUp);
-    mProjection = glm::ortho(-mAspectRatio * mZoom, mAspectRatio * mZoom, -1.f * mZoom, 1.f * mZoom, mNearPlane, mFarPlane);
+    mProjection = glm::ortho(-mZoom, mZoom, -1.f * mZoom, 1.f * mZoom, mNearPlane, mFarPlane);
 }

@@ -7,11 +7,12 @@ class UniformBuffer
     public:
         UniformBuffer();
         ~UniformBuffer();
-        void Create(VkDeviceSize capacity, VkShaderStageFlags shaderStage, uint32_t binding);
-        void SetDataToDescriptor(VkDeviceSize size, void* data, VkDescriptorSet descriptorSet, int binding);
+        void Create(size_t capacity);
+        void SetData(size_t size, void* data);
+        void UpdateDescriptor(VkDescriptorSet descriptorSet, int binding);
         const Buffer& GetBuffer() const { return mBuffer; }
         
-        VkDeviceSize GetCapacity();
+        size_t GetCapacity();
 
 
     private:

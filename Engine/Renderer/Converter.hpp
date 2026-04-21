@@ -17,3 +17,8 @@ VkMemoryPropertyFlags GetVulkanMemoryProperty(MemoryProperty memoryProperty);
 VkPhysicalDeviceType GetVulkanDeviceType(DeviceType deviceType);
 VkFilter GetVulkanFilter(Filter filter);
 VkSamplerAddressMode GetVulkanAddressMode(AddressMode addressMode);
+VkPresentModeKHR GetVulkanPresentMode(PresentMode presentMode);
+VkFrontFace GetVulkanFrontsFace(FrontFace face);
+VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive);
+VkCullModeFlags GetVulkanCullMode(CullMode mode);
+VkVertexInputRate GetVulkanInputRate(InputRate inputRate);
