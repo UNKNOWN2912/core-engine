@@ -2,6 +2,7 @@
 #include "Renderer/Converter.hpp"
 #include "Renderer/Mesh.hpp"
 #include "Core/Application.hpp"
+#include "Renderer/Types.hpp"
 
 
 size_t attributeTypeSize[] = 
@@ -82,56 +83,9 @@ void Material::Create()
 {
     CHROME_TRACE_FUNCTION();
  
-    VkDescriptorPoolSize uniformPoolSize = 
-    {
-        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 2,
-    };
-    VkDescriptorPoolSize samplerPoolSize = 
-    {
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 2,
-    };
-
-    mDescriptorPool = CreateDescriptorPool({uniformPoolSize, samplerPoolSize}, 2);
-
-    VkDescriptorSetLayoutBinding uniformBinding = 
-    {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    };
-
-    VkDescriptorSetLayoutBinding albedoBinding = 
-    {
-        .binding = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    };
-
-    VkDescriptorSetLayoutBinding shadowUniformBinding = 
-    {
-        .binding = 2,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    };
-
-    VkDescriptorSetLayoutBinding shadowMapBinding = 
-    {
-        .binding = 3,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    };
-
-
-    mSetLayout = CreateDescriptorSetLayout({uniformBinding, albedoBinding, shadowUniformBinding, shadowMapBinding});
-
-    mDescriptorSet = AllocateDescriptorSet(mSetLayout, mDescriptorPool);
-
+    mDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
+    mDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
+    mDescriptor.Create();
 
     VkPushConstantRange pushConstantRange =
     {
@@ -140,7 +94,7 @@ void Material::Create()
         .size = sizeof(glm::mat4),
     };
 
-    mPipelineLayout = CreatePipelineLayout({mSetLayout}, {pushConstantRange});
+    mPipelineLayout = CreatePipelineLayout({mDescriptor.GetDescriptorSetLayout()}, {pushConstantRange});
     
     mPipeline.EnableDepthTesting(mSettings.depthTestEnable);
     mPipeline.EnableDepthWrite(mSettings.depthWriteEnable);
@@ -163,8 +117,12 @@ void Material::Create()
 
     mPipeline.Create(renderPass, 0);
 
+    mAlbedoSampler.Create();
+
     if(mAlbedo.IsValid())
-        mAlbedo.UpdateDescriptorSet(mDescriptorSet, 1);
+        mDescriptor.UpdateImage(mAlbedo.GetImage(), ImageLayout::ShaderRead, mAlbedoSampler.GetHandle(), 1);
+
+    mDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetUniformBuffer().GetBuffer(), 0);
 
     mIsValid = true;
 }
@@ -173,9 +131,4 @@ MaterialSettings& Material::GetSettingsRef()
 {
     CHROME_TRACE_FUNCTION();
     return mSettings;
-}
-
-void Material::SetAlbedoSampler(Filter mag, Filter min, std::array<AddressMode, 3> addressModes) 
-{
-    mAlbedo.SetSampler(mag, min, {addressModes[0], addressModes[1], addressModes[2]});
 }

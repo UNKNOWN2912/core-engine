@@ -1,10 +1,13 @@
 #include "Renderer.hpp"
+#include "Core/Application.hpp"
 #include "Core/Macro.hpp"
 #include "GLFW/glfw3.h"
 #include "Renderer/Transform.hpp"
+#include "Renderer/Types.hpp"
 #include "Utility.hpp"
 #include "GraphicsContext.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include <vulkan/vulkan_core.h>
 
 void Renderer::Initialize(const Window& window) 
 {
@@ -14,7 +17,6 @@ void Renderer::Initialize(const Window& window)
     mSwapchain.Create(window.GetSize(), PresentMode::Fifo);
     CreateRenderPass();
     CreateSwapchainFramebuffers();
-    CreateShadowMapObjects();
     CreateSemaphores();
     CreateCommandBuffers();
     mUniformBuffer.Create(sizeof(UniformData));
@@ -57,7 +59,6 @@ void Renderer::BeginFrame()
 {
     CHROME_TRACE_FUNCTION();
     mDrawSubmitInfo.clear();
-
     mFrameRunning = true;
 }
 
@@ -66,16 +67,7 @@ void Renderer::EndFrame()
     CHROME_TRACE_FUNCTION();
 
     mCamera.Calculate();
-    SetUniformCameraData(mUniformData, mCamera);
-
-    // mUniformData.view = glm::lookAt(glm::vec3(100.f), glm::vec3(0,64,0), glm::vec3(0,1,0));
-    // mUniformData.projection = glm::ortho(-50.f, 50.f, -50.f, 50.f, -150.f, 150.f);
-    // mUniformData.projection[1][1] *= -1;
-
-    
-    mUniformData.time = glfwGetTime();
-
-    UpdateMaterialDescriptorSet(mDrawSubmitInfo, mUniformBuffer, mUniformData);
+    UpdateUniformData();
 
     vkDeviceWaitIdle(getDevice());
     
@@ -84,7 +76,6 @@ void Renderer::EndFrame()
 
     mCommandBuffers.render.BeginRecording();
     
-    CmdShadowRenderPass();
     CmdMainRenderPass(imageIndex);
     
     mCommandBuffers.render.EndRecording();
@@ -132,116 +123,6 @@ void Renderer::CmdMainRenderPass(uint32_t imageIndex)
     mRenderPass.CmdEndRenderPass(mCommandBuffers.render);
 }
 
-void Renderer::CmdShadowRenderPass() 
-{
-    // lightDirection = glm::vec3(sin(glfwGetTime() * 0.05), cos(glfwGetTime() * 0.05), 0);
-    mShadowObjects.uniformData.view = glm::lookAt(lightDirection + mCamera.GetPosition(), glm::vec3(0,0,0) + mCamera.GetPosition(), glm::vec3(0,1,0));
-    mShadowObjects.uniformData.projection = glm::ortho(-50.f, 50.f, -50.f, 50.f, -150.f, 150.f);
-    mShadowObjects.uniformData.projection[1][1] *= -1;
-
-    mShadowObjects.uniformBuffer.SetData(sizeof(ShadowUniformData), &mShadowObjects.uniformData);
-    mShadowObjects.uniformBuffer.UpdateDescriptor(mShadowObjects.descriptorSet, 0);
-
-    mShadowObjects.renderPass.CmdBeginRenderPass(mCommandBuffers.render, mShadowObjects.framebuffer, mShadowObjects.image.size, {{1,0,0,1}});
-
-        VkViewport viewport = 
-    {
-        .x = 0,
-        .y = 0,
-        .width = (float)mShadowObjects.image.size.x,
-        .height = (float)mShadowObjects.image.size.y,
-        .minDepth = 0.f,
-        .maxDepth = 1.f,
-    };
-
-    VkRect2D scissor = 
-    {
-        .extent = {(uint32_t)viewport.width, (uint32_t)viewport.height},
-    };
-
-
-    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &viewport);
-    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
-
-
-    RenderDrawSubmitInfosForShadowMap(mDrawSubmitInfo);
-    
-    mShadowObjects.renderPass.CmdEndRenderPass(mCommandBuffers.render);
-}
-
-void Renderer::CreateShadowMapObjects() 
-{
-    CHROME_TRACE_FUNCTION();
-
-
-    VkSamplerCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_NEAREST,
-        .minFilter = VK_FILTER_NEAREST,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .minLod = 1,
-        .maxLod = 1,
-        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-    };
-
-    vkCreateSampler(getDevice(), &createInfo, nullptr, &mShadowObjects.sampler);
-
-    mShadowObjects.renderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mShadowObjects.renderPass.AddSubpass({}, {}, 0);
-    mShadowObjects.renderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests, PipelineStage::LateFragmentTests);
-    mShadowObjects.renderPass.Create();
-
-    mShadowObjects.image = CreateImage({2048, 2048}, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal);
-    mShadowObjects.framebuffer = CreateFramebuffer({mShadowObjects.image.size}, {mShadowObjects.image}, mShadowObjects.renderPass);
-
-    VkDescriptorSetLayoutBinding shadowUniformBinding = 
-    {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    };
-
-    VkDescriptorPoolSize uniformBinding = 
-    {
-        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-    };
-
-    VkPushConstantRange pushConstantRange = 
-    {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .offset = 0,
-        .size = sizeof(glm::mat4),
-    };
-
-    mShadowObjects.setLayout = CreateDescriptorSetLayout({shadowUniformBinding});
-    mShadowObjects.descriptorPool = CreateDescriptorPool({uniformBinding}, 1);
-    mShadowObjects.descriptorSet = AllocateDescriptorSet(mShadowObjects.setLayout, mShadowObjects.descriptorPool);
-
-    mShadowObjects.pipeline.AddBinding(0, sizeof(Vertex), InputRate::Vertex);
-    mShadowObjects.pipeline.AddAttribute(0, 0, ImageFormat::RGB32, offsetof(Vertex, position));
-    mShadowObjects.pipeline.AddAttribute(0, 1, ImageFormat::RG32, offsetof(Vertex, uv));
-    mShadowObjects.pipeline.AddAttribute(0, 2, ImageFormat::RGB32, offsetof(Vertex, normal));
-    mShadowObjects.pipeline.AddBinding(1, sizeof(glm::mat4), InputRate::Instance);
-    mShadowObjects.pipeline.AddAttribute(1, 3, ImageFormat::RGBA32, sizeof(glm::vec4) * 0);
-    mShadowObjects.pipeline.AddAttribute(1, 4, ImageFormat::RGBA32, sizeof(glm::vec4) * 1);
-    mShadowObjects.pipeline.AddAttribute(1, 5, ImageFormat::RGBA32, sizeof(glm::vec4) * 2);
-    mShadowObjects.pipeline.AddAttribute(1, 6, ImageFormat::RGBA32, sizeof(glm::vec4) * 3);
-    mShadowObjects.pipeline.SetPipelineLayout(CreatePipelineLayout({mShadowObjects.setLayout}, {pushConstantRange}));
-    mShadowObjects.pipeline.EnableDepthTesting(true);
-    mShadowObjects.pipeline.EnableDepthWrite(true);
-    mShadowObjects.pipeline.LoadVertexShader("Shaders/shadow.vert.spv");
-    mShadowObjects.pipeline.LoadFragmentShader("Shaders/shadow.frag.spv");
-    mShadowObjects.pipeline.SetCullMode(CullMode::None);
-    mShadowObjects.pipeline.Create(mShadowObjects.renderPass, 0);
-
-    mShadowObjects.uniformBuffer.Create(sizeof(mShadowObjects.uniformData));
-}
-
 void Renderer::CreateRenderPass()
 {
     CHROME_TRACE_FUNCTION();
@@ -251,8 +132,6 @@ void Renderer::CreateRenderPass()
     mRenderPass.AddSubpass({0}, {}, 1);
     mRenderPass.AddDependency(mRenderPass.ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
     mRenderPass.Create();
-
-    
 }
 
 void Renderer::CreateSwapchainFramebuffers() 
@@ -324,57 +203,16 @@ void Renderer::DestroyCommandBuffers()
     mCommandBuffers.render.Destroy();    
 }
 
-void Renderer::SetUniformCameraData(UniformData& data, const Camera& camera) 
-{
-    data.projection = camera.GetProjection();    
-    data.view = camera.GetView();
-    data.cameraPosition = camera.GetPosition();
-    data.cameraFront = camera.GetFront();
-}
 
 void Renderer::UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData) 
 {
-    uniformData.time = glfwGetTime();
-
     uniformBuffer.SetData(sizeof(UniformData), &uniformData);
-
-    for(auto drawSubmit : drawSubmitInfos)
-    {
-        assert(drawSubmit.mesh->IsValid());
-        assert(drawSubmit.material->IsValid());
-
-        uniformBuffer.UpdateDescriptor(drawSubmit.material->mDescriptorSet, 0);
-
-        if(drawSubmit.material->mAlbedo.IsValid())
-            drawSubmit.material->mAlbedo.UpdateDescriptorSet(drawSubmit.material->mDescriptorSet, 1);
-
-        mShadowObjects.uniformBuffer.UpdateDescriptor(drawSubmit.material->mDescriptorSet, 2);
-
-        VkDescriptorImageInfo imageInfo = 
-        {
-            .sampler = mShadowObjects.sampler,
-            .imageView = mShadowObjects.image.view,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        };
-
-        VkWriteDescriptorSet write = 
-        {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = drawSubmit.material->mDescriptorSet,
-            .dstBinding = 3,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &imageInfo,
-        };
-
-        vkUpdateDescriptorSets(getDevice(), 1, &write, 0, nullptr);
-    }
 }
 
 void Renderer::CmdDrawSubmitBindDescriptorSet(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo) 
 {
-    vkCmdBindDescriptorSets(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmitInfo.material->mPipeline.GetPipelineLayout(), 0, 1, &drawSubmitInfo.material->mDescriptorSet, 0, nullptr);
+    VkDescriptorSet descriptorSets[] = {drawSubmitInfo.material->mDescriptor.GetDescriptorSet()};
+    vkCmdBindDescriptorSets(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmitInfo.material->mPipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
 }
 
 void Renderer::CmdDrawSubmitBindPipeline(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo) 
@@ -431,42 +269,6 @@ void Renderer::RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubm
     }
 }
 
-void Renderer::RenderDrawSubmitInfosForShadowMap(const std::vector<DrawSubmitInfo>& drawSubmitInfos) 
-{
-    // CmdDrawSubmitBindDescriptorSet(mCommandBuffers.render.GetHandle(), drawSubmit);
-    // CmdDrawSubmitBindPipeline(mCommandBuffers.render.GetHandle(), drawSubmit);
-
-
-    vkCmdBindDescriptorSets(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, mShadowObjects.pipeline.GetPipelineLayout(), 0, 1, &mShadowObjects.descriptorSet, 0, nullptr);
-    vkCmdBindPipeline(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, mShadowObjects.pipeline.GetHandle());
-
-
-
-
-    for (int i = 0; i < drawSubmitInfos.size(); i++)
-    {
-        DrawSubmitInfo drawSubmit = drawSubmitInfos[i];
-
-        int previousIndex = glm::clamp(i - 1, 0, INT32_MAX);
-
-        if(i == 0 || drawSubmit.mesh != drawSubmitInfos[previousIndex].mesh || drawSubmit.instanceBuffer != drawSubmitInfos[previousIndex].instanceBuffer)
-        {
-            CmdDrawSubmitBindVertexBuffer(mCommandBuffers.render.GetHandle(), drawSubmit);
-            CmdDrawSubmitBindIndexBuffer(mCommandBuffers.render.GetHandle(), drawSubmit);
-        }
-
-        glm::mat4 model = drawSubmit.transform.GetMatrix();
-        vkCmdPushConstants(mCommandBuffers.render.GetHandle(), drawSubmit.material->mPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
-
-        
-
-        if(drawSubmit.material->mSettings.enableInstancing)
-            vkCmdDrawIndexed(mCommandBuffers.render.GetHandle(), drawSubmit.mesh->mIndexSize / sizeof(uint32_t), drawSubmit.instanceCount, 0, 0, 0);
-        else
-            vkCmdDrawIndexed(mCommandBuffers.render.GetHandle(), drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
-    }
-}
-
 void Renderer::PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore) 
 {
     uint32_t waitSemaphoreCount = (waitSemaphore == VK_NULL_HANDLE) ? 0 : 1;
@@ -483,5 +285,14 @@ void Renderer::PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t 
     };
 
     vkQueuePresentKHR(queue, &presentInfo);
+}
 
+void Renderer::UpdateUniformData() 
+{
+    mUniformData.projection = mCamera.GetProjection();    
+    mUniformData.view = mCamera.GetView();
+    mUniformData.cameraPosition = mCamera.GetPosition();
+    mUniformData.cameraFront = mCamera.GetFront();
+    mUniformData.time = Application::GetInstance()->GetElapsedTime();
+    mUniformBuffer.SetData(sizeof(UniformData), &mUniformData);
 }

@@ -51,7 +51,7 @@
 #define PROFILE_FUNCTION() ScopedTimer __profilingScopedTimer__(__FNNAME__)
 
 
-#define CHROME_TRACE_ENABLED 1
+#define CHROME_TRACE_ENABLED 0
 
 
 #if CHROME_TRACE_ENABLED
@@ -61,5 +61,9 @@ inline ChromeTraceProfiler __global_profiler__("profile.json");
 #define CHROME_TRACE_FUNCTION() ChromeFunctionTrace __function_trace__ = __global_profiler__.ProfileFunction(__FNNAME__, 0, 0)
 #define CHROME_ENABLE_TRACING() __global_profiler__.EnableTracing(true)
 #define CHROME_DISABLE_TRACING() __global_profiler__.EnableTracing(false)
+#else
 
+#define CHROME_TRACE_FUNCTION()
+#define CHROME_ENABLE_TRACING()
+#define CHROME_DISABLE_TRACING()
 #endif

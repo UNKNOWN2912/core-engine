@@ -1,11 +1,12 @@
 #include "Application.hpp"
 #include "Input/Mouse.hpp"
 #include <cassert>
-#include <print>
 
 void Application::InitializeApplication()
 {
 	CHROME_TRACE_FUNCTION();
+
+	mApplicationTimer.Start();
 
 	WindowSpecification windowSpecification;
 	windowSpecification.size = glm::uvec2(800, 600);
@@ -150,6 +151,11 @@ Application::~Application()
 float Application::GetDeltaTime() 
 {
 	return mDeltaTime;
+}
+
+float Application::GetElapsedTime() 
+{
+	return mApplicationTimer.GetElapsedTime();
 }
 
 void Application::MainLoop()

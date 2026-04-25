@@ -5,16 +5,13 @@
 class UniformBuffer
 {
     public:
-        UniformBuffer();
-        ~UniformBuffer();
         void Create(size_t capacity);
         void SetData(size_t size, void* data);
-        void UpdateDescriptor(VkDescriptorSet descriptorSet, int binding);
         const Buffer& GetBuffer() const { return mBuffer; }
-        
         size_t GetCapacity();
-
-
+        
+        UniformBuffer();
+        ~UniformBuffer();
     private:
         Buffer mBuffer;
 };

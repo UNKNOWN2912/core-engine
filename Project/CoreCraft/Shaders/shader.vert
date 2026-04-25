@@ -1,5 +1,4 @@
 #version 450
-
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aUv;
 layout(location = 2) in vec3 aNormal;
@@ -19,18 +18,10 @@ layout(std140, binding = 0) uniform UniformData
     float time;
 } uniformData;
 
-layout(std140, binding = 2) uniform LightUniformData 
-{
-    mat4 view;
-    mat4 projection;
-} lightUniformData;
-
-
 
 layout(location = 0) out OutData
 {
     vec3 fragPos;
-    vec4 lightFragCoord;
     vec2 uv;
     vec3 normal;
     vec3 cameraPosition;
@@ -46,7 +37,6 @@ void main()
     outData.uv = aUv;
     outData.normal = aNormal;
     outData.fragPos = (pushConstant.model * vec4(aPosition, 1.0)).xyz;
-    outData.lightFragCoord = lightUniformData.projection * lightUniformData.view * pushConstant.model * vec4(aPosition, 1.0);
     outData.time = uniformData.time;
 
 

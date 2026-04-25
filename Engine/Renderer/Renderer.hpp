@@ -32,8 +32,6 @@ struct Semaphores
 
 struct CommandBuffers
 {
-    // VkCommandBuffer renderingCommandBuffer = VK_NULL_HANDLE;
-
     CommandBuffer render;
 };
 
@@ -62,28 +60,6 @@ struct DrawSubmitInfo
     uint32_t instanceCount = 0;
 };
 
-struct ShadowUniformData
-{
-    glm::mat4 view;
-    glm::mat4 projection;
-};
-
-struct ShadowObjects
-{
-    RenderPass renderPass;
-    GraphicsPipeline pipeline;
-    VkFramebuffer framebuffer;
-    Image image;
-    UniformBuffer uniformBuffer;
-    ShadowUniformData uniformData;
-
-    VkDescriptorSetLayout setLayout;
-    VkDescriptorPool descriptorPool;
-    VkDescriptorSet descriptorSet;
-
-    VkSampler sampler;
-};
-
 class Renderer
 {
     public:
@@ -105,12 +81,12 @@ class Renderer
         void Resize(const glm::uvec2& size);
 
         RenderPass GetMainRenderPass() const { return mRenderPass; }
+        
+
+        const UniformBuffer& GetUniformBuffer() const { return mUniformBuffer; }
 
     private:
         void CmdMainRenderPass(uint32_t imageIndex);
-        void CmdShadowRenderPass();
-
-        void CreateShadowMapObjects();
 
         void CreateRenderPass();
         void CreateSwapchainFramebuffers();
@@ -122,7 +98,6 @@ class Renderer
         void DestroySemaphores();
         void DestroyCommandBuffers();
 
-        void SetUniformCameraData(UniformData& data, const Camera& camera);
         void UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData);
 
         void CmdDrawSubmitBindDescriptorSet(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
@@ -131,11 +106,10 @@ class Renderer
         void CmdDrawSubmitBindIndexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
 
         void RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubmitInfos);
-        void RenderDrawSubmitInfosForShadowMap(const std::vector<DrawSubmitInfo>& drawSubmitInfos);
-        
 
         void PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore);
         
+        void UpdateUniformData();
     private:
         GraphicsContext mContext;
 
@@ -162,8 +136,6 @@ class Renderer
         Camera mCamera;
 
         Image mDepthAttachment;
-
-        ShadowObjects mShadowObjects;
 
         glm::vec3 lightDirection = glm::vec3(1,1,1);
 };

@@ -1,5 +1,7 @@
 #pragma once
+#include "Renderer/Descriptor.hpp"
 #include "Renderer/GraphicsPipeline.hpp"
+#include "Renderer/Sampler.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/Types.hpp"
 
@@ -48,17 +50,14 @@ class Material
         friend class Renderer;
 
         Texture mAlbedo;
+        Sampler mAlbedoSampler;
+        
         GraphicsPipeline mPipeline;
         MaterialSettings mSettings;
-
-        VkDescriptorSet mDescriptorSet;
-        VkDescriptorSetLayout mSetLayout;
-
         VkPipelineLayout mPipelineLayout;
-
-        VkDescriptorPool mDescriptorPool;
-
         uint32_t mFinalLocation = 0;
+
+        Descriptor mDescriptor;
 
         bool mIsValid = false;
 };

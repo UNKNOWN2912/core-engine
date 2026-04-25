@@ -27,21 +27,3 @@ void UniformBuffer::SetData(size_t size, void* data)
     
     memcpy(mBuffer.map, data, size);
 }
-
-void UniformBuffer::UpdateDescriptor(VkDescriptorSet descriptorSet, int binding) 
-{
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = mBuffer.handle;
-    bufferInfo.offset = 0;
-    bufferInfo.range = mBuffer.size;
-
-    VkWriteDescriptorSet descriptorWrite = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.dstBinding = binding;
-    descriptorWrite.dstSet = descriptorSet;
-    descriptorWrite.pBufferInfo = &bufferInfo;
-
-    vkUpdateDescriptorSets(getDevice(), 1, &descriptorWrite, 0, nullptr);
-}
