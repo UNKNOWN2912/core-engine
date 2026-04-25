@@ -55,6 +55,7 @@ public:
 	Renderer mRenderer;
 
 	float GetDeltaTime();
+	float GetElapsedTime();
 
 private:
 	bool mRunning = true;
@@ -65,6 +66,7 @@ private:
 	Window mWindow;
 
 	Timer mDeltaTimer;
+	Timer mApplicationTimer;
 
 	float mDeltaTime = 0;
 };

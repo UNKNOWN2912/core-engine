@@ -48,7 +48,12 @@ void Camera::Calculate()
         case CameraType::Orbital:
             CalculateOrbital();
             break;
+        case CameraType::Light:
+            CalculateLight();
+            break;
     }
+
+    mProjection[1][1] *= -1;
 }
 
 void Camera::CalculatePerspective()
@@ -70,4 +75,10 @@ void Camera::CalculateOrbital()
     CHROME_TRACE_FUNCTION();
     mView = glm::lookAt(mPosition, mFront, mUp);
     mProjection = glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane);
+}
+void Camera::CalculateLight() 
+{
+    CHROME_TRACE_FUNCTION();
+    mView = glm::lookAt(mPosition, mFront, mUp);
+    mProjection = glm::ortho(-mZoom, mZoom, -1.f * mZoom, 1.f * mZoom, mNearPlane, mFarPlane);
 }

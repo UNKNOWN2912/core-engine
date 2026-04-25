@@ -1,28 +1,10 @@
 #pragma once
+#include "Renderer/Descriptor.hpp"
 #include "Renderer/GraphicsPipeline.hpp"
+#include "Renderer/Sampler.hpp"
 #include "Renderer/Texture.hpp"
+#include "Renderer/Types.hpp"
 
-enum class CullMode
-{
-    None = 0,
-    Front,
-    Back,
-};
-
-enum class FrontFace
-{
-    None = 0,
-    Clockwise, 
-    CounterClockwise,
-};
-
-enum class PrimitiveType
-{
-    None = 0,
-    Triangle, 
-    Line, 
-    Point,
-};
 
 struct MaterialSettings
 {
@@ -35,7 +17,7 @@ struct MaterialSettings
     PrimitiveType primitiveType = PrimitiveType::Triangle;
     FrontFace frontFace = FrontFace::Clockwise;
     float lineWidth = 1.f;
-    int sampleCount = 1; 
+    SampleCount sampleCount = SampleCount::One; 
 };
 
 enum class AttributeType
@@ -46,26 +28,6 @@ enum class AttributeType
     IVec4, UVec4, Vec4,
 };
 
-enum class InputRate
-{
-    None = 0,
-    Vertex,
-    Instance
-};
-
-enum class Filter
-{
-    None = 0,
-    Nearest,
-    Linear
-};
-
-enum class AddressMode
-{
-    None = 0,
-    Repeat,
-    MirrorRepeat
-};
 
 class Material
 {
@@ -88,17 +50,14 @@ class Material
         friend class Renderer;
 
         Texture mAlbedo;
+        Sampler mAlbedoSampler;
+        
         GraphicsPipeline mPipeline;
         MaterialSettings mSettings;
-
-        VkDescriptorSet mDescriptorSet;
-        VkDescriptorSetLayout mSetLayout;
-
         VkPipelineLayout mPipelineLayout;
-
-        VkDescriptorPool mDescriptorPool;
-
         uint32_t mFinalLocation = 0;
+
+        Descriptor mDescriptor;
 
         bool mIsValid = false;
 };

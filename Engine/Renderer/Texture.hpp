@@ -3,28 +3,20 @@
 #include <string_view>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
+#include <vulkan/vulkan_core.h>
 
 
 class Texture
 {
     public:
-        void Create(void* data, VkFormat format, const glm::uvec2& size, uint32_t binding);
-        void Load(std::string_view filename, uint32_t binding);
-
-        VkDescriptorSet GetDescriptorSet() const;
-        VkDescriptorSetLayout GetSetLayout() const;
-
-        void SetDataToDescriptorSet(VkDescriptorSet descriptorSet, uint32_t binding);
-
+        void Create(void* data, const glm::uvec2& size, ImageFormat format);
+        void Load(std::string_view filename);
         bool IsValid() const { return mIsValid; }
 
-        void SetSampler(VkFilter minFilter, VkFilter magFilter, const std::array<VkSamplerAddressMode, 3>& addressMode);
+        const Image& GetImage() const { return mImage; }
 
       private:
         bool mIsValid = false;
         Image mImage;
         Buffer mStagingBuffer;
-
-        VkSampler mSampler = VK_NULL_HANDLE;
-
 };

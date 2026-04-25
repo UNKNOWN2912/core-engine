@@ -1,24 +1,27 @@
 #pragma once
 #include "Renderer/Camera.hpp"
+#include "Renderer/CommandBuffer.hpp"
 #include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
 #include "GraphicsPipeline.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/RenderPass.hpp"
+#include "Renderer/Swapchain.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/Transform.hpp"
 #include "Renderer/UniformBuffer.hpp"
 
-struct Swapchain
-{
-    uint32_t imageCount = 0;
-    VkFormat format = VK_FORMAT_UNDEFINED;
-    VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    VkExtent2D extent = {0,0};
-    VkSwapchainKHR handle = VK_NULL_HANDLE;
-    std::vector<VkImage> images;
-    std::vector<VkImageView> views;
-};
+// struct Swapchain
+// {
+//     uint32_t imageCount = 0;
+//     VkFormat format = VK_FORMAT_UNDEFINED;
+//     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+//     VkExtent2D extent = {0,0};
+//     VkSwapchainKHR handle = VK_NULL_HANDLE;
+//     std::vector<VkImage> images;
+//     std::vector<VkImageView> views;
+// };
 
 
 struct Semaphores
@@ -29,19 +32,16 @@ struct Semaphores
 
 struct CommandBuffers
 {
-    VkCommandBuffer renderingCommandBuffer = VK_NULL_HANDLE;
+    CommandBuffer render;
 };
 
 struct UniformData
 {
     glm::mat4 projection;
     glm::mat4 view;
-    glm::vec3 cameraPosition;
-    float     _pad1;  
-    glm::vec3 cameraFront;
-    float     _pad2;  
+    alignas(16) glm::vec3 cameraPosition;
+    alignas(16) glm::vec3 cameraFront;
     float time = 0;
-    float     _pad[3];
 };
 
 struct MeshMap
@@ -80,35 +80,49 @@ class Renderer
 
         void Resize(const glm::uvec2& size);
 
-        VkRenderPass GetMainRenderPass() const { return mRenderPass; }
+        RenderPass GetMainRenderPass() const { return mRenderPass; }
+        
+
+        const UniformBuffer& GetUniformBuffer() const { return mUniformBuffer; }
 
     private:
-        void CreateSwapchain(const glm::uvec2& size);
+        void CmdMainRenderPass(uint32_t imageIndex);
+
         void CreateRenderPass();
         void CreateSwapchainFramebuffers();
         void CreateSemaphores();
         void CreateCommandBuffers();
-        void CreatePipelines();
         
-        void DestroySwapchain();
         void DestroyRenderPass();
         void DestroySwapchainFramebuffers();
         void DestroySemaphores();
         void DestroyCommandBuffers();
 
+        void UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData);
+
+        void CmdDrawSubmitBindDescriptorSet(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+        void CmdDrawSubmitBindPipeline(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+        void CmdDrawSubmitBindVertexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+        void CmdDrawSubmitBindIndexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
+
+        void RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubmitInfos);
+
+        void PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore);
         
+        void UpdateUniformData();
     private:
         GraphicsContext mContext;
 
         Swapchain mSwapchain;
+        std::vector<VkFramebuffer> mSwapchainFramebuffer;
+
         Semaphores mSemaphores;
         CommandBuffers mCommandBuffers;
-        GraphicsPipeline mDefaultPipeline;
 
-        VkRenderPass mRenderPass;
+        RenderPass mRenderPass;
+
+
         VkViewport mViewport;
-
-        std::vector<VkFramebuffer> mSwapchainFramebuffer;
 
         std::vector<DrawSubmitInfo> mDrawSubmitInfo;
 
@@ -122,4 +136,6 @@ class Renderer
         Camera mCamera;
 
         Image mDepthAttachment;
+
+        glm::vec3 lightDirection = glm::vec3(1,1,1);
 };

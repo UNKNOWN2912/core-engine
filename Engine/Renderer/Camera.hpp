@@ -4,7 +4,7 @@
 
 enum class CameraType
 {
-    Perspective, Orthographic, Orbital
+    Perspective, Orthographic, Orbital, Light
 };
 
 class Camera
@@ -31,12 +31,14 @@ class Camera
         Camera& SetFarPlane(float farPlane) { mFarPlane = farPlane; return *this; }
         Camera& SetCameraType(CameraType type) { mType = type; return *this; }
         Camera& SetZoom(float zoom) { mZoom = zoom; return *this; }
+        
 
         void Calculate();
     private:
         void CalculatePerspective();
         void CalculateOrthographic();
         void CalculateOrbital();
+        void CalculateLight();
 
         float mZoom = 1.f;
       

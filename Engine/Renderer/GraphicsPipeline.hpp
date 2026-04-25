@@ -1,4 +1,6 @@
 #pragma once
+#include "Renderer/RenderPass.hpp"
+#include "Renderer/Types.hpp"
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -17,18 +19,18 @@ class GraphicsPipeline
         void EnableBlending(bool enable);
         void EnableWireframe(bool enable);
 
-        void AddBinding(uint32_t binding, size_t stride, VkVertexInputRate inputRate);
-        void AddAttribute(uint32_t binding, uint32_t location, VkFormat format, size_t offset);
+        void AddBinding(uint32_t binding, size_t stride, InputRate inputRate);
+        void AddAttribute(uint32_t binding, uint32_t location, ImageFormat format, size_t offset);
         void AddColorBlendAttachment(bool enableBlending);
 
-        void SetCullMode(VkCullModeFlags cullMode);
-        void SetPrimitive(VkPrimitiveTopology primitive);
-        void SetMultisampleCount(uint32_t count);
+        void SetCullMode(CullMode cullMode);
+        void SetPrimitive(PrimitiveType primitive);
+        void SetMultisampleCount(SampleCount count);
         void SetViewport(const VkViewport& viewport);
 
         void SetPipelineLayout(VkPipelineLayout layout);
 
-        void Create(VkRenderPass renderPass, uint32_t subpassIndex);
+        void Create(const RenderPass& renderPass, uint32_t subpassIndex);
 
         VkPipelineLayout GetPipelineLayout() const;
 
