@@ -86,8 +86,10 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 				break;
 			}
 		case WindowEvent::WindowMinimize:
+			OnWindowMinimize();
 			break;
 		case WindowEvent::WindowMaxmimize:
+			OnWindowMaximize();
 			break;
 		case WindowEvent::WindowMouseMove:
 			{
@@ -139,8 +141,6 @@ Application::Application()
 	assert(instance == nullptr);
 
 	instance = this;
-
-
 }
 
 Application::~Application()

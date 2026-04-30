@@ -9,6 +9,7 @@ class Swapchain
         VkSwapchainKHR GetHandle() const { return mHandle; }
         const std::vector<Image>& GetImages() const { return mImages; }
         const glm::uvec2& GetSize() const { return mSize; }
+        uint32_t GetImageCount() const { return mImages.size(); }
 
         void Create(const glm::uvec2& size, PresentMode presentMode);
         void Destroy();

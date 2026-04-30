@@ -7,3 +7,7 @@
 [submodule "Engine/Vendor/stb"]
 	path = Engine/Vendor/stb
 	url = https://github.com/nothings/stb.git
+[submodule "Project/Editor/imgui"]
+	path = Project/Editor/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking

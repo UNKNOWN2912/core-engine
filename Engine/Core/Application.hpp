@@ -17,12 +17,13 @@ public:
 	virtual void OnWindowClose() { Close(); }
 	virtual void OnWindowMove(const glm::uvec2& position) {}
 	virtual void OnWindowResize(const glm::uvec2& size) {}
+	virtual void OnWindowMinimize() {}
+	virtual void OnWindowMaximize() {}
 	
 	virtual void OnMouseMove(const glm::vec2& position, const glm::vec2& offset) {}
 	virtual void OnMouseButtonPress(MouseButton button) {}
 	virtual void OnMouseButtonRelease(MouseButton button) {}
 	virtual void OnScroll(const glm::vec2& scroll) {}
-
 
 	virtual void OnKeyPress(Key key) {}
 	virtual void OnKeyRepeat(Key key) {}
@@ -69,4 +70,5 @@ private:
 	Timer mApplicationTimer;
 
 	float mDeltaTime = 0;
+
 };

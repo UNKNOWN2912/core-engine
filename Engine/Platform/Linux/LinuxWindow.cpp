@@ -72,8 +72,6 @@ void mouseScrollCallback(GLFWwindow* window, double x, double y)
 
 Key GetKeyFromGlfwKey(int key)
 {
-	
-	
 	Key result;
 
 	switch (key)
@@ -472,6 +470,16 @@ void characterCallback(GLFWwindow* window, unsigned int codepoint)
 	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowCharacterType, &ch);
 }
 
+void minimizeCallback(GLFWwindow* window, int minimize)
+{
+	
+}
+
+void maximizeCallback(GLFWwindow* window, int maximize)
+{
+
+}
+
 void Window::Create(const WindowSpecification& specification)
 {
     CHROME_TRACE_FUNCTION();
@@ -500,6 +508,8 @@ void Window::Create(const WindowSpecification& specification)
 	glfwSetScrollCallback(mData->window, mouseScrollCallback);
 	glfwSetKeyCallback(mData->window, keyCallback);
 	glfwSetCharCallback(mData->window, characterCallback);
+	glfwSetWindowMaximizeCallback(mData->window, maximizeCallback);
+	glfwSetWindowIconifyCallback(mData->window, minimizeCallback);
 }
 
 void Window::HideCursor()

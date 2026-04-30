@@ -4,25 +4,14 @@
 #include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
-#include "GraphicsPipeline.hpp"
 #include "GraphicsContext.hpp"
 #include "Renderer/RenderPass.hpp"
 #include "Renderer/Swapchain.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/Transform.hpp"
 #include "Renderer/UniformBuffer.hpp"
-
-// struct Swapchain
-// {
-//     uint32_t imageCount = 0;
-//     VkFormat format = VK_FORMAT_UNDEFINED;
-//     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-//     VkExtent2D extent = {0,0};
-//     VkSwapchainKHR handle = VK_NULL_HANDLE;
-//     std::vector<VkImage> images;
-//     std::vector<VkImageView> views;
-// };
-
+#include "Renderer/Utility.hpp"
+#include <vulkan/vulkan_core.h>
 
 struct Semaphores
 {
@@ -58,6 +47,20 @@ struct DrawSubmitInfo
     InstanceBuffer* instanceBuffer = nullptr;
     bool instanced = false;
     uint32_t instanceCount = 0;
+};
+
+struct DeferredAttachment
+{
+    Image mPosition;
+    Image mAlbedo;
+    Image mNormal;
+    Image mDepth;
+    glm::uvec2 mSize;
+
+    void ResizeAttachments(const glm::uvec2& size);
+    void CreateAttachments(const glm::uvec2& size);
+    void DestroyAttachments();
+
 };
 
 class Renderer
@@ -110,16 +113,25 @@ class Renderer
         void PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore);
         
         void UpdateUniformData();
+
+        void CreateFinalImageAttachment(const glm::uvec2& size);
     private:
         GraphicsContext mContext;
 
         Swapchain mSwapchain;
         std::vector<VkFramebuffer> mSwapchainFramebuffer;
 
+        VkFramebuffer mFinalFrameBuffer;
+        Image mFinalImage;
+
         Semaphores mSemaphores;
         CommandBuffers mCommandBuffers;
 
         RenderPass mRenderPass;
+
+
+        RenderPass mMainRenderPass;
+        RenderPass mSwapchainRenderPass;
 
 
         VkViewport mViewport;
@@ -136,6 +148,11 @@ class Renderer
         Camera mCamera;
 
         Image mDepthAttachment;
+        Image mSceneDepthAttachment;
 
         glm::vec3 lightDirection = glm::vec3(1,1,1);
+
+        DeferredAttachment mDeferredAttachments;
+
+        friend class Editor;
 };

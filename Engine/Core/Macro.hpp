@@ -51,7 +51,7 @@
 #define PROFILE_FUNCTION() ScopedTimer __profilingScopedTimer__(__FNNAME__)
 
 
-#define CHROME_TRACE_ENABLED 0
+#define CHROME_TRACE_ENABLED 1
 
 
 #if CHROME_TRACE_ENABLED

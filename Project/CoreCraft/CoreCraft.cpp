@@ -1,3 +1,5 @@
+#include "Core/Macro.hpp"
+#include "Input/Keyboard.hpp"
 #include "Maths/Noise.hpp"
 #include "MeshGenerator.hpp"
 #include "Renderer/Mesh.hpp"
@@ -7,6 +9,7 @@
 #include <vector>
 #include "CameraController.hpp"
 #include "Chunk.hpp"
+#include "glm/ext/vector_float3.hpp"
 
 class CoreCraft : public Application
 {
@@ -25,8 +28,9 @@ class CoreCraft : public Application
 
     void OnStart() override
     {
+        CHROME_ENABLE_TRACING();
         ToggleCursor();
-        GetWindowRef().SetFullscreen(true);
+        // GetWindowRef().SetFullscreen(true);
 
         mController.SetCamera(mCamera, GetWindowRef());
         mController.SetSpeed(6);
@@ -60,6 +64,8 @@ class CoreCraft : public Application
 
         SetupMeshes();
         SetupMaterials();
+        CHROME_DISABLE_TRACING();
+
     }
 
     void OnUpdate() override
@@ -110,7 +116,9 @@ class CoreCraft : public Application
 
             glm::vec3 worldPosition = glm::vec3(position) + glm::vec3(chunk.GetChunkPosition().x * 16, 0, chunk.GetChunkPosition().y * 16);
 
-            position.y = (PerlinNoise(worldPosition / glm::vec3(16.f, 1, 16.f)) * 10) + 10;
+
+
+            position.y = CombinedPerlin(worldPosition) + 10; 
 
 
             chunk.SetBlock(BlockType::Grass, position);
@@ -119,6 +127,24 @@ class CoreCraft : public Application
 
         }
 
+    }
+
+    float CombinedPerlin(glm::vec3 st)
+    {
+        float l = 2.9;
+        float p = 6.3;	
+        float result = 0;
+        float k = 0.01;
+
+        float a = 10;
+        
+        for (int i = 0; i < 8; i++)
+        {
+            float fi = i;
+            result += (PerlinNoise(st * glm::pow(l,fi) * k) * a) / pow(p,fi);
+        }
+
+        return result;
     }
 
     void OnWindowResize(const glm::uvec2 &size) override
@@ -200,8 +226,7 @@ class CoreCraft : public Application
 
     void OnKeyPress(Key key) override
     {
-        if (key == Key::Escape)
-
+        if (key == Key::Q)
         {
             Close();
         }
@@ -223,6 +248,22 @@ class CoreCraft : public Application
         {
             mCamera.SetCameraType(CameraType::Light);
         }
+
+        if (key == Key::Escape) 
+        {
+            ToggleCursor();
+        }
+
+    }
+
+    void OnWindowMaximize() override
+    {
+        LOG("Maximize");
+    }
+
+    void OnWindowMinimize() override
+    {
+        LOG("minimize");
 
     }
 

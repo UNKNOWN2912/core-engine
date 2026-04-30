@@ -1,1 +1,1 @@
-add_subdirectory(CoreCraft)
+add_subdirectory(Editor)

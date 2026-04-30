@@ -1,7 +1,6 @@
 #include "Renderer.hpp"
 #include "Core/Application.hpp"
 #include "Core/Macro.hpp"
-#include "GLFW/glfw3.h"
 #include "Renderer/Transform.hpp"
 #include "Renderer/Types.hpp"
 #include "Utility.hpp"
@@ -17,8 +16,10 @@ void Renderer::Initialize(const Window& window)
     mSwapchain.Create(window.GetSize(), PresentMode::Fifo);
     CreateRenderPass();
     CreateSwapchainFramebuffers();
+    CreateFinalImageAttachment(mSwapchain.GetSize());
     CreateSemaphores();
     CreateCommandBuffers();
+    mDeferredAttachments.CreateAttachments(mSwapchain.GetSize());
     mUniformBuffer.Create(sizeof(UniformData));
 }
 
@@ -27,36 +28,10 @@ void Renderer::Terminate()
     CHROME_TRACE_FUNCTION();
 }
 
-void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform)
-{
-    CHROME_TRACE_FUNCTION();
-    DrawSubmitInfo submitInfo = 
-    {
-        .mesh = &mesh,
-        .material = &material,
-        .transform = transform,
-    };
-
-    mDrawSubmitInfo.push_back(submitInfo);
-}
-
-void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount)
-{
-    CHROME_TRACE_FUNCTION();
-    DrawSubmitInfo submitInfo = 
-    {
-        .mesh = &mesh,
-        .material = &material,
-        .instanceBuffer = &instanceBuffer,
-        .instanced = true,
-        .instanceCount = instanceCount,
-    };
-    
-    mDrawSubmitInfo.push_back(submitInfo);
-}
 
 void Renderer::BeginFrame() 
 {
+    vkDeviceWaitIdle(getDevice());
     CHROME_TRACE_FUNCTION();
     mDrawSubmitInfo.clear();
     mFrameRunning = true;
@@ -94,6 +69,7 @@ void Renderer::Resize(const glm::uvec2& size)
 
     mSwapchain.Destroy();
     DestroySwapchainFramebuffers();
+
     mSwapchain.Create(size, PresentMode::Fifo);
     CreateSwapchainFramebuffers();
 
@@ -104,22 +80,61 @@ void Renderer::Resize(const glm::uvec2& size)
     mViewport.minDepth = 0.f;
 }
 
+
+void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform)
+{
+    CHROME_TRACE_FUNCTION();
+    DrawSubmitInfo submitInfo = 
+    {
+        .mesh = &mesh,
+        .material = &material,
+        .transform = transform,
+    };
+
+    mDrawSubmitInfo.push_back(submitInfo);
+}
+
+void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount)
+{
+    CHROME_TRACE_FUNCTION();
+    DrawSubmitInfo submitInfo = 
+    {
+        .mesh = &mesh,
+        .material = &material,
+        .instanceBuffer = &instanceBuffer,
+        .instanced = true,
+        .instanceCount = instanceCount,
+    };
+    
+    mDrawSubmitInfo.push_back(submitInfo);
+}
+
 void Renderer::CmdMainRenderPass(uint32_t imageIndex) 
 {
     CHROME_TRACE_FUNCTION();
 
-    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render, mSwapchainFramebuffer[imageIndex], {mSwapchain.GetSize().x, mSwapchain.GetSize().y}, {{1,1,1,1}, {1,0,0,1}});
-    
     VkRect2D scissor = 
     {
         .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
     };
 
+    
+    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render, mFinalFrameBuffer, {mSwapchain.GetSize().x, mSwapchain.GetSize().y}, {{1,1,1,1}, {1,0,0,1}});
+    
     vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &mViewport);
     vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
     
     RenderDrawSubmitInfos(mDrawSubmitInfo);
-
+    
+    mRenderPass.CmdEndRenderPass(mCommandBuffers.render);
+    
+    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render, mSwapchainFramebuffer[imageIndex], {mSwapchain.GetSize().x, mSwapchain.GetSize().y}, {{1,1,1,1}, {1,0,0,1}});
+    
+    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &mViewport);
+    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
+    
+    RenderDrawSubmitInfos(mDrawSubmitInfo);
+    
     mRenderPass.CmdEndRenderPass(mCommandBuffers.render);
 }
 
@@ -127,11 +142,19 @@ void Renderer::CreateRenderPass()
 {
     CHROME_TRACE_FUNCTION();
 
-    mRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
-    mRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::DepthStencil, LoadOperation::Clear, StoreOperation::DontCare);
-    mRenderPass.AddSubpass({0}, {}, 1);
-    mRenderPass.AddDependency(mRenderPass.ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
-    mRenderPass.Create();
+    mSwapchainRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
+    mSwapchainRenderPass.AddSubpass({0}, {}, 1);
+    mSwapchainRenderPass.AddDependency(mSwapchainRenderPass.ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
+    mSwapchainRenderPass.Create();
+
+
+    mMainRenderPass.AddAttachment(ImageFormat::RGB8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mMainRenderPass.AddAttachment(ImageFormat::RGB16, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mMainRenderPass.AddAttachment(ImageFormat::RGB32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mMainRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::DepthStencil, LoadOperation::Clear, StoreOperation::Store);
+    mMainRenderPass.AddSubpass({0,1,2}, {}, 3);
+    mMainRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
+    mMainRenderPass.Create();
 }
 
 void Renderer::CreateSwapchainFramebuffers() 
@@ -139,6 +162,7 @@ void Renderer::CreateSwapchainFramebuffers()
     CHROME_TRACE_FUNCTION();
 
     mDepthAttachment = CreateImage(mSwapchain.GetSize(), ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
+    mSceneDepthAttachment = CreateImage(mSwapchain.GetSize(), ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
 
     for(Image image : mSwapchain.GetImages())
     {
@@ -295,4 +319,39 @@ void Renderer::UpdateUniformData()
     mUniformData.cameraFront = mCamera.GetFront();
     mUniformData.time = Application::GetInstance()->GetElapsedTime();
     mUniformBuffer.SetData(sizeof(UniformData), &mUniformData);
+}
+void Renderer::CreateFinalImageAttachment(const glm::uvec2& size) 
+{
+    mFinalImage = CreateImage(size, ImageFormat::BGRA8, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    mSceneDepthAttachment = CreateImage(size, ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
+    mFinalFrameBuffer = CreateFramebuffer(size, {mFinalImage, mSceneDepthAttachment}, mRenderPass);
+}
+
+
+
+void DeferredAttachment::CreateAttachments(const glm::uvec2& size) 
+{
+    mSize = size;
+
+    mPosition = CreateImage(mSize, ImageFormat::RGBA32, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    mAlbedo = CreateImage(mSize, ImageFormat::RGBA8, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    mNormal = CreateImage(mSize, ImageFormat::RGBA16, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    mDepth = CreateImage(mSize, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal);
+}
+
+void DeferredAttachment::DestroyAttachments() 
+{
+    DestroyImage(mPosition);
+    DestroyImage(mAlbedo);
+    DestroyImage(mNormal);
+    DestroyImage(mDepth);
+}
+
+void DeferredAttachment::ResizeAttachments(const glm::uvec2& size) 
+{
+    if(mSize == size)
+        return;
+
+    DestroyAttachments();
+    CreateAttachments(size);
 }
