@@ -37,6 +37,8 @@ class Material
         void AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes);
 
         const GraphicsPipeline& GetPipeline() const { return mPipeline; }
+        const Descriptor& GetImageDescriptor() const { return mImageDescriptor; }
+        const Descriptor& GetUniformDescriptor() const { return mUniformDescriptor; }
 
     private:
         float mLineWidth = 1.f;
@@ -51,7 +53,10 @@ class Material
         SampleCount mSampleCount = SampleCount::One; 
 
         GraphicsPipeline mPipeline;
+
         Descriptor mImageDescriptor;
+        Descriptor mUniformDescriptor;
+
         Texture mAlbedo;
         Sampler mAlbedoSampler;
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Window.hpp"
+#include "Renderer/Camera.hpp"
 #include "Renderer/ComputePipeline.hpp"
 #include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
@@ -7,6 +8,7 @@
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Swapchain.hpp"
 #include "Renderer/Synchronization.hpp"
+#include "Renderer/UniformBuffer.hpp"
 #include "RendererAttachments.hpp"
 
 struct RenderCommand
@@ -15,7 +17,23 @@ struct RenderCommand
     Buffer indexBuffer;
     InstanceBuffer instanceBuffer;
     GraphicsPipeline pipeline;
-    Descriptor descriptors;
+    Descriptor descriptors[16];
+
+    uint32_t descriptorCount = 0;
+    uint32_t indexCount = 0;
+};
+
+struct FrameInfo
+{
+    Camera camera;
+    bool isRecording = false;
+};
+
+struct RendererUniformData
+{
+    glm::mat4 projection = glm::mat4(1.f);
+    glm::mat4 view = glm::mat4(1.f);
+    glm::vec3 cameraPosition;
 };
 
 class Renderer
@@ -27,13 +45,15 @@ class Renderer
         void Submit(const StaticMesh& mesh, const Material& material);
         void Submit(const RenderCommand& renderCommand);
 
-        void BeginFrame(RenderTarget& renderTarget);
+        void BeginFrame(RenderTarget& renderTarget, const Camera& camera = {});
         void EndFrame();
 
         void ResizeSwapchain(const glm::uvec2& size);
         void DisplayToWindow(const RenderTarget& target);
 
         const RenderPass& GetDeferredRenderPass() const;
+
+        const UniformBuffer& GetRendererUniformBuffer() const { return mRendererUniformBuffer; }
 
     private:
         // Render passes
@@ -49,6 +69,9 @@ class Renderer
 
     private:
         GraphicsContext mContext;
+
+        RendererUniformData mRendererUniformData;
+        UniformBuffer mRendererUniformBuffer;
 
         Swapchain mSwapchain;
 
@@ -79,8 +102,8 @@ class Renderer
         Semaphore mRenderingSemaphore;
 
         Image mComputeImage;
+
+        FrameInfo mFrameInfo;
         
-        
-        bool mFrameRecording = false;
         friend class Editor;
 };

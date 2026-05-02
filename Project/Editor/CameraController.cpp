@@ -5,16 +5,30 @@
 void CameraController::SetCamera(Camera& camera, Window& window)
 {
     CHROME_TRACE_FUNCTION();
+    // mCamera = &camera;
+
+    // mCamera->SetCameraType(CameraType::Perspective)
+    //     .SetFront(glm::vec3(0.0f))
+    //     .SetPosition(glm::vec3(0.f,2.f,2.f))
+    //     .SetAspectRatio(float(window.GetSize().x) / float(window.GetSize().y))
+    //     .SetNearPlane(0.01f)
+    //     .SetFarPlane(1000.f);
+
+    SetCamera(camera);
+    mCamera->SetAspectRatio(float(window.GetSize().x) / float(window.GetSize().y));
+
+    ConnectWindow(window);
+}
+void CameraController::SetCamera(Camera& camera) 
+{
+    CHROME_TRACE_FUNCTION();
     mCamera = &camera;
 
     mCamera->SetCameraType(CameraType::Perspective)
         .SetFront(glm::vec3(0.0f))
         .SetPosition(glm::vec3(0.f,2.f,2.f))
-        .SetAspectRatio(float(window.GetSize().x) / float(window.GetSize().y))
         .SetNearPlane(0.01f)
         .SetFarPlane(1000.f);
-
-    ConnectWindow(window);
 }
 const Camera& CameraController::GetCamera() const 
 {
@@ -25,6 +39,9 @@ const Camera& CameraController::GetCamera() const
 void CameraController::Update()
 {
     CHROME_TRACE_FUNCTION();
+
+    if(!mEnableControl)
+        return;
 
     glm::vec3 cameraPosition = mCamera->GetPosition();
     glm::vec3 cameraFront = mCamera->GetFront();
@@ -72,6 +89,10 @@ void CameraController::Update()
 void CameraController::OnKeyPress(Key key)
 {
     CHROME_TRACE_FUNCTION();
+
+    if(!mEnableControl)
+        return;
+
     if(key == Key::W)
         mMoveForward = true;
     if(key == Key::S)
@@ -90,6 +111,10 @@ void CameraController::OnKeyPress(Key key)
 void CameraController::OnKeyRelease(Key key)
 {
     CHROME_TRACE_FUNCTION();
+
+    if(!mEnableControl)
+        return;
+
     if(key == Key::W)
         mMoveForward = false;
     if(key == Key::S)
@@ -109,6 +134,9 @@ void CameraController::OnMouseMove(const glm::vec2& position, const glm::vec2& o
 {
     CHROME_TRACE_FUNCTION();
 
+    if(!mEnableControl)
+        return;
+
 
     mYaw -= offset.x * mSensitivity;
     mPitch += offset.y * mSensitivity;
@@ -126,6 +154,8 @@ void CameraController::OnMouseButtonPress(MouseButton button)
 {
     CHROME_TRACE_FUNCTION();
 
+    if(!mEnableControl)
+        return;
     
 }
 
@@ -133,6 +163,8 @@ void CameraController::OnMouseButtonRelease(MouseButton button)
 {
     CHROME_TRACE_FUNCTION();
 
+    if(!mEnableControl)
+        return;
     
 }
 
@@ -140,7 +172,8 @@ void CameraController::OnScroll(const glm::vec2& scroll)
 {
     CHROME_TRACE_FUNCTION();
 
-    
+    if(!mEnableControl)
+        return;
 }
 
 void CameraController::ConnectWindow(Window& window)

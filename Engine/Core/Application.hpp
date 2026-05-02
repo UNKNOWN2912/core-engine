@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/LayerStack.hpp"
 #include "Core/Window.hpp"
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
@@ -58,6 +59,9 @@ public:
 	float GetDeltaTime();
 	float GetElapsedTime();
 
+	void AttachLayer(std::shared_ptr<Layer> layer);
+	void DetachLayer(std::shared_ptr<Layer> layer);
+
 private:
 	bool mRunning = true;
 	static Application* instance;
@@ -71,4 +75,5 @@ private:
 
 	float mDeltaTime = 0;
 
+	LayerStack mLayerStack;
 };

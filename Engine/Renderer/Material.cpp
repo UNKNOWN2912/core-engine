@@ -18,9 +18,12 @@ void Material::Create()
 
     mImageDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
     mImageDescriptor.Create();
-
     if(mAlbedo.IsValid())
         mImageDescriptor.UpdateImage(mAlbedo.GetImage(), ImageLayout::ShaderRead, mAlbedoSampler, 0);
+
+    mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
+    mUniformDescriptor.Create();
+    mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetRendererUniformBuffer().GetBuffer(), 0);
 
 
     mPipeline.SetCullMode(mCullMode);
@@ -35,7 +38,7 @@ void Material::Create()
     if(mAttributeCount == 0)
         SetDefaultAttribute();
 
-    mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout()}, {}));
+    mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout(), mUniformDescriptor.GetDescriptorSetLayout()}, {}));
 
     mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
 }

@@ -519,7 +519,8 @@ void Window::Create(const WindowSpecification& specification)
 void Window::HideCursor()
 {
     CHROME_TRACE_FUNCTION();
-	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	if(glfwGetInputMode(mData->window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+		glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 
@@ -606,7 +607,8 @@ void* Window::GetNativeWindow() const
 void Window::ShowCursor()
 {
     CHROME_TRACE_FUNCTION();
-	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	if(glfwGetInputMode(mData->window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
+		glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 bool Window::isCursorHidden()
 {
@@ -622,13 +624,14 @@ bool Window::isFullscreen()
 void Window::SetFullscreen(bool fullscreen)
 {
     CHROME_TRACE_FUNCTION();
+	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
 	if(fullscreen)
 	{
-		glfwSetWindowMonitor(mData->window, glfwGetPrimaryMonitor(), 0, 0, 1920, 1080, 0);
+		glfwSetWindowMonitor(mData->window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, 0);
 	}
 	else 
 	{
-		glfwSetWindowMonitor(mData->window, nullptr, 0, 0, 800, 600, 0);
+		glfwSetWindowMonitor(mData->window, nullptr, 100, 100, 800, 600, 0);
 	}
 }

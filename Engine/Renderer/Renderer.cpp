@@ -48,6 +48,9 @@ void Renderer::Initialize(const Window& window)
 
     mImageAcquiredSemaphore.Create();
     mTransferSemaphore.Create();
+
+    mRendererUniformBuffer.Create(sizeof(RendererUniformData));
+    mRendererUniformBuffer.SetData(sizeof(RendererUniformData), &mRendererUniformData);
 }
 
 void Renderer::Terminate() 
@@ -55,29 +58,52 @@ void Renderer::Terminate()
     
 }
 
+void Renderer::Submit(const StaticMesh& mesh, const Material& material) 
+{
+    RenderCommand renderCommand;
+    renderCommand.vertexBuffer = mesh.mVertexBuffer;    
+    renderCommand.indexBuffer = mesh.mIndexBuffer;    
+    renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
+    renderCommand.pipeline = material.GetPipeline();
+    renderCommand.descriptors[0] = material.GetImageDescriptor();    
+    renderCommand.descriptors[1] = material.GetUniformDescriptor();    
+    renderCommand.descriptorCount = 2;
+
+    Submit(renderCommand);
+}
+
 void Renderer::Submit(const RenderCommand& renderCommand) 
 {
-    assert(mFrameRecording == true);
+    assert(mFrameInfo.isRecording == true);
 
     mRenderCommands.push_back(renderCommand);    
 }
 
-void Renderer::BeginFrame(RenderTarget& renderTarget) 
+void Renderer::BeginFrame(RenderTarget& renderTarget, const Camera& camera) 
 {
     vkDeviceWaitIdle(getDevice());
 
-    mFrameRecording = true;    
+    mFrameInfo.isRecording = true;    
     mCurrentRenderTarget = renderTarget;
 
     renderTarget.TransitionLayout(ImageLayout::General);
     mComputeDescriptor.UpdateImage(renderTarget.GetImage(), ImageLayout::General, mDefaultSampler, 0);
 
     ResizeAttachments(renderTarget.GetImage().size);
+
+    mFrameInfo.camera = camera;
+    mRendererUniformData.cameraPosition = camera.GetPosition();
+    mRendererUniformData.view = camera.GetView();
+    mRendererUniformData.projection = camera.GetProjection();
+    mRendererUniformData.projection[1][1] *= -1;
+    
+    mRendererUniformBuffer.SetData(sizeof(RendererUniformData), &mRendererUniformData);
+
 }
 
 void Renderer::EndFrame() 
 {
-    assert(mFrameRecording == true);
+    assert(mFrameInfo.isRecording == true);
 
     vkDeviceWaitIdle(getDevice());
 
@@ -99,6 +125,14 @@ void Renderer::EndFrame()
 
         vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetHandle());
 
+        VkDescriptorSet descriptorSets[16];
+        for (int j = 0; j < renderCommand.descriptorCount; j++)
+        {
+            descriptorSets[j] = renderCommand.descriptors[j].GetDescriptorSet();
+        }
+
+        vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets, 0, nullptr);
+
         VkViewport viewport = 
         {
             .width = (float)mDeferredAttachments.size.x,
@@ -115,7 +149,7 @@ void Renderer::EndFrame()
         vkCmdSetViewport(mRenderCommandBuffer.GetHandle(), 0, 1, &viewport);
         vkCmdSetScissor(mRenderCommandBuffer.GetHandle(), 0, 1, &scissor);
 
-        vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), 3, 1, 0, 0, 0);
+        vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
     }   
 
     mDeferredRenderPass.CmdEndRenderPass(mRenderCommandBuffer);
@@ -136,7 +170,7 @@ void Renderer::EndFrame()
     mRenderCommandBuffer.QueueSubmit(getQueues().graphics, {}, mRenderingSemaphore, PipelineStage::ColorAttachmentOutput);
 
     mRenderCommands.clear();
-    mFrameRecording = false;    
+    mFrameInfo.isRecording = false;    
 
 }
 

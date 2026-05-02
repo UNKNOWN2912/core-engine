@@ -8,6 +8,7 @@ class CameraController
 {
     public:
         void SetCamera(Camera& camera, Window& window);
+        void SetCamera(Camera& camera);
         const Camera& GetCamera() const;
 
         void ConnectWindow(Window& window);
@@ -30,6 +31,8 @@ class CameraController
         void SetSpeed(float speed) { mSpeed = speed; }
         void SetSensitivity(float sensitivity) { mSensitivity = sensitivity; }
 
+        void EnableControl(bool enable) { mEnableControl = enable; }
+
     private:
         glm::vec2 previousMousePos;
         Camera* mCamera = nullptr;
@@ -45,5 +48,7 @@ class CameraController
 
         float mSpeed = 0.05f;
         float mSensitivity = 0.4;
+
+        bool mEnableControl = true;
 
 };

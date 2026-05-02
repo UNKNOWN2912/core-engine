@@ -1,6 +1,8 @@
 #version 450
 
-layout(location = 0) out vec4 outputColor;
+layout(location = 0) out vec4 albedo;
+layout(location = 1) out vec4 position;
+layout(location = 2) out vec4 normal;
 
 
 layout(location = 0) in InData
@@ -39,5 +41,5 @@ void main()
 
     color += sunColor * pow(abs(1 - t), 4);
 
-    outputColor = vec4(color, 1.0);
+    albedo = vec4(color, 1.0);
 }
