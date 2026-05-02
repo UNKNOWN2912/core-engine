@@ -472,12 +472,16 @@ void characterCallback(GLFWwindow* window, unsigned int codepoint)
 
 void minimizeCallback(GLFWwindow* window, int minimize)
 {
-	
+	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	bool isMinimized = minimize;
+	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMinimize, &isMinimized);
 }
 
 void maximizeCallback(GLFWwindow* window, int maximize)
 {
-
+	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	bool isMaximized = maximize;
+	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMaximize, &isMaximized);
 }
 
 void Window::Create(const WindowSpecification& specification)
@@ -508,8 +512,8 @@ void Window::Create(const WindowSpecification& specification)
 	glfwSetScrollCallback(mData->window, mouseScrollCallback);
 	glfwSetKeyCallback(mData->window, keyCallback);
 	glfwSetCharCallback(mData->window, characterCallback);
-	glfwSetWindowMaximizeCallback(mData->window, maximizeCallback);
 	glfwSetWindowIconifyCallback(mData->window, minimizeCallback);
+	glfwSetWindowMaximizeCallback(mData->window, maximizeCallback);
 }
 
 void Window::HideCursor()

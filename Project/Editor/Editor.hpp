@@ -1,34 +1,39 @@
 #pragma once
-#include "glm/ext/vector_float2.hpp"
-#include "imgui.h"
-#include "backends/imgui_impl_vulkan.h"
-#include "backends/imgui_impl_glfw.h"
 #include <Engine.hpp>
+#include "imgui.h"
+
 
 class Editor : public Application
 {
     void OnStart() override;
     void OnUpdate() override;
+    void OnEnd() override;
 
-    void OnWindowResize(const glm::uvec2 &size) override;
     void OnKeyPress(Key key) override;
+    void OnWindowResize(const glm::uvec2 &size) override;
+
+    Material material;
+    StaticMesh mesh;
+    GraphicsPipeline pipeline;
 
     void InitializeImgui();
+    void TerminateImgui();
+    void RenderImgui();
+    
+    RenderTarget mTarget;
+    RenderCommand renderCommand;
+    CommandBuffer mImGuiCommandBuffer;
+    RenderPass mImguiRenderPass;
+    Semaphore mImageAcquiredSemaphore;
+    Semaphore mRenderingFinished;
 
-    void CustomEndFrame();
-    void CustomCmdMainRenderPass(uint32_t imageIndex);
+    std::vector<FrameBuffer> mImguiFrameBuffer;
 
-    void StartImguiRender();
-    void EndImguiRender();
+    ImTextureID mRenderViewTexture;
 
-    Material mMaterial;
-    StaticMesh mMesh;
+    glm::uvec2 mViewSize;
 
-    ImTextureRef mFrameBuffer;
-    VkSampler sampler;
+    void RenderUi();
 
-    glm::uvec2 mGameViewSize = {0,0};
-
-    void ResizeFrameBuffer(const glm::uvec2& size);
 
 };

@@ -1,4 +1,6 @@
 #include "FrameBuffer.hpp"
+#include "Renderer/GraphicsContext.hpp"
+#include "Renderer/RenderPass.hpp"
 
 void FrameBuffer::Create(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass) 
 {
@@ -27,5 +29,5 @@ void FrameBuffer::Destroy()
     vkDestroyFramebuffer(getDevice(), mHandle, nullptr);
 }
 
-VkFramebuffer FrameBuffer::GetFrameBuffer() const { return mHandle; }
+VkFramebuffer FrameBuffer::GetHandle() const { return mHandle; }
 

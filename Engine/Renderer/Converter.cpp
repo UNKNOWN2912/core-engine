@@ -69,7 +69,33 @@ VkFormat GetVulkanImageFormat(ImageFormat imageFormat)
             return VK_FORMAT_D24_UNORM_S8_UINT;
         case ImageFormat::BGRA8:
             return VK_FORMAT_B8G8R8A8_SRGB;
-    }
+        case ImageFormat::R8U:
+            return VK_FORMAT_R8_UINT;
+        case ImageFormat::RG8U:
+            return VK_FORMAT_R8G8_UINT;
+        case ImageFormat::RGB8U:
+            return VK_FORMAT_R8G8B8_UINT;
+        case ImageFormat::RGBA8U:
+            return VK_FORMAT_R8G8B8A8_UINT;
+        case ImageFormat::R8UNORM:
+            return VK_FORMAT_R8_UNORM;
+        case ImageFormat::RG8UNORM:
+            return VK_FORMAT_R8G8_UNORM;
+        case ImageFormat::RGB8UNORM:
+            return VK_FORMAT_R8G8B8_UNORM;
+        case ImageFormat::RGBA8UNORM:
+            return VK_FORMAT_R8G8B8A8_UNORM;
+        case ImageFormat::R16UNORM:
+            return VK_FORMAT_R16_UNORM;
+        case ImageFormat::RG16UNORM:
+            return VK_FORMAT_R16G16_UNORM;
+        case ImageFormat::RGB16UNORM:
+            return VK_FORMAT_R16G16B16_UNORM;
+        case ImageFormat::RGBA16UNORM:
+            return VK_FORMAT_R16G16B16A16_UNORM;
+        case ImageFormat::BGRA8UNORM:
+            return VK_FORMAT_B8G8R8A8_UNORM;
+        }
 
     ERROR("Invalid format: {}", (uint32_t)imageFormat);
 
@@ -94,7 +120,9 @@ VkImageLayout GetVulkanImageLayout(ImageLayout imageLayout)
             return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         case ImageLayout::PresentSource:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    }
+        case ImageLayout::General:
+            return VK_IMAGE_LAYOUT_GENERAL;
+        }
     ERROR("Invalid image layout: {}", (uint32_t)imageLayout);
 
     return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -124,6 +152,9 @@ VkImageUsageFlags GetVulkanImageUsage(ImageUsage imageUsage)
 
     if((ImageUsage::Storage & imageUsage) == ImageUsage::Storage)
         usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+    if((ImageUsage::InputAttachment & imageUsage) == ImageUsage::InputAttachment)
+        usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 
 
     return usage;
@@ -221,7 +252,11 @@ VkDescriptorType GetVulkanDescriptorType(DescriptorType descriptorType)
             return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         case DescriptorType::InputAttachment:
             return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    }
+        case DescriptorType::StorageBuffer:
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        case DescriptorType::StorageImage:
+            return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        }
     ERROR("Invalid descriptor type: {}", (uint32_t)descriptorType);
 
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -457,6 +492,24 @@ VkVertexInputRate GetVulkanInputRate(InputRate inputRate)
     ERROR("Invalid input rate");
 
     return VK_VERTEX_INPUT_RATE_MAX_ENUM;
+}
+
+VkPipelineBindPoint GetVulkanPipelineBindPoint(PipelineBindPoint bindPoint) 
+{
+    switch (bindPoint) 
+    {
+        case PipelineBindPoint::None:
+            return VK_PIPELINE_BIND_POINT_MAX_ENUM;
+        case PipelineBindPoint::Graphic:
+            return VK_PIPELINE_BIND_POINT_GRAPHICS;
+        case PipelineBindPoint::Compute:
+            return VK_PIPELINE_BIND_POINT_COMPUTE;
+        case PipelineBindPoint::RayTracing:
+            return VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+    }
+
+    ERROR("Invalid pipeline bind point");
+    return VK_PIPELINE_BIND_POINT_MAX_ENUM;
 }
 
 VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive)

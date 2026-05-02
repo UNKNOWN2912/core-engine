@@ -1,357 +1,266 @@
 #include "Renderer.hpp"
-#include "Core/Application.hpp"
-#include "Core/Macro.hpp"
-#include "Renderer/Transform.hpp"
-#include "Renderer/Types.hpp"
-#include "Utility.hpp"
-#include "GraphicsContext.hpp"
-#include <glm/gtc/matrix_transform.hpp>
-#include <vulkan/vulkan_core.h>
 
-void Renderer::Initialize(const Window& window) 
+void Renderer::Initialize(const Window& window)
 {
-    CHROME_TRACE_FUNCTION();
-
     mContext.Create(window, true);
+
+    mDefaultSampler.Create();
+
     mSwapchain.Create(window.GetSize(), PresentMode::Fifo);
-    CreateRenderPass();
-    CreateSwapchainFramebuffers();
-    CreateFinalImageAttachment(mSwapchain.GetSize());
-    CreateSemaphores();
-    CreateCommandBuffers();
-    mDeferredAttachments.CreateAttachments(mSwapchain.GetSize());
-    mUniformBuffer.Create(sizeof(UniformData));
+    CreateAttachments(mSwapchain.GetSize());
+
+
+    mComputeImage = CreateImage(mSwapchain.GetSize(), ImageFormat::RGBA8UNORM, ImageUsage::Storage | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    TransitionImageLayout(ImageLayout::None, ImageLayout::General, ImageAspect::Color, mComputeImage);
+
+
+    mComputeDescriptor.AddDescriptor(DescriptorType::StorageImage, ShaderStage::Compute);
+    mComputeDescriptor.Create();
+
+    mComputeDescriptor.UpdateImage(mComputeImage, ImageLayout::General, mDefaultSampler, 0);
+
+
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.Create();
+
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+
+    mComputePipeline.LoadShader("Shaders/swapchain.comp.spv");
+    mComputePipeline.Create({mComputeDescriptor, mDeferredAttachmentDescriptor});
+
+    // Render pass
+    CreateDeferredRenderPass();
+
+    // Attachments
+
+    // Frame buffer
+    CreateDeferredFrameBuffer(mSwapchain.GetSize());
+
+    
+    mRenderCommandBuffer.Create();
+    mTransferToSwapchainCommandBuffer.Create();
+
+    mImageAcquiredSemaphore.Create();
+    mTransferSemaphore.Create();
 }
 
 void Renderer::Terminate() 
 {
-    CHROME_TRACE_FUNCTION();
+    
 }
 
+void Renderer::Submit(const RenderCommand& renderCommand) 
+{
+    assert(mFrameRecording == true);
 
-void Renderer::BeginFrame() 
+    mRenderCommands.push_back(renderCommand);    
+}
+
+void Renderer::BeginFrame(RenderTarget& renderTarget) 
 {
     vkDeviceWaitIdle(getDevice());
-    CHROME_TRACE_FUNCTION();
-    mDrawSubmitInfo.clear();
-    mFrameRunning = true;
+
+    mFrameRecording = true;    
+    mCurrentRenderTarget = renderTarget;
+
+    renderTarget.TransitionLayout(ImageLayout::General);
+    mComputeDescriptor.UpdateImage(renderTarget.GetImage(), ImageLayout::General, mDefaultSampler, 0);
+
+    ResizeAttachments(renderTarget.GetImage().size);
 }
 
 void Renderer::EndFrame() 
 {
-    CHROME_TRACE_FUNCTION();
-
-    mCamera.Calculate();
-    UpdateUniformData();
+    assert(mFrameRecording == true);
 
     vkDeviceWaitIdle(getDevice());
-    
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(getDevice(), mSwapchain.GetHandle(), UINT64_MAX, mSemaphores.imageAcquired, VK_NULL_HANDLE, &imageIndex);
 
-    mCommandBuffers.render.BeginRecording();
-    
-    CmdMainRenderPass(imageIndex);
-    
-    mCommandBuffers.render.EndRecording();
+    mRenderCommandBuffer.BeginRecording();
 
-    mCommandBuffers.render.QueueSubmit(getQueues().graphics, mSemaphores.imageAcquired, mSemaphores.renderingFinish, PipelineStage::ColorAttachmentOutput);
+    // Begin Deferred render pass
 
-    PresentImage(getQueues().present, mSwapchain, imageIndex, mSemaphores.renderingFinish);
+    mDeferredRenderPass.CmdBeginRenderPass(mRenderCommandBuffer, mDeferredFrameBuffer, mDeferredAttachments.size, {{0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {1,1,1,1}, {0,0,0,1}});
 
-    mFrameRunning = false;
+    for (int i = 0; i < mRenderCommands.size(); i++)
+    {
+        const RenderCommand& renderCommand = mRenderCommands[i];
+
+        VkBuffer vertexBuffer[] = {renderCommand.vertexBuffer.handle};
+        VkDeviceSize offsets[] = {0};
+
+        vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, 1, vertexBuffer, offsets);
+        vkCmdBindIndexBuffer(mRenderCommandBuffer.GetHandle(), renderCommand.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetHandle());
+
+        VkViewport viewport = 
+        {
+            .width = (float)mDeferredAttachments.size.x,
+            .height = (float)mDeferredAttachments.size.y,
+            .minDepth = 0.f,
+            .maxDepth = 1.f,
+        };
+
+        VkRect2D scissor = 
+        {
+            .extent = {mDeferredAttachments.size.x, mDeferredAttachments.size.y},
+        };
+
+        vkCmdSetViewport(mRenderCommandBuffer.GetHandle(), 0, 1, &viewport);
+        vkCmdSetScissor(mRenderCommandBuffer.GetHandle(), 0, 1, &scissor);
+
+        vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), 3, 1, 0, 0, 0);
+    }   
+
+    mDeferredRenderPass.CmdEndRenderPass(mRenderCommandBuffer);
+
+    // End Deferred render pass
+
+    VkDescriptorSet descriptorSets[] = {mComputeDescriptor.GetDescriptorSet(), mDeferredAttachmentDescriptor.GetDescriptorSet()};
+    vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_COMPUTE, mComputePipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
+    vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_COMPUTE, mComputePipeline.GetHandle());
+
+    glm::ivec3 groupCount;
+    groupCount.x = (mSwapchain.GetSize().x / 16) + 1;
+    groupCount.y = (mSwapchain.GetSize().y / 16) + 1;
+    groupCount.z = 1;
+    vkCmdDispatch(mRenderCommandBuffer.GetHandle(), groupCount.x, groupCount.y, groupCount.z);
+
+    mRenderCommandBuffer.EndRecording();
+    mRenderCommandBuffer.QueueSubmit(getQueues().graphics, {}, mRenderingSemaphore, PipelineStage::ColorAttachmentOutput);
+
+    mRenderCommands.clear();
+    mFrameRecording = false;    
+
 }
 
-void Renderer::Resize(const glm::uvec2& size)
+void Renderer::ResizeSwapchain(const glm::uvec2& size) 
 {
-    CHROME_TRACE_FUNCTION();
+    if(mSwapchain.GetSize() == size)
+        return;
+    
     vkDeviceWaitIdle(getDevice());
 
     mSwapchain.Destroy();
-    DestroySwapchainFramebuffers();
-
     mSwapchain.Create(size, PresentMode::Fifo);
-    CreateSwapchainFramebuffers();
 
-    mViewport = {};
-    mViewport.width = mSwapchain.GetSize().x;
-    mViewport.height = mSwapchain.GetSize().y;
-    mViewport.maxDepth = 1.f;
-    mViewport.minDepth = 0.f;
+    DestroyImage(mComputeImage);
+    mComputeImage = CreateImage(mSwapchain.GetSize(), ImageFormat::RGBA8UNORM, ImageUsage::Storage | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    TransitionImageLayout(ImageLayout::None, ImageLayout::General, ImageAspect::Color, mComputeImage);
+    
+    mComputeDescriptor.UpdateImage(mComputeImage, ImageLayout::General, mDefaultSampler, 0);
+
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
 }
 
 
-void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform)
+void Renderer::DisplayToWindow(const RenderTarget& target) 
 {
-    CHROME_TRACE_FUNCTION();
-    DrawSubmitInfo submitInfo = 
+    vkDeviceWaitIdle(getDevice());
+    uint32_t imageIndex = mSwapchain.GetNextImageIndex(mImageAcquiredSemaphore, {});
+    VkSwapchainKHR swapchain[] = {mSwapchain.GetHandle()};
+
+    mTransferToSwapchainCommandBuffer.BeginRecording();
+
+    VkImageCopy region = 
     {
-        .mesh = &mesh,
-        .material = &material,
-        .transform = transform,
-    };
-
-    mDrawSubmitInfo.push_back(submitInfo);
-}
-
-void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount)
-{
-    CHROME_TRACE_FUNCTION();
-    DrawSubmitInfo submitInfo = 
-    {
-        .mesh = &mesh,
-        .material = &material,
-        .instanceBuffer = &instanceBuffer,
-        .instanced = true,
-        .instanceCount = instanceCount,
-    };
-    
-    mDrawSubmitInfo.push_back(submitInfo);
-}
-
-void Renderer::CmdMainRenderPass(uint32_t imageIndex) 
-{
-    CHROME_TRACE_FUNCTION();
-
-    VkRect2D scissor = 
-    {
-        .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
-    };
-
-    
-    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render, mFinalFrameBuffer, {mSwapchain.GetSize().x, mSwapchain.GetSize().y}, {{1,1,1,1}, {1,0,0,1}});
-    
-    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &mViewport);
-    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
-    
-    RenderDrawSubmitInfos(mDrawSubmitInfo);
-    
-    mRenderPass.CmdEndRenderPass(mCommandBuffers.render);
-    
-    mRenderPass.CmdBeginRenderPass(mCommandBuffers.render, mSwapchainFramebuffer[imageIndex], {mSwapchain.GetSize().x, mSwapchain.GetSize().y}, {{1,1,1,1}, {1,0,0,1}});
-    
-    vkCmdSetViewport(mCommandBuffers.render.GetHandle(), 0, 1, &mViewport);
-    vkCmdSetScissor(mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
-    
-    RenderDrawSubmitInfos(mDrawSubmitInfo);
-    
-    mRenderPass.CmdEndRenderPass(mCommandBuffers.render);
-}
-
-void Renderer::CreateRenderPass()
-{
-    CHROME_TRACE_FUNCTION();
-
-    mSwapchainRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
-    mSwapchainRenderPass.AddSubpass({0}, {}, 1);
-    mSwapchainRenderPass.AddDependency(mSwapchainRenderPass.ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
-    mSwapchainRenderPass.Create();
-
-
-    mMainRenderPass.AddAttachment(ImageFormat::RGB8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mMainRenderPass.AddAttachment(ImageFormat::RGB16, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mMainRenderPass.AddAttachment(ImageFormat::RGB32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mMainRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::DepthStencil, LoadOperation::Clear, StoreOperation::Store);
-    mMainRenderPass.AddSubpass({0,1,2}, {}, 3);
-    mMainRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
-    mMainRenderPass.Create();
-}
-
-void Renderer::CreateSwapchainFramebuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-
-    mDepthAttachment = CreateImage(mSwapchain.GetSize(), ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
-    mSceneDepthAttachment = CreateImage(mSwapchain.GetSize(), ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
-
-    for(Image image : mSwapchain.GetImages())
-    {
-        VkFramebuffer framebuffer = CreateFramebuffer(mSwapchain.GetSize(), {image, mDepthAttachment}, mRenderPass);
-        mSwapchainFramebuffer.push_back(framebuffer);
-    }
-
-    mViewport.width = mSwapchain.GetSize().x;
-    mViewport.height = mSwapchain.GetSize().y;
-    mViewport.maxDepth = 1.f;
-    mViewport.minDepth = 0.f;
-
-}
-
-void Renderer::CreateSemaphores() 
-{
-    CHROME_TRACE_FUNCTION();
-    VkSemaphoreCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-
-    vkCreateSemaphore(getDevice(), &createInfo, nullptr, &mSemaphores.imageAcquired);
-    vkCreateSemaphore(getDevice(), &createInfo, nullptr, &mSemaphores.renderingFinish);
-}
-
-void Renderer::CreateCommandBuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    mCommandBuffers.render.Create();
-}
-
-
-
-void Renderer::DestroyRenderPass() 
-{
-    CHROME_TRACE_FUNCTION();
-    mRenderPass.Destroy();
-}
-
-void Renderer::DestroySwapchainFramebuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    for (VkFramebuffer framebuffer : mSwapchainFramebuffer) 
-    {
-        vkDestroyFramebuffer(getDevice(), framebuffer, nullptr);
-    }
-
-    mSwapchainFramebuffer.clear();
-}
-
-void Renderer::DestroySemaphores() 
-{
-    CHROME_TRACE_FUNCTION();
-    vkDestroySemaphore(getDevice(), mSemaphores.imageAcquired, nullptr);    
-    vkDestroySemaphore(getDevice(), mSemaphores.renderingFinish, nullptr);    
-}
-
-void Renderer::DestroyCommandBuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    mCommandBuffers.render.Destroy();    
-}
-
-
-void Renderer::UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData) 
-{
-    uniformBuffer.SetData(sizeof(UniformData), &uniformData);
-}
-
-void Renderer::CmdDrawSubmitBindDescriptorSet(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo) 
-{
-    VkDescriptorSet descriptorSets[] = {drawSubmitInfo.material->mDescriptor.GetDescriptorSet()};
-    vkCmdBindDescriptorSets(mCommandBuffers.render.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmitInfo.material->mPipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
-}
-
-void Renderer::CmdDrawSubmitBindPipeline(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo) 
-{
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmitInfo.material->mPipeline.GetHandle());
-}
-
-void Renderer::CmdDrawSubmitBindVertexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo) 
-{
-    VkBuffer vertexBuffers[2]; 
-    uint32_t vertexBufferCount = 1;
-    vertexBuffers[0] = drawSubmitInfo.mesh->mVertexBuffer.handle;
-    if(drawSubmitInfo.material->mSettings.enableInstancing)
-    {
-        vertexBufferCount = 2;
-        vertexBuffers[1] = drawSubmitInfo.instanceBuffer->mBuffer.handle;
-    }
-    VkDeviceSize offsets[] = {0, 0};
-
-    vkCmdBindVertexBuffers(mCommandBuffers.render.GetHandle(), 0, vertexBufferCount, vertexBuffers, offsets);
-}
-
-void Renderer::CmdDrawSubmitBindIndexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo) 
-{
-    vkCmdBindIndexBuffer(mCommandBuffers.render.GetHandle(), drawSubmitInfo.mesh->mIndexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-}
-
-void Renderer::RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubmitInfos) 
-{
-    for (int i = 0; i < drawSubmitInfos.size(); i++)
-    {
-        DrawSubmitInfo drawSubmit = drawSubmitInfos[i];
-
-        int previousIndex = glm::clamp(i - 1, 0, INT32_MAX);
-
-        if(i == 0 || drawSubmit.material != drawSubmitInfos[previousIndex].material)
+        .srcSubresource = 
         {
-            CmdDrawSubmitBindDescriptorSet(mCommandBuffers.render.GetHandle(), drawSubmit);
-            CmdDrawSubmitBindPipeline(mCommandBuffers.render.GetHandle(), drawSubmit);
-        }
-        if(i == 0 || drawSubmit.mesh != drawSubmitInfos[previousIndex].mesh || drawSubmit.instanceBuffer != drawSubmitInfos[previousIndex].instanceBuffer)
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcOffset = {},
+        .dstSubresource = 
         {
-            CmdDrawSubmitBindVertexBuffer(mCommandBuffers.render.GetHandle(), drawSubmit);
-            CmdDrawSubmitBindIndexBuffer(mCommandBuffers.render.GetHandle(), drawSubmit);
-        }
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .dstOffset = {},
+        .extent = {target.GetImage().size.x, target.GetImage().size.y, 1},
+    };
 
-        glm::mat4 model = drawSubmit.transform.GetMatrix();
-        vkCmdPushConstants(mCommandBuffers.render.GetHandle(), drawSubmit.material->mPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+    vkCmdCopyImage(mTransferToSwapchainCommandBuffer.GetHandle(), target.GetImage().handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mSwapchain.GetImages()[imageIndex].handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-        if(drawSubmit.material->mSettings.enableInstancing)
-            vkCmdDrawIndexed(mCommandBuffers.render.GetHandle(), drawSubmit.mesh->mIndexSize / sizeof(uint32_t), drawSubmit.instanceCount, 0, 0, 0);
-        else
-            vkCmdDrawIndexed(mCommandBuffers.render.GetHandle(), drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
-    }
-}
+    mTransferToSwapchainCommandBuffer.EndRecording();
 
-void Renderer::PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore) 
-{
-    uint32_t waitSemaphoreCount = (waitSemaphore == VK_NULL_HANDLE) ? 0 : 1;
-    VkSwapchainKHR swapchains[] = {swapchain.GetHandle()};
+    mTransferToSwapchainCommandBuffer.QueueSubmit(getQueues().transfer, mImageAcquiredSemaphore, mTransferSemaphore);
 
+    VkSemaphore waitSemaphoreHandles[] = {mTransferSemaphore.GetHandle()};
     VkPresentInfoKHR presentInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = waitSemaphoreCount,
-        .pWaitSemaphores = &waitSemaphore,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = waitSemaphoreHandles,
         .swapchainCount = 1,
-        .pSwapchains = swapchains,
+        .pSwapchains = swapchain,
         .pImageIndices = &imageIndex,
     };
 
-    vkQueuePresentKHR(queue, &presentInfo);
+    vkQueuePresentKHR(getQueues().present, &presentInfo);
 }
 
-void Renderer::UpdateUniformData() 
+const RenderPass& Renderer::GetDeferredRenderPass() const { return mDeferredRenderPass; }
+
+void Renderer::CreateDeferredRenderPass() 
 {
-    mUniformData.projection = mCamera.GetProjection();    
-    mUniformData.view = mCamera.GetView();
-    mUniformData.cameraPosition = mCamera.GetPosition();
-    mUniformData.cameraFront = mCamera.GetFront();
-    mUniformData.time = Application::GetInstance()->GetElapsedTime();
-    mUniformBuffer.SetData(sizeof(UniformData), &mUniformData);
-}
-void Renderer::CreateFinalImageAttachment(const glm::uvec2& size) 
-{
-    mFinalImage = CreateImage(size, ImageFormat::BGRA8, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
-    mSceneDepthAttachment = CreateImage(size, ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal);
-    mFinalFrameBuffer = CreateFramebuffer(size, {mFinalImage, mSceneDepthAttachment}, mRenderPass);
-}
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA16, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
 
+    mDeferredRenderPass.AddSubpass({0,1,2}, {}, 3, PipelineBindPoint::Graphic);
 
+    mDeferredRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
 
-void DeferredAttachment::CreateAttachments(const glm::uvec2& size) 
-{
-    mSize = size;
-
-    mPosition = CreateImage(mSize, ImageFormat::RGBA32, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
-    mAlbedo = CreateImage(mSize, ImageFormat::RGBA8, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
-    mNormal = CreateImage(mSize, ImageFormat::RGBA16, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
-    mDepth = CreateImage(mSize, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal);
+    mDeferredRenderPass.Create();
 }
 
-void DeferredAttachment::DestroyAttachments() 
+void Renderer::CreateAttachments(const glm::uvec2& size) 
 {
-    DestroyImage(mPosition);
-    DestroyImage(mAlbedo);
-    DestroyImage(mNormal);
-    DestroyImage(mDepth);
+    mDeferredAttachments.CreateAttachment(mSwapchain.GetSize());
 }
 
-void DeferredAttachment::ResizeAttachments(const glm::uvec2& size) 
+void Renderer::ResizeAttachments(const glm::uvec2& size) 
 {
-    if(mSize == size)
-        return;
+    vkDeviceWaitIdle(getDevice());
+    mDeferredAttachments.ResizeAttachment(size);
+    mDeferredFrameBuffer.Destroy();
+    CreateDeferredFrameBuffer(size);
 
-    DestroyAttachments();
-    CreateAttachments(size);
+
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+
+}
+
+void Renderer::DestroyAttachments() 
+{
+    mDeferredAttachments.DestroyAttachment();
+}
+
+void Renderer::CreateDeferredFrameBuffer(const glm::uvec2& size) 
+{
+    std::initializer_list<Image> attachments = 
+    {   mDeferredAttachments.albedo,
+        mDeferredAttachments.position,
+        mDeferredAttachments.normal,
+        mDeferredAttachments.depth,
+    };
+
+    mDeferredFrameBuffer.Create(size, attachments, mDeferredRenderPass);
 }

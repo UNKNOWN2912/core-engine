@@ -102,11 +102,11 @@ void Descriptor::UpdateBuffer(const Buffer& buffer, uint32_t binding)
 	vkUpdateDescriptorSets(getDevice(), 1, &writeDescriptorSet, 0, nullptr);
 }
 
-void Descriptor::UpdateImage(const Image& image, ImageLayout layout, VkSampler sampler, uint32_t binding)
+void Descriptor::UpdateImage(const Image& image, ImageLayout layout, const Sampler& sampler, uint32_t binding)
 {
 	VkDescriptorImageInfo imageInfo = 
 	{
-		.sampler = sampler,
+		.sampler = sampler.GetHandle(),
 		.imageView = image.view,
 		.imageLayout = GetVulkanImageLayout(layout),
 	};

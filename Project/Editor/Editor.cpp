@@ -1,245 +1,230 @@
 #include "Editor.hpp"
-#include "Renderer/GraphicsContext.hpp"
-#include "Renderer/Utility.hpp"
 #include "backends/imgui_impl_vulkan.h"
-#include "imgui.h"
-#include <vulkan/vulkan_core.h>
-
+#include "backends/imgui_impl_glfw.h"
 
 void Editor::OnStart()
 {
     GetWindowRef().SetFullscreen(true);
+
     Vertex vertices[] = 
     {
-        // Front
-        {{ -0.5, -0.5,  0.5 }, { 0, 0 }, { 0,  0,  1 }},
-        {{  0.5, -0.5,  0.5 }, { 1, 0 }, { 0,  0,  1 }},
-        {{  0.5,  0.5,  0.5 }, { 1, 1 }, { 0,  0,  1 }},
-        {{ -0.5,  0.5,  0.5 }, { 0, 1 }, { 0,  0,  1 }},
-
-        // Back
-        {{  0.5, -0.5, -0.5 }, { 0, 0 }, { 0,  0, -1 }},
-        {{ -0.5, -0.5, -0.5 }, { 1, 0 }, { 0,  0, -1 }},
-        {{ -0.5,  0.5, -0.5 }, { 1, 1 }, { 0,  0, -1 }},
-        {{  0.5,  0.5, -0.5 }, { 0, 1 }, { 0,  0, -1 }},
-
-        // Left
-        {{ -0.5, -0.5, -0.5 }, { 0, 0 }, { -1, 0,  0 }},
-        {{ -0.5, -0.5,  0.5 }, { 1, 0 }, { -1, 0,  0 }},
-        {{ -0.5,  0.5,  0.5 }, { 1, 1 }, { -1, 0,  0 }},
-        {{ -0.5,  0.5, -0.5 }, { 0, 1 }, { -1, 0,  0 }},
-
-        // Right
-        {{  0.5, -0.5,  0.5 }, { 0, 0 }, {  1, 0,  0 }},
-        {{  0.5, -0.5, -0.5 }, { 1, 0 }, {  1, 0,  0 }},
-        {{  0.5,  0.5, -0.5 }, { 1, 1 }, {  1, 0,  0 }},
-        {{  0.5,  0.5,  0.5 }, { 0, 1 }, {  1, 0,  0 }},
-
-        // Top 
-        {{ -0.5,  0.5,  0.5 }, { 0, 0 }, {  0, 1,  0 }},
-        {{  0.5,  0.5,  0.5 }, { 1, 0 }, {  0, 1,  0 }},
-        {{  0.5,  0.5, -0.5 }, { 1, 1 }, {  0, 1,  0 }},
-        {{ -0.5,  0.5, -0.5 }, { 0, 1 }, {  0, 1,  0 }},
-
-        // Bottom
-        {{ -0.5, -0.5, -0.5 }, { 0, 0 }, {  0, -1, 0 }},
-        {{  0.5, -0.5, -0.5 }, { 1, 0 }, {  0, -1, 0 }},
-        {{  0.5, -0.5,  0.5 }, { 1, 1 }, {  0, -1, 0 }},
-        {{ -0.5, -0.5,  0.5 }, { 0, 1 }, {  0, -1, 0 }},
+        {glm::vec3( 0.5, 0.5, 0.0), glm::vec2(0), glm::vec3(0,0,0)},
+        {glm::vec3( 0.5,-0.5, 0.0), glm::vec2(0), glm::vec3(0,0,0)},
+        {glm::vec3(-0.5,-0.5, 0.0), glm::vec2(0), glm::vec3(0,0,0)},
     };
 
     uint32_t indices[] = 
     {
-         2,  1,  0,    3,  2,  0, // Front
-         6,  5,  4,    7,  6,  4, // Back
-        10,  9,  8,   11, 10,  8, // Left
-        14, 13, 12,   15, 14, 12, // Right
-        18, 17, 16,   19, 18, 16, // Top
-        22, 21, 20,   23, 22, 20, // Bottom
+        0,1,2,
     };
 
-    mMesh.SetData(vertices, sizeof(vertices), indices, sizeof(indices));
-    mMaterial.LoadShaders("Shaders/skybox.vert.spv", "Shaders/skybox.frag.spv");
-    mMaterial.GetSettingsRef().cullMode = CullMode::None;
-    mMaterial.GetSettingsRef().depthTestEnable = false;
-    mMaterial.GetSettingsRef().depthWriteEnable = false;
-    mMaterial.Create();
+    mesh.SetData(vertices, sizeof(vertices), indices, sizeof(indices));
+
+    material.LoadShaders("Shaders/shader.vert.spv", "Shaders/shader.frag.spv");
+    material.SetCullMode(CullMode::None);
+    material.Create();
+
+    renderCommand.pipeline = material.GetPipeline();
+    renderCommand.vertexBuffer = mesh.GetVertexBuffer();
+    renderCommand.indexBuffer = mesh.GetIndexBuffer();
+
+    mTarget.Create(GetWindowRef().GetFrameBufferSize());
+    mTarget.TransitionLayout(ImageLayout::General);
 
     InitializeImgui();
+    
 }
 
 void Editor::OnUpdate()
 {
-    GetRendererRef().BeginFrame();
-    GetRendererRef().DrawMeshWithMaterial(mMesh, mMaterial, Transform());
+    GetRendererRef().BeginFrame(mTarget);
 
-    StartImguiRender();
+    GetRendererRef().Submit(renderCommand);
 
-    ImGui::Begin("Window");
-    mGameViewSize.x = ImGui::GetWindowSize().x;
-    mGameViewSize.y = ImGui::GetWindowSize().y;
+    GetRendererRef().EndFrame();
 
-    ResizeFrameBuffer(mGameViewSize);
-
-    ImGui::Image(mFrameBuffer, {float(GetRendererRef().mFinalImage.size.x), float(GetRendererRef().mFinalImage.size.y)});
-    ImGui::End();
-
-    EndImguiRender();
-
+    RenderImgui();
 }
 
-void Editor::ResizeFrameBuffer(const glm::uvec2& size)
+void Editor::OnEnd()
 {
-    if(GetRendererRef().mFinalImage.size == size)
-        return;
-
-    vkDeviceWaitIdle(getDevice());
-
-    DestroyImage(GetRendererRef().mFinalImage);
-    DestroyImage(GetRendererRef().mSceneDepthAttachment);
-    vkDestroyFramebuffer(getDevice(), GetRendererRef().mFinalFrameBuffer, nullptr);
-
-    GetRendererRef().CreateFinalImageAttachment(size);
-}
-
-void Editor::OnWindowResize(const glm::uvec2 &size) 
-{
-    GetRendererRef().Resize(size);
-    ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)mFrameBuffer.GetTexID());
-    mFrameBuffer = ImGui_ImplVulkan_AddTexture(sampler, GetRendererRef().mFinalImage.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
+    
 }
 
 void Editor::OnKeyPress(Key key) 
 {
-    if (key == Key::Escape)    
+    if (key == Key::Escape) 
         Close();
+}
+
+void Editor::OnWindowResize(const glm::uvec2 &size) 
+{
+    // mTarget.Resize(size);
+    // ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)mRenderViewTexture);
+    // mRenderViewTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(GetRendererRef().mDefaultSampler.GetHandle(), mTarget.GetImage().view, VK_IMAGE_LAYOUT_GENERAL);
+
+    GetRendererRef().ResizeSwapchain(size);
+
+    
+    for (int i = 0; i < GetRendererRef().mSwapchain.GetImageCount(); i++)
+    {
+        mImguiFrameBuffer[i].Destroy();
+        FrameBuffer frameBuffer;
+        frameBuffer.Create(GetRendererRef().mSwapchain.GetSize(), {GetRendererRef().mSwapchain.GetImages()[i]}, mImguiRenderPass);
+        mImguiFrameBuffer[i] = frameBuffer;
+    }
+}
+
+void CustomStyle() 
+{
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("./inter.ttf");
+
+    ImGuiStyle &style = ImGui::GetStyle(); 
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.01,0.01,0.01,1);
+    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.02,0.02,0.02,1);
+    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.01,0.01,0.01,1);
+
 }
 
 void Editor::InitializeImgui() 
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    
+
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    CustomStyle();
+
     VkDescriptorPoolSize poolSize = 
     {
         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
     };
+
+
+    VkDescriptorPoolCreateInfo createInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize,
+    };
+
+    VkDescriptorPool descriptorPool;
+    vkCreateDescriptorPool(getDevice(), &createInfo, nullptr, &descriptorPool);
+
+    mImguiRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
+    mImguiRenderPass.AddSubpass({0}, {}, UINT32_MAX, PipelineBindPoint::Graphic);
+    mImguiRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
+    mImguiRenderPass.Create();
     
-    VkDescriptorPool descriptorPool = CreateDescriptorPool({poolSize}, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE);
-    ImGui_ImplVulkan_InitInfo initInfo = {};
-    initInfo.Instance = getInstance();
-    initInfo.PhysicalDevice = getPhysicalDevice();
-    initInfo.Device = getDevice();
-    initInfo.ImageCount = GetRendererRef().mSwapchain.GetImageCount();
-    initInfo.MinImageCount = GetRendererRef().mSwapchain.GetImageCount();
-    initInfo.DescriptorPool = descriptorPool;
-    initInfo.Queue = getQueues().graphics;
-    initInfo.QueueFamily = getQueueIndices().graphics;
-    initInfo.PipelineInfoMain.RenderPass = GetRendererRef().GetMainRenderPass().GetHandle();
-    initInfo.PipelineInfoMain.Subpass = 0;
-    initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    
+    ImGui_ImplVulkan_InitInfo initInfo = 
+    {
+        .Instance = getInstance(),
+        .PhysicalDevice = getPhysicalDevice(),
+        .Device = getDevice(),
+        .QueueFamily = getQueueIndices().graphics,
+        .Queue = getQueues().graphics,
+        .DescriptorPool = descriptorPool,
+        .MinImageCount = GetRendererRef().mSwapchain.GetImageCount(),
+        .ImageCount = GetRendererRef().mSwapchain.GetImageCount(),
+        .PipelineInfoMain = 
+        {
+            .RenderPass = mImguiRenderPass.GetHandle(),
+            .Subpass = 0,
+            .SwapChainImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        },
+    };
+
     ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)GetWindowRef().GetNativeWindow(), true);
     ImGui_ImplVulkan_Init(&initInfo);
 
-    VkSamplerCreateInfo createInfo = 
+
+
+    for (int i = 0; i < GetRendererRef().mSwapchain.GetImageCount(); i++)
     {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_NEAREST,
-        .minFilter = VK_FILTER_NEAREST,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .minLod = 1,
-        .maxLod = 1,
-    };
+        FrameBuffer frameBuffer;
+        frameBuffer.Create(GetRendererRef().mSwapchain.GetSize(), {GetRendererRef().mSwapchain.GetImages()[i]}, mImguiRenderPass);
+        mImguiFrameBuffer.push_back(frameBuffer);
+    }
 
-    vkCreateSampler(getDevice(), &createInfo, nullptr, &sampler);
+    mImGuiCommandBuffer.Create();
+    mImageAcquiredSemaphore.Create();
+    mRenderingFinished.Create();
 
-    mFrameBuffer = ImGui_ImplVulkan_AddTexture(sampler, GetRendererRef().mFinalImage.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    mRenderViewTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(GetRendererRef().mDefaultSampler.GetHandle(), mTarget.GetImage().view, VK_IMAGE_LAYOUT_GENERAL);
 }
 
-void Editor::CustomEndFrame() 
+
+
+void Editor::RenderUi()
 {
-    CHROME_TRACE_FUNCTION();
+    ImGui::Begin("Game View");
 
-    GetRendererRef().mCamera.Calculate();
-    GetRendererRef().UpdateUniformData();
+    mViewSize.x = ImGui::GetContentRegionAvail().x;
+    mViewSize.y = ImGui::GetContentRegionAvail().y;
 
-    vkDeviceWaitIdle(getDevice());
-    
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(getDevice(), GetRendererRef().mSwapchain.GetHandle(), UINT64_MAX, GetRendererRef().mSemaphores.imageAcquired, VK_NULL_HANDLE, &imageIndex);
+    if(mTarget.GetImage().size != mViewSize)
+    {
+        vkDeviceWaitIdle(getDevice());
+        mTarget.Resize(mViewSize);
+        ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)mRenderViewTexture);
+        mRenderViewTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(GetRendererRef().mDefaultSampler.GetHandle(), mTarget.GetImage().view, VK_IMAGE_LAYOUT_GENERAL);
+    }
 
-    GetRendererRef().mCommandBuffers.render.BeginRecording();
-    
-    CustomCmdMainRenderPass(imageIndex);
-    
-    GetRendererRef().mCommandBuffers.render.EndRecording();
+    ImGui::Image(mRenderViewTexture, {(float)mTarget.GetImage().size.x, (float)mTarget.GetImage().size.y});
 
-    GetRendererRef().mCommandBuffers.render.QueueSubmit(getQueues().graphics, GetRendererRef().mSemaphores.imageAcquired, GetRendererRef().mSemaphores.renderingFinish, PipelineStage::ColorAttachmentOutput);
+    ImGui::End();
 
-    GetRendererRef().PresentImage(getQueues().present, GetRendererRef().mSwapchain, imageIndex, GetRendererRef().mSemaphores.renderingFinish);
+    ImGui::Begin("Control Panel");
 
-    GetRendererRef().mFrameRunning = false;
+
+
+    ImGui::End();
 }
 
-void Editor::CustomCmdMainRenderPass(uint32_t imageIndex) 
+void Editor::RenderImgui() 
 {
-    VkViewport viewport = 
-    {
-        .width = (float)mGameViewSize.x,
-        .height = (float)mGameViewSize.y,
-        .minDepth = 0.f,
-        .maxDepth = 1.f,
-    };
-
-    VkRect2D scissor = 
-    {
-        .extent = {(uint32_t)viewport.width, (uint32_t)viewport.height},
-    };
-
-    
-    GetRendererRef().mRenderPass.CmdBeginRenderPass(GetRendererRef().mCommandBuffers.render, GetRendererRef().mFinalFrameBuffer, mGameViewSize, {{1,1,1,1}, {1,0,0,1}});
-    
-    vkCmdSetViewport(GetRendererRef().mCommandBuffers.render.GetHandle(), 0, 1, &viewport);
-    vkCmdSetScissor(GetRendererRef().mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
-    
-    GetRendererRef().RenderDrawSubmitInfos(GetRendererRef().mDrawSubmitInfo);
-    
-    GetRendererRef().mRenderPass.CmdEndRenderPass(GetRendererRef().mCommandBuffers.render);
-    
-
-    viewport = GetRendererRef().mViewport;
-    scissor.extent = {(uint32_t)viewport.width, (uint32_t)viewport.height};
-
-    GetRendererRef().mRenderPass.CmdBeginRenderPass(GetRendererRef().mCommandBuffers.render, GetRendererRef().mSwapchainFramebuffer[imageIndex], GetRendererRef().mSwapchain.GetSize(), {{1,1,1,1}, {1,0,0,1}});
-    
-    vkCmdSetViewport(GetRendererRef().mCommandBuffers.render.GetHandle(), 0, 1, &GetRendererRef().mViewport);
-    vkCmdSetScissor(GetRendererRef().mCommandBuffers.render.GetHandle(), 0, 1, &scissor);
-    
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), GetRendererRef().mCommandBuffers.render.GetHandle());
-
-    
-    GetRendererRef().mRenderPass.CmdEndRenderPass(GetRendererRef().mCommandBuffers.render);
-}
-
-void Editor::StartImguiRender() 
-{
-    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplVulkan_NewFrame();    
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-}
 
-void Editor::EndImguiRender() 
-{
+    ImGui::DockSpaceOverViewport();
+
+    RenderUi();
+
     ImGui::Render();
-    CustomEndFrame();
+
+    uint32_t imageIndex = GetRendererRef().mSwapchain.GetNextImageIndex(mImageAcquiredSemaphore, {});
+
+    mImGuiCommandBuffer.BeginRecording();
+
+    mImguiRenderPass.CmdBeginRenderPass(mImGuiCommandBuffer, mImguiFrameBuffer[imageIndex], GetWindowRef().GetSize(), {{0,0,0,1}});
+
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mImGuiCommandBuffer.GetHandle());
+
+    mImguiRenderPass.CmdEndRenderPass(mImGuiCommandBuffer);
+
+    mImGuiCommandBuffer.EndRecording();
+
+    mImGuiCommandBuffer.QueueSubmit(getQueues().graphics, mImageAcquiredSemaphore, mRenderingFinished);
+
+    VkSemaphore waitSemaphores[] = {mRenderingFinished.GetHandle()};
+    VkSwapchainKHR swapchains[] = {GetRendererRef().mSwapchain.GetHandle()};
+
+    VkPresentInfoKHR presentInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = waitSemaphores,
+        .swapchainCount = 1,
+        .pSwapchains = swapchains,
+        .pImageIndices = &imageIndex,
+    };
+
+    vkQueuePresentKHR(getQueues().present, &presentInfo);
 }
 
-Application* Application::Create()
-{
-    return new Editor;
-}
+
+CREATE_APPLICATION(Editor);

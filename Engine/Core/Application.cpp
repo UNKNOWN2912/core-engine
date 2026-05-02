@@ -86,11 +86,15 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 				break;
 			}
 		case WindowEvent::WindowMinimize:
-			OnWindowMinimize();
-			break;
-		case WindowEvent::WindowMaxmimize:
-			OnWindowMaximize();
-			break;
+			{
+				OnWindowMinimize();
+				break;
+			}
+		case WindowEvent::WindowMaximize:
+			{
+				OnWindowMaximize();
+				break;
+			}
 		case WindowEvent::WindowMouseMove:
 			{
 				glm::vec2 position = *(glm::vec2*)data;

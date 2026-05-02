@@ -19,7 +19,7 @@ void RenderPass::AddAttachment(ImageFormat format, ImageLayout finalLayout, Load
     mAttachments.push_back(description);
 }
 
-void RenderPass::AddSubpass(std::initializer_list<uint32_t> colorAttachments, std::initializer_list<uint32_t> inputAttachments, uint32_t depthAttachment) 
+void RenderPass::AddSubpass(std::initializer_list<uint32_t> colorAttachments, std::initializer_list<uint32_t> inputAttachments, uint32_t depthAttachment, PipelineBindPoint bindPoint) 
 {
     VkAttachmentReference* colorAttachmentReference = new VkAttachmentReference[colorAttachments.size()];
     VkAttachmentReference* inputAttachmentReference = new VkAttachmentReference[inputAttachments.size()];
@@ -64,7 +64,7 @@ void RenderPass::AddSubpass(std::initializer_list<uint32_t> colorAttachments, st
 
     VkSubpassDescription description = 
     {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .pipelineBindPoint = GetVulkanPipelineBindPoint(bindPoint),
         .inputAttachmentCount = (uint32_t)inputAttachments.size(),
         .pInputAttachments = inputAttachmentReference,
         .colorAttachmentCount = (uint32_t)colorAttachments.size(),
@@ -75,6 +75,7 @@ void RenderPass::AddSubpass(std::initializer_list<uint32_t> colorAttachments, st
     {
         description.pDepthStencilAttachment = depthAttachmentReference;
     }
+
 
     mSubpasses.push_back(description);
 }
@@ -133,13 +134,13 @@ void RenderPass::AddDependency(uint32_t sourceSubpass, uint32_t destinationSubpa
     mDependencies.push_back(dependency);
 }
 
-void RenderPass::CmdBeginRenderPass(const CommandBuffer& commandBuffer, VkFramebuffer framebuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues) 
+void RenderPass::CmdBeginRenderPass(const CommandBuffer& commandBuffer, const FrameBuffer& frameBuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues) 
 {
     VkRenderPassBeginInfo beginInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = mHandle,
-        .framebuffer = framebuffer,
+        .framebuffer = frameBuffer.GetHandle(),
         .renderArea = {{0,0}, {size.x, size.y}},
         .clearValueCount = (uint32_t)clearValues.size(),
         .pClearValues = clearValues.begin(),

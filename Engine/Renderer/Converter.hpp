@@ -22,3 +22,4 @@ VkFrontFace GetVulkanFrontsFace(FrontFace face);
 VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive);
 VkCullModeFlags GetVulkanCullMode(CullMode mode);
 VkVertexInputRate GetVulkanInputRate(InputRate inputRate);
+VkPipelineBindPoint GetVulkanPipelineBindPoint(PipelineBindPoint bindPoint);

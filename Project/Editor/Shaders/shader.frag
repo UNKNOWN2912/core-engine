@@ -1,27 +1,17 @@
 #version 450
 
-layout(location = 0) out vec4 outputColor;
-layout(binding = 1) uniform sampler2D tex0;
+layout(location = 0) out vec4 albedo;
+layout(location = 1) out vec4 position;
+layout(location = 2) out vec4 normal;
 
-layout(location = 0) in InData
+layout(location = 0) in InputData
 {
     vec3 fragPos;
-    vec2 uv;
-    vec3 normal;
-    vec3 cameraPosition;
-    vec3 cameraFront;
-    float time;
-} inData;
-
-
+} Input;
 
 void main()
-{   
-    vec3 lightDirection = normalize(vec3(1));
-
-    float diffuse = max(dot(lightDirection, inData.normal), 0.0);
-    float ambient = 0.1;
-
-    outputColor = texture(tex0, inData.uv);
-    outputColor.rgb *= (diffuse + ambient);
+{
+    albedo = vec4(0,1,1,1);
+    position = vec4(Input.fragPos, 1.0);
+    normal = vec4(1,1,0,1);
 }

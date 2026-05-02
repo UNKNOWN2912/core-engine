@@ -1,4 +1,5 @@
 #pragma once
+#include "Renderer/Sampler.hpp"
 #include "Renderer/Types.hpp"
 #include <unordered_map>
 #include <vector>
@@ -13,7 +14,7 @@ class Descriptor
 		void Create();
 
 		void UpdateBuffer(const Buffer& buffer, uint32_t binding);
-		void UpdateImage(const Image& image, ImageLayout layout, VkSampler sampler, uint32_t binding);
+		void UpdateImage(const Image& image, ImageLayout layout, const Sampler& sampler, uint32_t binding);
 		
 		VkDescriptorSet GetDescriptorSet() const { return mSet; }
 		VkDescriptorSetLayout GetDescriptorSetLayout() const { return mSetLayout; }

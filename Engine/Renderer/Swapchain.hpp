@@ -1,4 +1,5 @@
 #pragma once
+#include "Renderer/Synchronization.hpp"
 #include "Renderer/Utility.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -10,6 +11,8 @@ class Swapchain
         const std::vector<Image>& GetImages() const { return mImages; }
         const glm::uvec2& GetSize() const { return mSize; }
         uint32_t GetImageCount() const { return mImages.size(); }
+
+        uint32_t GetNextImageIndex(const Semaphore& semaphore, const Fence& fence) const;
 
         void Create(const glm::uvec2& size, PresentMode presentMode);
         void Destroy();

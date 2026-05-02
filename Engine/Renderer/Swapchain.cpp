@@ -2,6 +2,13 @@
 #include "Renderer/Converter.hpp"
 #include "Renderer/GraphicsContext.hpp"
 
+uint32_t Swapchain::GetNextImageIndex(const Semaphore& semaphore, const Fence& fence) const 
+{
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(getDevice(), mHandle, UINT64_MAX, semaphore.GetHandle(), fence.GetHandle(), &imageIndex);    
+    return imageIndex;
+}
+
 void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode) 
 {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -27,7 +34,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
         .imageColorSpace = colorSpace,
         .imageExtent = {size.x, size.y},
         .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .preTransform = capabilities.currentTransform,
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -44,7 +51,6 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
     images.resize(imageCount);
     vkGetSwapchainImagesKHR(getDevice(), mHandle, &imageCount, images.data());
 
-
     for (VkImage image : images)
     {
         VkImageView view = CreateImageView(image, ImageFormat::BGRA8, ImageAspect::Color);
@@ -59,6 +65,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
         image.size = mSize;
         mImages.push_back(image);
     }
+
 }
 
 void Swapchain::Destroy() 

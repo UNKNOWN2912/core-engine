@@ -7,25 +7,38 @@
 void GraphicsPipeline::LoadVertexShader(std::string_view filename)
 {
     CHROME_TRACE_FUNCTION();
+    if(mVertexShader != VK_NULL_HANDLE)
+        vkDestroyShaderModule(getDevice(), mVertexShader, nullptr);
+
     mVertexShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::LoadFragmentShader(std::string_view filename)
 {
     CHROME_TRACE_FUNCTION();
+    if(mFragmentShader != VK_NULL_HANDLE)
+        vkDestroyShaderModule(getDevice(), mFragmentShader, nullptr);
+
     mFragmentShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::LoadGeometryShader(std::string_view filename)
 {
     CHROME_TRACE_FUNCTION();
+    if(mGeometryShader != VK_NULL_HANDLE)
+        vkDestroyShaderModule(getDevice(), mGeometryShader, nullptr);
+    
     mGeometryShader = CreateShaderFromFile(getDevice(), filename.data());
 }
 
 void GraphicsPipeline::LoadTessellationShader(std::string_view filename)
 {
     CHROME_TRACE_FUNCTION();
+    if(mTessellationShader != VK_NULL_HANDLE)
+        vkDestroyShaderModule(getDevice(), mTessellationShader, nullptr);
+    
     mTessellationShader = CreateShaderFromFile(getDevice(), filename.data());
+
 }
 
 void GraphicsPipeline::EnableDepthTesting(bool enable)
@@ -95,6 +108,11 @@ void GraphicsPipeline::SetMultisampleCount(SampleCount count)
 {
     CHROME_TRACE_FUNCTION();
     mSampleCount = GetVulkanSampleCount(count);
+}
+
+void GraphicsPipeline::SetFrontFace(FrontFace frontFace) 
+{
+    mFrontFace = GetVulkanFrontsFace(frontFace);    
 }
 
 void GraphicsPipeline::SetViewport(const VkViewport& viewport)
@@ -183,7 +201,7 @@ void GraphicsPipeline::Create(const RenderPass& renderPass, uint32_t subpassInde
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;
     if (mWireframeEnable)
         rasterization.polygonMode = VK_POLYGON_MODE_LINE;
-    rasterization.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterization.frontFace = mFrontFace;
     rasterization.lineWidth = 1.f;
 
     VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };

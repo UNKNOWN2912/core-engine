@@ -2,7 +2,6 @@
 #include "Renderer/RenderPass.hpp"
 #include "Renderer/Types.hpp"
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -13,27 +12,28 @@ class GraphicsPipeline
         void LoadFragmentShader(std::string_view filename);
         void LoadGeometryShader(std::string_view filename);
         void LoadTessellationShader(std::string_view filename);
-
+        
         void EnableDepthTesting(bool enable);
         void EnableDepthWrite(bool enable);
         void EnableBlending(bool enable);
         void EnableWireframe(bool enable);
-
+        
         void AddBinding(uint32_t binding, size_t stride, InputRate inputRate);
         void AddAttribute(uint32_t binding, uint32_t location, ImageFormat format, size_t offset);
         void AddColorBlendAttachment(bool enableBlending);
-
+        
         void SetCullMode(CullMode cullMode);
         void SetPrimitive(PrimitiveType primitive);
         void SetMultisampleCount(SampleCount count);
+        void SetFrontFace(FrontFace frontFace);
         void SetViewport(const VkViewport& viewport);
-
         void SetPipelineLayout(VkPipelineLayout layout);
-
+        
+        
         void Create(const RenderPass& renderPass, uint32_t subpassIndex);
-
+        
+        
         VkPipelineLayout GetPipelineLayout() const;
-
         VkPipeline GetHandle() const { return mHandle; }
 
         void ClearAttributesAndBinding();
@@ -51,9 +51,11 @@ class GraphicsPipeline
         std::vector<VkPipelineColorBlendAttachmentState> mColorBlendStates;
 
         VkCullModeFlags mCullMode = VK_CULL_MODE_BACK_BIT;
+        VkViewport mViewport = {};
+
         VkPrimitiveTopology mPrimitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         VkSampleCountFlagBits mSampleCount = VK_SAMPLE_COUNT_1_BIT;
-        VkViewport mViewport = {};
+        VkFrontFace mFrontFace = VK_FRONT_FACE_CLOCKWISE;
 
         bool mDepthTestEnable = false;
         bool mDepthWriteEnable = false;

@@ -1,5 +1,6 @@
 #pragma once
 #include "Renderer/GraphicsContext.hpp"
+#include "Renderer/Synchronization.hpp"
 #include "Renderer/Types.hpp"
 
 class CommandBuffer
@@ -11,7 +12,7 @@ class CommandBuffer
         void BeginRecording(bool oneTimeSubmit = false);
         void EndRecording();
 
-        void QueueSubmit(VkQueue queue, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, PipelineStage waitStage);
+        void QueueSubmit(VkQueue queue, const Semaphore& waitSemaphore = {}, const Semaphore& signalSemaphore = {}, PipelineStage waitStage = PipelineStage::TopOfPipe);
 
         VkCommandBuffer GetHandle() const { return mHandle; }
     private:

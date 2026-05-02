@@ -4,13 +4,6 @@
 #include <cstdint>
 #include <vector>
 
-enum class LayoutType
-{
-    Int, UnsignedInt, Float,
-    IVec2, UVec2, Vec2,
-    IVec3, UVec3, Vec3,
-    IVec4, UVec4, Vec4,
-};
 
 struct Vertex
 {
@@ -30,11 +23,12 @@ class StaticMesh
         StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
 
         void SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
-
         bool IsValid() const { return mIsValid; }
-        // void SetLayout(std::initializer_list<LayoutType> layout);
 
         void Destroy();
+
+        const Buffer& GetVertexBuffer() const { return mVertexBuffer; }
+        const Buffer& GetIndexBuffer() const { return mIndexBuffer; }
     private:
         friend class Renderer;
 
@@ -48,7 +42,4 @@ class StaticMesh
         Buffer mIndexBuffer;
 
         bool mIsValid = false;
-
-        // std::vector<VkVertexInputAttributeDescription> mAttributeDescriptions;
-        // VkVertexInputBindingDescription mBindingDescription;
 };

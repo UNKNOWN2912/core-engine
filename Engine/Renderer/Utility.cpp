@@ -115,7 +115,7 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer)
     vkDestroyCommandPool(getDevice(), commandPool, nullptr);
 }
 
-void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image)
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image& image)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -127,12 +127,12 @@ void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkI
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
         .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
+        .oldLayout = GetVulkanImageLayout(oldLayout),
+        .newLayout = GetVulkanImageLayout(newLayout),
         .image = image.handle,
         .subresourceRange = 
         {
-            .aspectMask = aspectMask,
+            .aspectMask = GetVulkanImageAspect(aspectMask),
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
@@ -146,7 +146,7 @@ void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkI
     ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
 }
 
-void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFlags aspectMask) 
+void TransferImageData(const Buffer& srcBuffer, Image& dstImage, ImageAspect aspectMask) 
 {
     CHROME_TRACE_FUNCTION();
     VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
@@ -159,7 +159,7 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
         .bufferImageHeight = 0,
         .imageSubresource = 
         {
-            .aspectMask = aspectMask,
+            .aspectMask = GetVulkanImageAspect(aspectMask),
             .mipLevel = 0,
             .baseArrayLayer = 0,
             .layerCount = 1,
@@ -177,7 +177,6 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
 
     vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &commandBuffer);
 }
-
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool) 
 {
@@ -427,29 +426,4 @@ VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspec
     VkImageView view;
     vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &view);
     return view;
-}
-
-VkFramebuffer CreateFramebuffer(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass)
-{
-    VkImageView views[16];
-
-    for (int i = 0; i < attachments.size(); i++)
-    {
-        views[i] = (attachments.begin() + i)->view;
-    }
-
-    VkFramebufferCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .renderPass = renderPass.GetHandle(),
-        .attachmentCount = (uint32_t)attachments.size(),
-        .pAttachments = views,
-        .width = size.x,
-        .height = size.y,
-        .layers = 1,
-    };
-
-    VkFramebuffer frameBuffer;
-    vkCreateFramebuffer(getDevice(), &createInfo, nullptr, &frameBuffer);
-    return frameBuffer;
 }

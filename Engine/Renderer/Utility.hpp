@@ -1,5 +1,4 @@
 #pragma once
-#include "Renderer/RenderPass.hpp"
 #include "Renderer/Types.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -31,8 +30,6 @@ void DestroyImage(Image& image);
 
 VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect);
 
-VkFramebuffer CreateFramebuffer(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass);
-
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool);
 void BeginCommandBuffer(VkCommandBuffer commandBuffer, bool singleUse);
@@ -46,5 +43,5 @@ VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize
 VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool);
 VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts, std::initializer_list<VkPushConstantRange> pushConstant);
 
-void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image);
-void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFlags aspectMask);
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image& image);
+void TransferImageData(const Buffer& srcBuffer, Image& dstImage, ImageAspect aspectMask);

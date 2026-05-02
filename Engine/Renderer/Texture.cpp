@@ -1,5 +1,6 @@
 #include "Texture.hpp"
 #include "Core/Macro.hpp"
+#include <filesystem>
 #include <memory.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -8,15 +9,19 @@
 void Texture::Create(void* data, const glm::uvec2& size, ImageFormat format)
 {
     CHROME_TRACE_FUNCTION();
+
+    if(IsValid())
+        Destroy();
+
     mImage = CreateImage(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
     mStagingBuffer = CreateBuffer(mImage.memorySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     memcpy(mStagingBuffer.map, data, mImage.memorySize);
 
-    TransitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, mImage);
+    TransitionImageLayout(ImageLayout::None, ImageLayout::TransferDestination, ImageAspect::Color, mImage);
 
-    TransferImageData(mStagingBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT);
+    TransferImageData(mStagingBuffer, mImage, ImageAspect::Color);
 
-    TransitionImageLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, mImage);
+    TransitionImageLayout(ImageLayout::TransferDestination, ImageLayout::ShaderRead, ImageAspect::Color, mImage);
 
     mIsValid = true;
 }
@@ -24,8 +29,26 @@ void Texture::Create(void* data, const glm::uvec2& size, ImageFormat format)
 void Texture::Load(std::string_view filename)
 {
     CHROME_TRACE_FUNCTION();
+
+    if(!std::filesystem::exists(filename))
+    {
+        ERROR("File not found: {}", filename);
+        assert(false);
+    }
+
     glm::ivec2 size;
     stbi_uc* data = stbi_load(filename.data(), &size.x, &size.y, nullptr, 4);
 
     Create(data, size, ImageFormat::RGBA8);
+}
+
+void Texture::Destroy() 
+{
+    DestroyImage(mImage);
+    DestroyBuffer(mStagingBuffer);
+
+    mImage = {};
+    mStagingBuffer = {};
+
+    mIsValid = false;
 }

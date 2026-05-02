@@ -5,21 +5,6 @@
 #include "Renderer/Texture.hpp"
 #include "Renderer/Types.hpp"
 
-
-struct MaterialSettings
-{
-    bool depthTestEnable = true;
-    bool depthWriteEnable = true;
-    bool enableInstancing = false;
-    bool wireframe = false;
-    bool blendEnable = true;
-    CullMode cullMode = CullMode::Back;
-    PrimitiveType primitiveType = PrimitiveType::Triangle;
-    FrontFace frontFace = FrontFace::Clockwise;
-    float lineWidth = 1.f;
-    SampleCount sampleCount = SampleCount::One; 
-};
-
 enum class AttributeType
 {
     Int, UInt, Float,
@@ -28,36 +13,47 @@ enum class AttributeType
     IVec4, UVec4, Vec4,
 };
 
-
 class Material
 {
     public:
-        Material();
         void LoadAlbedo(std::string_view filename);
-        void LoadShaders(std::string_view vertexShader, std::string_view fragmentShader);
-
-        void ClearBindingAttribute();
-        void SetBindingAttribute(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> layout);
+        void LoadShaders(std::string_view vertexShaderFilename,
+                        std::string_view fragmentShaderFilename);
 
         void Create();
 
-        MaterialSettings& GetSettingsRef();
+        void SetLineWidth(float lineWidth);
+        void SetCullMode(CullMode cullMode);
+        void SetPrimitiveType(PrimitiveType primitiveType);
+        void SetFrontFace(FrontFace frontFace);
+        void SetSampleCount(SampleCount sampleCount);
+        void SetDefaultAttribute();
+        
+        void EnableWireframe(bool wireframe);
+        void EnableDepthTestEnable(bool depthTestEnable);
+        void EnableDepthWriteEnable(bool depthWriteEnable);
+        void EnableInstancing(bool enableInstancing);
 
-        void SetAlbedoSampler(Filter mag, Filter min, std::array<AddressMode, 3> addressModes);
+        void AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes);
 
-        bool IsValid() const { return mIsValid; }
+        const GraphicsPipeline& GetPipeline() const { return mPipeline; }
+
     private:
-        friend class Renderer;
+        float mLineWidth = 1.f;
+        bool mDepthTestEnable = true;
+        bool mDepthWriteEnable = true;
+        bool mEnableInstancing = false;
+        bool mWireframeEnable = false;
 
+        CullMode mCullMode = CullMode::Back;
+        PrimitiveType mPrimitiveType = PrimitiveType::Triangle;
+        FrontFace mFrontFace = FrontFace::Clockwise;
+        SampleCount mSampleCount = SampleCount::One; 
+
+        GraphicsPipeline mPipeline;
+        Descriptor mImageDescriptor;
         Texture mAlbedo;
         Sampler mAlbedoSampler;
-        
-        GraphicsPipeline mPipeline;
-        MaterialSettings mSettings;
-        VkPipelineLayout mPipelineLayout;
-        uint32_t mFinalLocation = 0;
 
-        Descriptor mDescriptor;
-
-        bool mIsValid = false;
+        uint32_t mAttributeCount = 0;
 };

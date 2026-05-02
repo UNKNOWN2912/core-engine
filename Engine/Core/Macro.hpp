@@ -3,6 +3,8 @@
 #include "Profiler/ChromeTraceProfiler.hpp"
 #include "Timer.hpp"
 
+#define CREATE_APPLICATION(applicationClass) Application* Application::Create() { return new applicationClass; }
+
 #define ENABLE_LOGGING 1
 #define ENABLE_WARNING 1
 #define ENABLE_ERROR 1

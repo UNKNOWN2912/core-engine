@@ -16,7 +16,7 @@ enum class WindowEvent
 	WindowResize,
 	WindowMove,
 	WindowMinimize,
-	WindowMaxmimize,
+	WindowMaximize,
 
 	WindowMouseMove,
 	WindowMousePress,

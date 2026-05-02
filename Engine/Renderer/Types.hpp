@@ -20,6 +20,16 @@ enum class ImageFormat
     RGB8,
     RGBA8,
 
+    R8U,
+    RG8U,
+    RGB8U,
+    RGBA8U,
+
+    R8UNORM,
+    RG8UNORM,
+    RGB8UNORM,
+    RGBA8UNORM,
+
     R16,
     RG16,
     RGB16,
@@ -29,6 +39,11 @@ enum class ImageFormat
     RG16U,
     RGB16U,
     RGBA16U,
+
+    R16UNORM,
+    RG16UNORM,
+    RGB16UNORM,
+    RGBA16UNORM,
 
     R32,
     RG32,
@@ -53,7 +68,8 @@ enum class ImageFormat
     D32,
     D24_S8,
 
-    BGRA8
+    BGRA8,
+    BGRA8UNORM
 };
 
 enum class ImageLayout
@@ -64,7 +80,8 @@ enum class ImageLayout
     ShaderRead,
     TransferSource,
     TransferDestination,
-    PresentSource
+    PresentSource,
+    General
 };
 
 enum class ImageUsage : uint64_t
@@ -75,7 +92,8 @@ enum class ImageUsage : uint64_t
     Sampler = 1 << 3,
     TransferSource = 1 << 4,
     TransferDestination = 1 << 5,
-    Storage = 1 << 6
+    Storage = 1 << 6,
+    InputAttachment = 1 << 7,
 };
 
 DefineBitOperators(ImageUsage, uint64_t);
@@ -120,7 +138,9 @@ enum class DescriptorType
     None = 0,
     Uniform,
     CombinedSampler,
-    InputAttachment
+    InputAttachment,
+    StorageBuffer,
+    StorageImage
 };
 
 enum class PipelineStage : uint64_t
@@ -237,4 +257,12 @@ enum class InputRate
     None = 0,
     Vertex,
     Instance
+};
+
+enum class PipelineBindPoint
+{
+    None = 0,
+    Graphic,
+    Compute,
+    RayTracing
 };

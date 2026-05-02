@@ -1,66 +1,21 @@
 #pragma once
-#include "Renderer/Camera.hpp"
-#include "Renderer/CommandBuffer.hpp"
+#include "Core/Window.hpp"
+#include "Renderer/ComputePipeline.hpp"
 #include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
-#include "GraphicsContext.hpp"
-#include "Renderer/RenderPass.hpp"
+#include "Renderer/RenderTarget.hpp"
 #include "Renderer/Swapchain.hpp"
-#include "Renderer/Texture.hpp"
-#include "Renderer/Transform.hpp"
-#include "Renderer/UniformBuffer.hpp"
-#include "Renderer/Utility.hpp"
-#include <vulkan/vulkan_core.h>
+#include "Renderer/Synchronization.hpp"
+#include "RendererAttachments.hpp"
 
-struct Semaphores
+struct RenderCommand
 {
-    VkSemaphore imageAcquired = VK_NULL_HANDLE;
-    VkSemaphore renderingFinish = VK_NULL_HANDLE;
-};
-
-struct CommandBuffers
-{
-    CommandBuffer render;
-};
-
-struct UniformData
-{
-    glm::mat4 projection;
-    glm::mat4 view;
-    alignas(16) glm::vec3 cameraPosition;
-    alignas(16) glm::vec3 cameraFront;
-    float time = 0;
-};
-
-struct MeshMap
-{
-    Material* material;
-    Transform* transform;
-};
-
-struct DrawSubmitInfo
-{
-    StaticMesh* mesh = nullptr;
-    Material* material = nullptr;
-    Transform transform;
-    InstanceBuffer* instanceBuffer = nullptr;
-    bool instanced = false;
-    uint32_t instanceCount = 0;
-};
-
-struct DeferredAttachment
-{
-    Image mPosition;
-    Image mAlbedo;
-    Image mNormal;
-    Image mDepth;
-    glm::uvec2 mSize;
-
-    void ResizeAttachments(const glm::uvec2& size);
-    void CreateAttachments(const glm::uvec2& size);
-    void DestroyAttachments();
-
+    Buffer vertexBuffer;
+    Buffer indexBuffer;
+    InstanceBuffer instanceBuffer;
+    GraphicsPipeline pipeline;
+    Descriptor descriptors;
 };
 
 class Renderer
@@ -69,90 +24,63 @@ class Renderer
         void Initialize(const Window& window);
         void Terminate();
 
-        void DrawMesh(StaticMesh& mesh);
-        void DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform);
-        void DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount);
+        void Submit(const StaticMesh& mesh, const Material& material);
+        void Submit(const RenderCommand& renderCommand);
 
-        void BeginFrame();
+        void BeginFrame(RenderTarget& renderTarget);
         void EndFrame();
 
-        void CreateMeshData(StaticMesh& mesh);
+        void ResizeSwapchain(const glm::uvec2& size);
+        void DisplayToWindow(const RenderTarget& target);
 
-        void SetCamera(const Camera& camera) { mCamera = camera; }
-        const Camera& GetCamera() const { return mCamera; }
-
-        void Resize(const glm::uvec2& size);
-
-        RenderPass GetMainRenderPass() const { return mRenderPass; }
-        
-
-        const UniformBuffer& GetUniformBuffer() const { return mUniformBuffer; }
+        const RenderPass& GetDeferredRenderPass() const;
 
     private:
-        void CmdMainRenderPass(uint32_t imageIndex);
+        // Render passes
+        void CreateDeferredRenderPass();
 
-        void CreateRenderPass();
-        void CreateSwapchainFramebuffers();
-        void CreateSemaphores();
-        void CreateCommandBuffers();
-        
-        void DestroyRenderPass();
-        void DestroySwapchainFramebuffers();
-        void DestroySemaphores();
-        void DestroyCommandBuffers();
+        // Attachments
+        void CreateAttachments(const glm::uvec2& size);
+        void ResizeAttachments(const glm::uvec2& size);
+        void DestroyAttachments();
 
-        void UpdateMaterialDescriptorSet(const std::vector<DrawSubmitInfo>& drawSubmitInfos, UniformBuffer& uniformBuffer, UniformData& uniformData);
+        // FrameBuffer
+        void CreateDeferredFrameBuffer(const glm::uvec2& size);
 
-        void CmdDrawSubmitBindDescriptorSet(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
-        void CmdDrawSubmitBindPipeline(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
-        void CmdDrawSubmitBindVertexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
-        void CmdDrawSubmitBindIndexBuffer(VkCommandBuffer commandBuffer, const DrawSubmitInfo& drawSubmitInfo);
-
-        void RenderDrawSubmitInfos(const std::vector<DrawSubmitInfo>& drawSubmitInfos);
-
-        void PresentImage(VkQueue queue, const Swapchain& swapchain, uint32_t imageIndex, VkSemaphore waitSemaphore);
-        
-        void UpdateUniformData();
-
-        void CreateFinalImageAttachment(const glm::uvec2& size);
     private:
         GraphicsContext mContext;
 
         Swapchain mSwapchain;
-        std::vector<VkFramebuffer> mSwapchainFramebuffer;
 
-        VkFramebuffer mFinalFrameBuffer;
-        Image mFinalImage;
+        Descriptor mComputeDescriptor;
+        Descriptor mDeferredAttachmentDescriptor;
+        // Render passes
+        RenderPass mDeferredRenderPass;
+        
+        // FrameBuffers
+        FrameBuffer mDeferredFrameBuffer;
+        
+        // Attachments
+        DeferredSubpassAttachment mDeferredAttachments;
+        
+        std::vector<RenderCommand> mRenderCommands;
+        RenderTarget mCurrentRenderTarget;
+        
+        CommandBuffer mRenderCommandBuffer;
+        CommandBuffer mTransferToSwapchainCommandBuffer;
 
-        Semaphores mSemaphores;
-        CommandBuffers mCommandBuffers;
+        Semaphore mImageAcquiredSemaphore;
+        Semaphore mTransferSemaphore;
 
-        RenderPass mRenderPass;
+        Sampler mDefaultSampler;
 
+        ComputePipeline mComputePipeline;
 
-        RenderPass mMainRenderPass;
-        RenderPass mSwapchainRenderPass;
+        Semaphore mRenderingSemaphore;
 
-
-        VkViewport mViewport;
-
-        std::vector<DrawSubmitInfo> mDrawSubmitInfo;
-
-        bool mFrameRunning = false;
-
-        UniformBuffer mUniformBuffer;
-        UniformData mUniformData;
-
-        Texture mTexture;
-
-        Camera mCamera;
-
-        Image mDepthAttachment;
-        Image mSceneDepthAttachment;
-
-        glm::vec3 lightDirection = glm::vec3(1,1,1);
-
-        DeferredAttachment mDeferredAttachments;
-
+        Image mComputeImage;
+        
+        
+        bool mFrameRecording = false;
         friend class Editor;
 };
