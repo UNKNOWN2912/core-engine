@@ -57,6 +57,8 @@ public:
 	void ShowCursor();
 	bool isCursorHidden();
 
+	void Maximize();
+
 
 
 private:

@@ -33,6 +33,12 @@ class CameraController
 
         void EnableControl(bool enable) { mEnableControl = enable; }
 
+        void EnableKeyboardControl(bool enable);
+        void EnableMouseControl(bool enable);
+
+        float& GetSpeedRef() { return mSpeed; }
+        float& GetSensitivityRef() { return mSensitivity; }
+
     private:
         glm::vec2 previousMousePos;
         Camera* mCamera = nullptr;
@@ -46,9 +52,10 @@ class CameraController
 
         float mYaw = 0, mPitch = 0;
 
-        float mSpeed = 0.05f;
+        float mSpeed = 5;
         float mSensitivity = 0.4;
 
         bool mEnableControl = true;
-
+        bool mEnableKeyboardControl = true;
+        bool mEnableMouseControl = true;
 };

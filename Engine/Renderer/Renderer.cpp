@@ -62,12 +62,18 @@ void Renderer::Submit(const StaticMesh& mesh, const Material& material)
 {
     RenderCommand renderCommand;
     renderCommand.vertexBuffer = mesh.mVertexBuffer;    
-    renderCommand.indexBuffer = mesh.mIndexBuffer;    
+    renderCommand.indexBuffer = mesh.mIndexBuffer;
     renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
     renderCommand.pipeline = material.GetPipeline();
     renderCommand.descriptors[0] = material.GetImageDescriptor();    
     renderCommand.descriptors[1] = material.GetUniformDescriptor();    
     renderCommand.descriptorCount = 2;
+
+    if(material.IsInstancingEnabled())
+    {
+        renderCommand.instanceBuffer = material.GetInstanceBuffer();
+        renderCommand.instanceCount = material.GetInstanceCount();
+    }
 
     Submit(renderCommand);
 }
@@ -117,10 +123,11 @@ void Renderer::EndFrame()
     {
         const RenderCommand& renderCommand = mRenderCommands[i];
 
-        VkBuffer vertexBuffer[] = {renderCommand.vertexBuffer.handle};
-        VkDeviceSize offsets[] = {0};
+        uint32_t vertexBufferCount = (renderCommand.instanceCount == 0) ? 1 : 2;
+        VkBuffer vertexBuffer[] = {renderCommand.vertexBuffer.handle, renderCommand.instanceBuffer.mBuffer.handle};
+        VkDeviceSize offsets[] = {0, 0};
 
-        vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, 1, vertexBuffer, offsets);
+        vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, vertexBufferCount, vertexBuffer, offsets);
         vkCmdBindIndexBuffer(mRenderCommandBuffer.GetHandle(), renderCommand.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetHandle());
@@ -149,7 +156,11 @@ void Renderer::EndFrame()
         vkCmdSetViewport(mRenderCommandBuffer.GetHandle(), 0, 1, &viewport);
         vkCmdSetScissor(mRenderCommandBuffer.GetHandle(), 0, 1, &scissor);
 
-        vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
+        if(renderCommand.instanceCount == 0)
+            vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
+        else
+            vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, renderCommand.instanceCount, 0, 0, 0);
+
     }   
 
     mDeferredRenderPass.CmdEndRenderPass(mRenderCommandBuffer);
@@ -174,10 +185,10 @@ void Renderer::EndFrame()
 
 }
 
-void Renderer::ResizeSwapchain(const glm::uvec2& size) 
+bool Renderer::ResizeSwapchain(const glm::uvec2& size) 
 {
     if(mSwapchain.GetSize() == size)
-        return;
+        return false;
     
     vkDeviceWaitIdle(getDevice());
 
@@ -194,6 +205,8 @@ void Renderer::ResizeSwapchain(const glm::uvec2& size)
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+
+    return true;
 }
 
 
@@ -248,6 +261,16 @@ void Renderer::DisplayToWindow(const RenderTarget& target)
 
 const RenderPass& Renderer::GetDeferredRenderPass() const { return mDeferredRenderPass; }
 
+void Renderer::AddListener(std::function<bool (uint32_t, void *)> listener) 
+{
+    mDispatcher.AddListener(listener);    
+}
+
+void Renderer::QueueSwapchainResize(const glm::uvec2& size) 
+{
+    mSwapchainSize = size;
+}
+
 void Renderer::CreateDeferredRenderPass() 
 {
     mDeferredRenderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
@@ -272,6 +295,7 @@ void Renderer::ResizeAttachments(const glm::uvec2& size)
     vkDeviceWaitIdle(getDevice());
     mDeferredAttachments.ResizeAttachment(size);
     mDeferredFrameBuffer.Destroy();
+    mDispatcher.Dispatch((uint32_t)RendererEvent::DeferredAttachmentResize, &mDeferredAttachments);
     CreateDeferredFrameBuffer(size);
 
 
@@ -279,7 +303,6 @@ void Renderer::ResizeAttachments(const glm::uvec2& size)
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
-
 }
 
 void Renderer::DestroyAttachments() 

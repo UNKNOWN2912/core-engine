@@ -31,7 +31,7 @@ class GraphicsPipeline
         
         
         void Create(const RenderPass& renderPass, uint32_t subpassIndex);
-        
+        void Destroy();  
         
         VkPipelineLayout GetPipelineLayout() const;
         VkPipeline GetHandle() const { return mHandle; }

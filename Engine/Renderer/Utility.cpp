@@ -26,7 +26,7 @@ uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProp
     return UINT32_MAX;
 }
 
-Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryProperties) 
+Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryProperties) 
 {
     CHROME_TRACE_FUNCTION();
     Buffer buffer;
@@ -35,7 +35,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
-        .usage = usage,
+        .usage = GetVulkanBufferUsage(usage),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
@@ -48,7 +48,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = requirements.size,
-        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, memoryProperties),
+        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperties)),
     };
 
     vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &buffer.memory);
@@ -57,7 +57,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
 
     vkBindBufferMemory(getDevice(), buffer.handle, buffer.memory, 0);
 
-    if((memoryProperties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+    if((GetVulkanMemoryProperty(memoryProperties) & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
         vkMapMemory(getDevice(), buffer.memory, 0, requirements.size, 0, &buffer.map);
     }

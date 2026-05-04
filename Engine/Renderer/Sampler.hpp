@@ -10,6 +10,7 @@ class Sampler
         void SetAddressMode(AddressMode u, AddressMode v, AddressMode w);
         void SetBorderColor(const glm::vec4& color);
         void Create();
+        void Destroy();
 
         VkSampler GetHandle() const { return mHandle; }
     private:

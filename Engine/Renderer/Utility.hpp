@@ -21,7 +21,7 @@ struct Image
     glm::uvec2 size = {0, 0};
 };
 
-Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryProperties);
+Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryProperties);
 void DestroyBuffer(Buffer& buffer);
 void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer); 
 

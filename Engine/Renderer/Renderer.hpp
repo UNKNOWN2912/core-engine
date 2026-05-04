@@ -15,7 +15,10 @@ struct RenderCommand
 {
     Buffer vertexBuffer;
     Buffer indexBuffer;
+
     InstanceBuffer instanceBuffer;
+    uint32_t instanceCount = 0;
+    
     GraphicsPipeline pipeline;
     Descriptor descriptors[16];
 
@@ -36,6 +39,11 @@ struct RendererUniformData
     glm::vec3 cameraPosition;
 };
 
+enum class RendererEvent
+{
+    DeferredAttachmentResize,
+};
+
 class Renderer
 {
     public:
@@ -48,12 +56,20 @@ class Renderer
         void BeginFrame(RenderTarget& renderTarget, const Camera& camera = {});
         void EndFrame();
 
-        void ResizeSwapchain(const glm::uvec2& size);
+        bool ResizeSwapchain(const glm::uvec2& size);
         void DisplayToWindow(const RenderTarget& target);
 
         const RenderPass& GetDeferredRenderPass() const;
 
         const UniformBuffer& GetRendererUniformBuffer() const { return mRendererUniformBuffer; }
+
+        const Swapchain& GetSwapchain() const { return mSwapchain; }
+        const DeferredSubpassAttachment& GetDeferredAttachments() const { return mDeferredAttachments; }
+        const Sampler& GetDefaultSampler() const { return mDefaultSampler; }
+
+        void AddListener(std::function<bool (uint32_t, void *)> listener);
+
+        void QueueSwapchainResize(const glm::uvec2& size);
 
     private:
         // Render passes
@@ -68,6 +84,10 @@ class Renderer
         void CreateDeferredFrameBuffer(const glm::uvec2& size);
 
     private:
+        glm::uvec2 mSwapchainSize;
+
+        EventDispatcher mDispatcher;
+
         GraphicsContext mContext;
 
         RendererUniformData mRendererUniformData;

@@ -37,6 +37,7 @@ public:
 	void RunApplication();
 
 	void HideCursor();
+	void ShowCursor();
 	void ToggleCursor();
 	bool IsCursorHidden();
 
@@ -59,8 +60,29 @@ public:
 	float GetDeltaTime();
 	float GetElapsedTime();
 
-	void AttachLayer(std::shared_ptr<Layer> layer);
-	void DetachLayer(std::shared_ptr<Layer> layer);
+	template<typename T, typename ...Args> requires std::derived_from<T, Layer>
+	void AttachLayer(Args... args)
+	{
+		mLayerStack.Attach<T>(args...);
+	}
+
+	template<typename T> requires std::derived_from<T, Layer>
+	void DetachLayer()
+	{
+		mLayerStack.Detach<T>();
+	}
+
+	template<typename T> requires std::derived_from<T, Layer>
+	const T& GetLayer() const 
+	{
+		return mLayerStack.Get<T>();
+	}
+
+	template<typename T> requires std::derived_from<T, Layer>
+	T& GetLayer() 
+	{
+		return mLayerStack.Get<T>();
+	}
 
 private:
 	bool mRunning = true;

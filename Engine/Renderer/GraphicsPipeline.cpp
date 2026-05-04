@@ -236,6 +236,14 @@ void GraphicsPipeline::Create(const RenderPass& renderPass, uint32_t subpassInde
     vkCreateGraphicsPipelines(getDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mHandle);
 }
 
+void GraphicsPipeline::Destroy() 
+{
+    vkDestroyShaderModule(getDevice(), mVertexShader, nullptr);
+    vkDestroyShaderModule(getDevice(), mFragmentShader, nullptr);
+    vkDestroyPipeline(getDevice(), mHandle, nullptr);
+
+}
+
 VkPipelineLayout GraphicsPipeline::GetPipelineLayout() const 
 {
     CHROME_TRACE_FUNCTION();

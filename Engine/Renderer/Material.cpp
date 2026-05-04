@@ -35,12 +35,24 @@ void Material::Create()
     mPipeline.AddColorBlendAttachment(false);
     mPipeline.AddColorBlendAttachment(false);
 
+
     if(mAttributeCount == 0)
         SetDefaultAttribute();
 
     mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout(), mUniformDescriptor.GetDescriptorSetLayout()}, {}));
 
     mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
+}
+
+void Material::Destroy() 
+{
+    vkDeviceWaitIdle(getDevice());
+    mAlbedoSampler.Destroy();
+    mImageDescriptor.Destroy();
+    mUniformDescriptor.Destroy();
+    mPipeline.Destroy();
+
+    *this = Material();
 }
 
 void Material::SetLineWidth(float lineWidth)
@@ -109,8 +121,8 @@ size_t GetAttributeSize(AttributeType attributeType)
 void Material::AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes) 
 {
     size_t offset = 0;
-    uint32_t location = 0;
-    
+    uint32_t location = mLastAttributeLocation;
+
     for (AttributeType attributeType : attributes)
     {
         mPipeline.AddAttribute(binding, location, GetAttributeFormat(attributeType), offset);
@@ -118,10 +130,22 @@ void Material::AddLayout(uint32_t binding, InputRate inputRate, std::initializer
         offset += GetAttributeSize(attributeType);
     }
 
+    mLastAttributeLocation = location;
+
     size_t stride = offset;
     mPipeline.AddBinding(binding, stride, inputRate);
 
     mAttributeCount++;
+}
+
+void Material::SetInstanceData(void* data, size_t size) 
+{
+    mInstanceBuffer.SetData(data, size);    
+}
+
+void Material::SetInstanceBuffer(const InstanceBuffer& instanceBuffer) 
+{
+    mInstanceBuffer = instanceBuffer;
 }
 
 void Material::SetDefaultAttribute() 

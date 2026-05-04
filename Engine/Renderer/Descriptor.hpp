@@ -12,6 +12,7 @@ class Descriptor
 	public:
 		void AddDescriptor(DescriptorType type, ShaderStage shaderStage);
 		void Create();
+		void Destroy();
 
 		void UpdateBuffer(const Buffer& buffer, uint32_t binding);
 		void UpdateImage(const Image& image, ImageLayout layout, const Sampler& sampler, uint32_t binding);
@@ -19,10 +20,15 @@ class Descriptor
 		VkDescriptorSet GetDescriptorSet() const { return mSet; }
 		VkDescriptorSetLayout GetDescriptorSetLayout() const { return mSetLayout; }
 		VkDescriptorPool GetDescriptorPool() const { return mDescriptorPool; }
+
 	private:
 		void CreateDescriptorSetLayout();
 		void CreateDescriptorPool();
 		void AllocateDescriptorSet();
+
+		void DestroyDescriptorSetLayout();
+		void DestroyDescriptorPool();
+		void FreeDescriptorSet();
 
 		std::unordered_map<VkDescriptorType, uint32_t> mDescriptorTypeCount;
 		std::vector<VkDescriptorSetLayoutBinding> mDescriptorBinding;

@@ -35,3 +35,7 @@ void Sampler::Create()
 
     vkCreateSampler(getDevice(), &createInfo, nullptr, &mHandle);
 }
+void Sampler::Destroy() 
+{
+    vkDestroySampler(getDevice(), mHandle, nullptr);    
+}

@@ -162,7 +162,7 @@ VkImageUsageFlags GetVulkanImageUsage(ImageUsage imageUsage)
 
 VkBufferUsageFlags GetVulkanBufferUsage(BufferUsage bufferUsage)
 {
-    VkBufferUsageFlags usage;
+    VkBufferUsageFlags usage = 0;
 
     if((BufferUsage::None & bufferUsage) == BufferUsage::None)
         usage |= 0;

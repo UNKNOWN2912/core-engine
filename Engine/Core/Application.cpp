@@ -135,7 +135,7 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 			}
 	}
 
-	mLayerStack.InvokeLayerEvents(code, data);
+	mLayerStack.InvokeEvents(code, data);
 		
 	return false;
 }
@@ -164,15 +164,6 @@ float Application::GetElapsedTime()
 	return mApplicationTimer.GetElapsedTime();
 }
 
-void Application::AttachLayer(std::shared_ptr<Layer> layer) 
-{
-	mLayerStack.AttachLayer(layer);	
-}
-
-void Application::DetachLayer(std::shared_ptr<Layer> layer) 
-{
-	mLayerStack.DetachLayer(layer);
-}
 
 void Application::MainLoop()
 {
@@ -184,7 +175,7 @@ void Application::MainLoop()
 		mDeltaTimer.Start();
 		mWindow.ProcessEvent();
 		OnUpdate();
-		mLayerStack.InvokeLayerUpdates();
+		mLayerStack.InvokeUpdates();
 		mDeltaTimer.Stop();
 		mDeltaTime = mDeltaTimer.GetDuration();
 	}
@@ -195,6 +186,11 @@ void Application::HideCursor()
 {
 	CHROME_TRACE_FUNCTION();
 	mWindow.HideCursor();
+}
+
+void Application::ShowCursor() 
+{
+	mWindow.ShowCursor();	
 }
 
 void Application::ToggleCursor()

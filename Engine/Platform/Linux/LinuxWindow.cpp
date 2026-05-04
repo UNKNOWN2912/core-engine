@@ -621,6 +621,11 @@ bool Window::isFullscreen()
 	return glfwGetWindowMonitor(mData->window) == glfwGetPrimaryMonitor();
 }
 
+void Window::Maximize()
+{
+	glfwMaximizeWindow(mData->window);
+}
+
 void Window::SetFullscreen(bool fullscreen)
 {
     CHROME_TRACE_FUNCTION();

@@ -20,8 +20,8 @@ void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, s
     {
         DestroyBuffer(mStagingVertexBuffer);
         DestroyBuffer(mVertexBuffer);
-        mStagingVertexBuffer = CreateBuffer(vertexSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        mVertexBuffer = CreateBuffer(vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        mStagingVertexBuffer = CreateBuffer(vertexSize, BufferUsage::TransferSource, MemoryProperty::HostCoherent | MemoryProperty::HostVisible);
+        mVertexBuffer = CreateBuffer(vertexSize, BufferUsage::VertexBuffer | BufferUsage::TransferDestination, MemoryProperty::DeviceLocal);
         mVertexSize = vertexSize;
     }
 
@@ -29,8 +29,8 @@ void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, s
     {
         DestroyBuffer(mStagingIndexBuffer);
         DestroyBuffer(mIndexBuffer);
-        mStagingIndexBuffer = CreateBuffer(indexSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        mIndexBuffer = CreateBuffer(indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        mStagingIndexBuffer = CreateBuffer(indexSize, BufferUsage::TransferSource, MemoryProperty::HostCoherent | MemoryProperty::HostVisible);
+        mIndexBuffer = CreateBuffer(indexSize, BufferUsage::IndexBuffer | BufferUsage::TransferDestination, MemoryProperty::DeviceLocal);
         mIndexSize = indexSize;
     }
 

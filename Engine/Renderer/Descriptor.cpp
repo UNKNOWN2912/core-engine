@@ -27,6 +27,12 @@ void Descriptor::Create()
 	AllocateDescriptorSet();
 }
 
+void Descriptor::Destroy() 
+{
+	DestroyDescriptorPool();
+	DestroyDescriptorSetLayout();
+}
+
 
 void Descriptor::CreateDescriptorSetLayout()
 {
@@ -76,6 +82,21 @@ void Descriptor::AllocateDescriptorSet()
 	};
 
 	vkAllocateDescriptorSets(getDevice(), &allocateInfo, &mSet);
+}
+
+void Descriptor::DestroyDescriptorSetLayout() 
+{
+	vkDestroyDescriptorSetLayout(getDevice(), mSetLayout, nullptr);	
+}
+
+void Descriptor::DestroyDescriptorPool() 
+{
+	vkDestroyDescriptorPool(getDevice(), mDescriptorPool, nullptr);	
+}
+
+void Descriptor::FreeDescriptorSet() 
+{
+	vkFreeDescriptorSets(getDevice(), mDescriptorPool, 1, &mSet);	
 }
 
 

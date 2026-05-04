@@ -1,6 +1,5 @@
 #pragma once
 #include "Core/Window.hpp"
-#include <mutex>
 #include <vulkan/vulkan.h>
 
 struct QueueIndices
@@ -32,6 +31,7 @@ class GraphicsContext
         QueueIndices GetQueueIndices();
         Queues GetQueues();
         VkCommandPool GetCommandPool();
+        VkDebugUtilsMessengerEXT GetMessenger();
     private:
         static GraphicsContext* sCurrentContext;
         VkInstance mInstance;
@@ -41,6 +41,7 @@ class GraphicsContext
         QueueIndices mQueueIndices;
         Queues mQueues;
         VkCommandPool mCommandPool;
+        VkDebugUtilsMessengerEXT mMessenger;
 };
 
 VkInstance getInstance();
@@ -50,3 +51,4 @@ VkSurfaceKHR getSurface();
 QueueIndices getQueueIndices();
 Queues getQueues();
 VkCommandPool getCommandPool();
+VkDebugUtilsMessengerEXT getMessenger();
