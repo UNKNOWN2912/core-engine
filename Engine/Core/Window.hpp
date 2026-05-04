@@ -16,7 +16,7 @@ enum class WindowEvent
 	WindowResize,
 	WindowMove,
 	WindowMinimize,
-	WindowMaxmimize,
+	WindowMaximize,
 
 	WindowMouseMove,
 	WindowMousePress,
@@ -56,6 +56,8 @@ public:
 	void HideCursor();
 	void ShowCursor();
 	bool isCursorHidden();
+
+	void Maximize();
 
 
 

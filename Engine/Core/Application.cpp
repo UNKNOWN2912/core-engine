@@ -1,11 +1,12 @@
 #include "Application.hpp"
 #include "Input/Mouse.hpp"
 #include <cassert>
-#include <print>
 
 void Application::InitializeApplication()
 {
 	CHROME_TRACE_FUNCTION();
+
+	mApplicationTimer.Start();
 
 	WindowSpecification windowSpecification;
 	windowSpecification.size = glm::uvec2(800, 600);
@@ -85,9 +86,15 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 				break;
 			}
 		case WindowEvent::WindowMinimize:
-			break;
-		case WindowEvent::WindowMaxmimize:
-			break;
+			{
+				OnWindowMinimize();
+				break;
+			}
+		case WindowEvent::WindowMaximize:
+			{
+				OnWindowMaximize();
+				break;
+			}
 		case WindowEvent::WindowMouseMove:
 			{
 				glm::vec2 position = *(glm::vec2*)data;
@@ -127,6 +134,8 @@ bool Application::WindowEventCallback(uint32_t code, void* data)
 				break;
 			}
 	}
+
+	mLayerStack.InvokeEvents(code, data);
 		
 	return false;
 }
@@ -138,8 +147,6 @@ Application::Application()
 	assert(instance == nullptr);
 
 	instance = this;
-
-
 }
 
 Application::~Application()
@@ -152,6 +159,12 @@ float Application::GetDeltaTime()
 	return mDeltaTime;
 }
 
+float Application::GetElapsedTime() 
+{
+	return mApplicationTimer.GetElapsedTime();
+}
+
+
 void Application::MainLoop()
 {
 	CHROME_TRACE_FUNCTION();
@@ -162,6 +175,7 @@ void Application::MainLoop()
 		mDeltaTimer.Start();
 		mWindow.ProcessEvent();
 		OnUpdate();
+		mLayerStack.InvokeUpdates();
 		mDeltaTimer.Stop();
 		mDeltaTime = mDeltaTimer.GetDuration();
 	}
@@ -172,6 +186,11 @@ void Application::HideCursor()
 {
 	CHROME_TRACE_FUNCTION();
 	mWindow.HideCursor();
+}
+
+void Application::ShowCursor() 
+{
+	mWindow.ShowCursor();	
 }
 
 void Application::ToggleCursor()

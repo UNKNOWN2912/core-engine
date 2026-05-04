@@ -1,496 +1,323 @@
 #include "Renderer.hpp"
-#include "Core/Macro.hpp"
-#include "GLFW/glfw3.h"
-#include "Renderer/Transform.hpp"
-#include "Utility.hpp"
-#include "GraphicsContext.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include <print>
 
-void Renderer::Initialize(const Window& window) 
+void Renderer::Initialize(const Window& window)
 {
-    CHROME_TRACE_FUNCTION();
     mContext.Create(window, true);
-    CreateSwapchain(window.GetSize());
-    CreateRenderPass();
-    CreateSwapchainFramebuffers();
-    CreateSemaphores();
-    CreateCommandBuffers();
-    mUniformBuffer.Create(sizeof(UniformData), VK_SHADER_STAGE_VERTEX_BIT, 0);
-    CreatePipelines();
+
+    mDefaultSampler.Create();
+
+    mSwapchain.Create(window.GetSize(), PresentMode::Fifo);
+    CreateAttachments(mSwapchain.GetSize());
+
+
+    mComputeImage = CreateImage(mSwapchain.GetSize(), ImageFormat::RGBA8UNORM, ImageUsage::Storage | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    TransitionImageLayout(ImageLayout::None, ImageLayout::General, ImageAspect::Color, mComputeImage);
+
+
+    mComputeDescriptor.AddDescriptor(DescriptorType::StorageImage, ShaderStage::Compute);
+    mComputeDescriptor.Create();
+
+    mComputeDescriptor.UpdateImage(mComputeImage, ImageLayout::General, mDefaultSampler, 0);
+
+
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferredAttachmentDescriptor.Create();
+
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+
+    mComputePipeline.LoadShader("Shaders/swapchain.comp.spv");
+    mComputePipeline.Create({mComputeDescriptor, mDeferredAttachmentDescriptor});
+
+    // Render pass
+    CreateDeferredRenderPass();
+
+    // Attachments
+
+    // Frame buffer
+    CreateDeferredFrameBuffer(mSwapchain.GetSize());
+
+    
+    mRenderCommandBuffer.Create();
+    mTransferToSwapchainCommandBuffer.Create();
+
+    mImageAcquiredSemaphore.Create();
+    mTransferSemaphore.Create();
+
+    mRendererUniformBuffer.Create(sizeof(RendererUniformData));
+    mRendererUniformBuffer.SetData(sizeof(RendererUniformData), &mRendererUniformData);
 }
 
 void Renderer::Terminate() 
 {
-    CHROME_TRACE_FUNCTION();
-    // DestroyCommandBuffers();
-    // DestroySemaphores();
-    // DestroySwapchainFramebuffers();
-    // DestroyRenderPass();
-    // DestroySwapchain();
-    // mContext.Destroy();
-}
-
-
-void Renderer::DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform)
-{
-    CHROME_TRACE_FUNCTION();
-    DrawSubmitInfo submitInfo = 
-    {
-        .mesh = &mesh,
-        .material = &material,
-        .transform = transform,
-    };
-
-    mDrawSubmitInfo.push_back(submitInfo);
-}
-
-void Renderer::DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount)
-{
-    CHROME_TRACE_FUNCTION();
-    DrawSubmitInfo submitInfo = 
-    {
-        .mesh = &mesh,
-        .material = &material,
-        .instanceBuffer = &instanceBuffer,
-        .instanced = true,
-        .instanceCount = instanceCount,
-    };
     
-    mDrawSubmitInfo.push_back(submitInfo);
 }
 
-void Renderer::BeginFrame() 
+void Renderer::Submit(const StaticMesh& mesh, const Material& material) 
 {
-    CHROME_TRACE_FUNCTION();
-    mDrawSubmitInfo.clear();
+    RenderCommand renderCommand;
+    renderCommand.vertexBuffer = mesh.mVertexBuffer;    
+    renderCommand.indexBuffer = mesh.mIndexBuffer;
+    renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
+    renderCommand.pipeline = material.GetPipeline();
+    renderCommand.descriptors[0] = material.GetImageDescriptor();    
+    renderCommand.descriptors[1] = material.GetUniformDescriptor();    
+    renderCommand.descriptorCount = 2;
 
-    mFrameRunning = true;
+    if(material.IsInstancingEnabled())
+    {
+        renderCommand.instanceBuffer = material.GetInstanceBuffer();
+        renderCommand.instanceCount = material.GetInstanceCount();
+    }
+
+    Submit(renderCommand);
+}
+
+void Renderer::Submit(const RenderCommand& renderCommand) 
+{
+    assert(mFrameInfo.isRecording == true);
+
+    mRenderCommands.push_back(renderCommand);    
+}
+
+void Renderer::BeginFrame(RenderTarget& renderTarget, const Camera& camera) 
+{
+    vkDeviceWaitIdle(getDevice());
+
+    mFrameInfo.isRecording = true;    
+    mCurrentRenderTarget = renderTarget;
+
+    renderTarget.TransitionLayout(ImageLayout::General);
+    mComputeDescriptor.UpdateImage(renderTarget.GetImage(), ImageLayout::General, mDefaultSampler, 0);
+
+    ResizeAttachments(renderTarget.GetImage().size);
+
+    mFrameInfo.camera = camera;
+    mRendererUniformData.cameraPosition = camera.GetPosition();
+    mRendererUniformData.view = camera.GetView();
+    mRendererUniformData.projection = camera.GetProjection();
+    mRendererUniformData.projection[1][1] *= -1;
+    
+    mRendererUniformBuffer.SetData(sizeof(RendererUniformData), &mRendererUniformData);
+
 }
 
 void Renderer::EndFrame() 
 {
-    CHROME_TRACE_FUNCTION();
+    assert(mFrameInfo.isRecording == true);
 
-    mCamera.Calculate();
-
-    mUniformData.projection = mCamera.GetProjection();
-    mUniformData.projection[1][1] *= -1; 
-    mUniformData.view = mCamera.GetView();
-    mUniformData.cameraPosition = mCamera.GetPosition();
-    mUniformData.cameraFront = mCamera.GetFront();
-
-    mUniformData.time = glfwGetTime();
-
-    for(auto drawSubmit : mDrawSubmitInfo)
-    {
-        mUniformBuffer.SetDataToDescriptor(sizeof(UniformData), &mUniformData, drawSubmit.material->mDescriptorSet, 0);
-
-        if(drawSubmit.material->mAlbedo.IsValid())
-            drawSubmit.material->mAlbedo.SetDataToDescriptorSet(drawSubmit.material->mDescriptorSet, 1);
-    }
-
-
-    
     vkDeviceWaitIdle(getDevice());
-    
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(getDevice(), mSwapchain.handle, UINT64_MAX, mSemaphores.imageAcquired, VK_NULL_HANDLE, &imageIndex);
-    
-    VkCommandBufferBeginInfo beginInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    };
-    
-    vkBeginCommandBuffer(mCommandBuffers.renderingCommandBuffer, &beginInfo);
-    
-    VkClearValue clearValue[] = 
-    {
-        {{0.1,0.1,0.1,1}},
-        {{1,0,0,1},},
-    };
-    
-    VkRenderPassBeginInfo renderPassBeginInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = mRenderPass,
-        .framebuffer = mSwapchainFramebuffer[imageIndex],
-        .renderArea = 
-        {
-            .offset = {0,0},
-            .extent = mSwapchain.extent,
-        },
-        .clearValueCount = sizeof(clearValue) / sizeof(VkClearValue),
-        .pClearValues = clearValue,
-    };
-    
-    vkCmdBeginRenderPass(mCommandBuffers.renderingCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-    
-    VkRect2D scissor = 
-    {
-        .extent = {(uint32_t)mViewport.width, (uint32_t)mViewport.height},
-    };
 
-    vkCmdSetViewport(mCommandBuffers.renderingCommandBuffer, 0, 1, &mViewport);
-    vkCmdSetScissor(mCommandBuffers.renderingCommandBuffer, 0, 1, &scissor);
-    
-    for (int i = 0; i < mDrawSubmitInfo.size(); i++)
+    mRenderCommandBuffer.BeginRecording();
+
+    // Begin Deferred render pass
+
+    mDeferredRenderPass.CmdBeginRenderPass(mRenderCommandBuffer, mDeferredFrameBuffer, mDeferredAttachments.size, {{0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {1,1,1,1}, {0,0,0,1}});
+
+    for (int i = 0; i < mRenderCommands.size(); i++)
     {
-        DrawSubmitInfo drawSubmit = mDrawSubmitInfo[i];
+        const RenderCommand& renderCommand = mRenderCommands[i];
 
-        uint32_t vertexBufferCount = 1;
-
-        VkBuffer vertexBuffers[2] = {drawSubmit.mesh->mVertexBuffer.handle};
-        if(drawSubmit.material->mSettings.enableInstancing)
-        {
-            vertexBufferCount = 2;
-            vertexBuffers[1] = drawSubmit.instanceBuffer->mBuffer.handle;
-        }
-
-        VkBuffer indexBuffer = drawSubmit.mesh->mIndexBuffer.handle;
-
+        uint32_t vertexBufferCount = (renderCommand.instanceCount == 0) ? 1 : 2;
+        VkBuffer vertexBuffer[] = {renderCommand.vertexBuffer.handle, renderCommand.instanceBuffer.mBuffer.handle};
         VkDeviceSize offsets[] = {0, 0};
 
-        VkDescriptorSet descriptorSets[] = {drawSubmit.material->mDescriptorSet};
+        vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, vertexBufferCount, vertexBuffer, offsets);
+        vkCmdBindIndexBuffer(mRenderCommandBuffer.GetHandle(), renderCommand.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
-        int previousIndex = (i-1 < 0) ? 0 : i - 1;
+        vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetHandle());
 
-        if(i == 0 || drawSubmit.material != mDrawSubmitInfo[previousIndex].material)
+        VkDescriptorSet descriptorSets[16];
+        for (int j = 0; j < renderCommand.descriptorCount; j++)
         {
-            vkCmdBindDescriptorSets(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmit.material->mPipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
-            vkCmdBindPipeline(mCommandBuffers.renderingCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, drawSubmit.material->mPipeline.GetHandle());
-        }
-        if(i == 0 || drawSubmit.mesh != mDrawSubmitInfo[previousIndex].mesh || drawSubmit.instanceBuffer != mDrawSubmitInfo[previousIndex].instanceBuffer)
-        {
-            vkCmdBindVertexBuffers(mCommandBuffers.renderingCommandBuffer, 0, vertexBufferCount, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(mCommandBuffers.renderingCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            descriptorSets[j] = renderCommand.descriptors[j].GetDescriptorSet();
         }
 
-        glm::mat4 model = drawSubmit.transform.GetMatrix();
-        vkCmdPushConstants(mCommandBuffers.renderingCommandBuffer, drawSubmit.material->mPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+        vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets, 0, nullptr);
 
-        if(drawSubmit.material->mSettings.enableInstancing)
-            vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, drawSubmit.mesh->mIndexSize / sizeof(uint32_t), drawSubmit.instanceCount, 0, 0, 0);
+        VkViewport viewport = 
+        {
+            .width = (float)mDeferredAttachments.size.x,
+            .height = (float)mDeferredAttachments.size.y,
+            .minDepth = 0.f,
+            .maxDepth = 1.f,
+        };
+
+        VkRect2D scissor = 
+        {
+            .extent = {mDeferredAttachments.size.x, mDeferredAttachments.size.y},
+        };
+
+        vkCmdSetViewport(mRenderCommandBuffer.GetHandle(), 0, 1, &viewport);
+        vkCmdSetScissor(mRenderCommandBuffer.GetHandle(), 0, 1, &scissor);
+
+        if(renderCommand.instanceCount == 0)
+            vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
         else
-            vkCmdDrawIndexed(mCommandBuffers.renderingCommandBuffer, drawSubmit.mesh->mIndexSize / sizeof(uint32_t), 1, 0, 0, 0);
-    }
-    vkCmdEndRenderPass(mCommandBuffers.renderingCommandBuffer);
+            vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, renderCommand.instanceCount, 0, 0, 0);
 
-    vkEndCommandBuffer(mCommandBuffers.renderingCommandBuffer);
+    }   
 
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    mDeferredRenderPass.CmdEndRenderPass(mRenderCommandBuffer);
 
-    VkSubmitInfo submitInfo = 
+    // End Deferred render pass
+
+    VkDescriptorSet descriptorSets[] = {mComputeDescriptor.GetDescriptorSet(), mDeferredAttachmentDescriptor.GetDescriptorSet()};
+    vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_COMPUTE, mComputePipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
+    vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_COMPUTE, mComputePipeline.GetHandle());
+
+    glm::ivec3 groupCount;
+    groupCount.x = (mSwapchain.GetSize().x / 16) + 1;
+    groupCount.y = (mSwapchain.GetSize().y / 16) + 1;
+    groupCount.z = 1;
+    vkCmdDispatch(mRenderCommandBuffer.GetHandle(), groupCount.x, groupCount.y, groupCount.z);
+
+    mRenderCommandBuffer.EndRecording();
+    mRenderCommandBuffer.QueueSubmit(getQueues().graphics, {}, mRenderingSemaphore, PipelineStage::ColorAttachmentOutput);
+
+    mRenderCommands.clear();
+    mFrameInfo.isRecording = false;    
+
+}
+
+bool Renderer::ResizeSwapchain(const glm::uvec2& size) 
+{
+    if(mSwapchain.GetSize() == size)
+        return false;
+    
+    vkDeviceWaitIdle(getDevice());
+
+    mSwapchain.Destroy();
+    mSwapchain.Create(size, PresentMode::Fifo);
+
+    DestroyImage(mComputeImage);
+    mComputeImage = CreateImage(mSwapchain.GetSize(), ImageFormat::RGBA8UNORM, ImageUsage::Storage | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    TransitionImageLayout(ImageLayout::None, ImageLayout::General, ImageAspect::Color, mComputeImage);
+    
+    mComputeDescriptor.UpdateImage(mComputeImage, ImageLayout::General, mDefaultSampler, 0);
+
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+
+    return true;
+}
+
+
+void Renderer::DisplayToWindow(const RenderTarget& target) 
+{
+    vkDeviceWaitIdle(getDevice());
+    uint32_t imageIndex = mSwapchain.GetNextImageIndex(mImageAcquiredSemaphore, {});
+    VkSwapchainKHR swapchain[] = {mSwapchain.GetHandle()};
+
+    mTransferToSwapchainCommandBuffer.BeginRecording();
+
+    VkImageCopy region = 
     {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &mSemaphores.imageAcquired,
-        .pWaitDstStageMask = &waitStage,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &mCommandBuffers.renderingCommandBuffer,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &mSemaphores.renderingFinish,
+        .srcSubresource = 
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcOffset = {},
+        .dstSubresource = 
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .dstOffset = {},
+        .extent = {target.GetImage().size.x, target.GetImage().size.y, 1},
     };
 
-    vkQueueSubmit(getQueues().graphics, 1, &submitInfo, VK_NULL_HANDLE);
+    vkCmdCopyImage(mTransferToSwapchainCommandBuffer.GetHandle(), target.GetImage().handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mSwapchain.GetImages()[imageIndex].handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
+    mTransferToSwapchainCommandBuffer.EndRecording();
+
+    mTransferToSwapchainCommandBuffer.QueueSubmit(getQueues().transfer, mImageAcquiredSemaphore, mTransferSemaphore);
+
+    VkSemaphore waitSemaphoreHandles[] = {mTransferSemaphore.GetHandle()};
     VkPresentInfoKHR presentInfo = 
     {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &mSemaphores.renderingFinish,
+        .pWaitSemaphores = waitSemaphoreHandles,
         .swapchainCount = 1,
-        .pSwapchains = &mSwapchain.handle,
+        .pSwapchains = swapchain,
         .pImageIndices = &imageIndex,
     };
 
     vkQueuePresentKHR(getQueues().present, &presentInfo);
-
-    mFrameRunning = false;
 }
 
-void Renderer::Resize(const glm::uvec2& size)
+const RenderPass& Renderer::GetDeferredRenderPass() const { return mDeferredRenderPass; }
+
+void Renderer::AddListener(std::function<bool (uint32_t, void *)> listener) 
 {
-    CHROME_TRACE_FUNCTION();
+    mDispatcher.AddListener(listener);    
+}
+
+void Renderer::QueueSwapchainResize(const glm::uvec2& size) 
+{
+    mSwapchainSize = size;
+}
+
+void Renderer::CreateDeferredRenderPass() 
+{
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA16, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+
+    mDeferredRenderPass.AddSubpass({0,1,2}, {}, 3, PipelineBindPoint::Graphic);
+
+    mDeferredRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
+
+    mDeferredRenderPass.Create();
+}
+
+void Renderer::CreateAttachments(const glm::uvec2& size) 
+{
+    mDeferredAttachments.CreateAttachment(mSwapchain.GetSize());
+}
+
+void Renderer::ResizeAttachments(const glm::uvec2& size) 
+{
     vkDeviceWaitIdle(getDevice());
+    mDeferredAttachments.ResizeAttachment(size);
+    mDeferredFrameBuffer.Destroy();
+    mDispatcher.Dispatch((uint32_t)RendererEvent::DeferredAttachmentResize, &mDeferredAttachments);
+    CreateDeferredFrameBuffer(size);
 
-    DestroySwapchain();
-    DestroySwapchainFramebuffers();
-    CreateSwapchain(size);
-    CreateSwapchainFramebuffers();
-    mViewport.width = mSwapchain.extent.width;
-    mViewport.height = mSwapchain.extent.height;
-    mViewport.maxDepth = 1.f;
-    mViewport.minDepth = 0.f;
+
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
 }
 
-void Renderer::CreateSwapchain(const glm::uvec2& size) 
+void Renderer::DestroyAttachments() 
 {
-    CHROME_TRACE_FUNCTION();
-    VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(getPhysicalDevice(), getSurface(), &capabilities);
-    mSwapchain.extent = {size.x, size.y};
-
-    if(mSwapchain.extent.width > capabilities.maxImageExtent.width || mSwapchain.extent.height > capabilities.maxImageExtent.height)
-    {
-        mSwapchain.extent = {800, 600};
-    }
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(getPhysicalDevice(), getSurface(), &formatCount, nullptr);
-    std::vector<VkSurfaceFormatKHR> formats(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(getPhysicalDevice(), getSurface(), &formatCount, formats.data());
-
-    for (VkSurfaceFormatKHR format : formats)
-    {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            mSwapchain.format = VK_FORMAT_B8G8R8A8_SRGB;
-            mSwapchain.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-        }
-    }
-
-    mSwapchain.imageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
-
-    VkSwapchainCreateInfoKHR createInfo = { };
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.clipped = VK_TRUE;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageColorSpace = mSwapchain.colorSpace;
-    createInfo.imageFormat = mSwapchain.format;
-    createInfo.imageExtent = mSwapchain.extent;
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    createInfo.minImageCount = mSwapchain.imageCount;
-    createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    createInfo.preTransform = capabilities.currentTransform;
-    createInfo.surface = getSurface();
-
-    vkCreateSwapchainKHR(getDevice(), &createInfo, nullptr, &mSwapchain.handle);
-
-    vkGetSwapchainImagesKHR(getDevice(), mSwapchain.handle, &mSwapchain.imageCount, nullptr);
-    mSwapchain.images.resize(mSwapchain.imageCount);
-    vkGetSwapchainImagesKHR(getDevice(), mSwapchain.handle, &mSwapchain.imageCount, mSwapchain.images.data());
-
-    for (VkImage image : mSwapchain.images)
-    {
-        VkImageViewCreateInfo viewCreateInfo = {};
-        viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewCreateInfo.image = image;
-        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreateInfo.format = mSwapchain.format;
-        viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.baseMipLevel = 0;
-        viewCreateInfo.subresourceRange.layerCount = 1;
-        viewCreateInfo.subresourceRange.levelCount = 1;
-
-        VkImageView view;
-        vkCreateImageView(getDevice(), &viewCreateInfo, nullptr, &view);
-        mSwapchain.views.push_back(view);
-    } 
+    mDeferredAttachments.DestroyAttachment();
 }
 
-void Renderer::CreateRenderPass()
+void Renderer::CreateDeferredFrameBuffer(const glm::uvec2& size) 
 {
-    CHROME_TRACE_FUNCTION();
-    VkAttachmentDescription swapchainAttachmentDescription = 
-    {
-        .flags = 0,
-        .format = mSwapchain.format,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+    std::initializer_list<Image> attachments = 
+    {   mDeferredAttachments.albedo,
+        mDeferredAttachments.position,
+        mDeferredAttachments.normal,
+        mDeferredAttachments.depth,
     };
 
-    VkAttachmentDescription depthAttachmentDescription = 
-    {
-        .flags = 0,
-        .format = VK_FORMAT_D32_SFLOAT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    };
-
-    VkAttachmentReference swapchainAttachmentReference = 
-    {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    };
-
-    VkAttachmentReference depthAttachmentReference = 
-    {
-        .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    };
-
-    VkSubpassDescription subpassDescription = 
-    {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &swapchainAttachmentReference,
-        .pDepthStencilAttachment = &depthAttachmentReference,
-    };
-
-    VkSubpassDependency dependencies = 
-    {
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
-    };
-
-    VkAttachmentDescription attachmentDescriptions[] = {swapchainAttachmentDescription, depthAttachmentDescription};
-
-    VkRenderPassCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 2,
-        .pAttachments = attachmentDescriptions,
-        .subpassCount = 1,
-        .pSubpasses = &subpassDescription,
-        .dependencyCount = 1,
-        .pDependencies = &dependencies,
-    };
-
-    vkCreateRenderPass(getDevice(), &createInfo, nullptr, &mRenderPass);
-}
-
-void Renderer::CreateSwapchainFramebuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    VkFramebufferCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .renderPass = mRenderPass,
-        .attachmentCount = 2,
-        .width = mSwapchain.extent.width,
-        .height = mSwapchain.extent.height,
-        .layers = 1,
-    };
-
-    mDepthAttachment = CreateImage({mSwapchain.extent.width, mSwapchain.extent.height}, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    for(VkImageView view : mSwapchain.views)
-    {
-        VkImageView attachments[] = {view, mDepthAttachment.view};
-        createInfo.pAttachments = attachments;
-        VkFramebuffer framebuffer;
-        vkCreateFramebuffer(getDevice(), &createInfo, nullptr, &framebuffer);
-        mSwapchainFramebuffer.push_back(framebuffer);
-    }
-
-    mViewport.width = mSwapchain.extent.width;
-    mViewport.height = mSwapchain.extent.height;
-    mViewport.maxDepth = 1.f;
-    mViewport.minDepth = 0.f;
-
-}
-
-void Renderer::CreateSemaphores() 
-{
-    CHROME_TRACE_FUNCTION();
-    VkSemaphoreCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-
-    vkCreateSemaphore(getDevice(), &createInfo, nullptr, &mSemaphores.imageAcquired);
-    vkCreateSemaphore(getDevice(), &createInfo, nullptr, &mSemaphores.renderingFinish);
-}
-
-void Renderer::CreateCommandBuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    VkCommandBufferAllocateInfo allocateInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = getCommandPool(),
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-    };
-
-    vkAllocateCommandBuffers(getDevice(), &allocateInfo, &mCommandBuffers.renderingCommandBuffer);
-}
-
-void Renderer::CreatePipelines() 
-{
-    CHROME_TRACE_FUNCTION();
-    // mDefaultPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
-    // mDefaultPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
-    // mDefaultPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
-    // mDefaultPipeline.AddAttribute(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal));
-    // mDefaultPipeline.AddColorBlendAttachment();
-
-    // mDefaultPipeline.EnableDepth(true);
-    
-    // mDefaultPipeline.LoadVertexShader("Shader/shader.vert.spv");
-    // mDefaultPipeline.LoadFragmentShader("Shader/shader.frag.spv");
-
-    // mTexture.Load("Texture/texture_01.png", 1);
-    
-    // VkPipelineLayout pipelineLayout = CreatePipelineLayout({mUniformBuffer.GetSetLayout(), mTexture.GetSetLayout()});
-    // mDefaultPipeline.SetPipelineLayout(pipelineLayout);
-
-    // mDefaultPipeline.SetCullMode(VK_CULL_MODE_NONE);
-
-    // mDefaultPipeline.Create(mRenderPass, 0);
-}
-
-void Renderer::DestroySwapchain() 
-{
-    CHROME_TRACE_FUNCTION();
-    for (VkImageView view : mSwapchain.views) 
-    {
-        vkDestroyImageView(getDevice(), view, nullptr);
-    }
-
-    vkDestroySwapchainKHR(getDevice(), mSwapchain.handle, nullptr);
-
-    mSwapchain = {};
-}
-
-void Renderer::DestroyRenderPass() 
-{
-    CHROME_TRACE_FUNCTION();
-    vkDestroyRenderPass(getDevice(), mRenderPass, nullptr);    
-}
-
-void Renderer::DestroySwapchainFramebuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    for (VkFramebuffer framebuffer : mSwapchainFramebuffer) 
-    {
-        vkDestroyFramebuffer(getDevice(), framebuffer, nullptr);
-    }
-
-    mSwapchainFramebuffer.clear();
-}
-
-void Renderer::DestroySemaphores() 
-{
-    CHROME_TRACE_FUNCTION();
-    vkDestroySemaphore(getDevice(), mSemaphores.imageAcquired, nullptr);    
-    vkDestroySemaphore(getDevice(), mSemaphores.renderingFinish, nullptr);    
-}
-
-void Renderer::DestroyCommandBuffers() 
-{
-    CHROME_TRACE_FUNCTION();
-    vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &mCommandBuffers.renderingCommandBuffer);    
+    mDeferredFrameBuffer.Create(size, attachments, mDeferredRenderPass);
 }

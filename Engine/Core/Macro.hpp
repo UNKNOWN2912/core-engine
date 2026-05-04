@@ -2,6 +2,9 @@
 #include <print>
 #include "Profiler/ChromeTraceProfiler.hpp"
 #include "Timer.hpp"
+#include <cassert>
+
+#define CREATE_APPLICATION(applicationClass) Application* Application::Create() { return new applicationClass; }
 
 #define ENABLE_LOGGING 1
 #define ENABLE_WARNING 1
@@ -61,5 +64,10 @@ inline ChromeTraceProfiler __global_profiler__("profile.json");
 #define CHROME_TRACE_FUNCTION() ChromeFunctionTrace __function_trace__ = __global_profiler__.ProfileFunction(__FNNAME__, 0, 0)
 #define CHROME_ENABLE_TRACING() __global_profiler__.EnableTracing(true)
 #define CHROME_DISABLE_TRACING() __global_profiler__.EnableTracing(false)
+#else
 
+#define CHROME_TRACE_FUNCTION()
+#define CHROME_ENABLE_TRACING()
+#define CHROME_DISABLE_TRACING()
 #endif
+

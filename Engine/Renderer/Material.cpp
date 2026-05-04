@@ -1,219 +1,156 @@
 #include "Material.hpp"
-#include "Renderer/Mesh.hpp"
-#include "Core/Application.hpp"
+#include <Core/Application.hpp>
 
-
-size_t attributeTypeSize[] = 
+void Material::LoadAlbedo(std::string_view filename) 
 {
-    4 * 1, 4 * 1, 4 * 1,
-    4 * 2, 4 * 2, 4 * 2,
-    4 * 3, 4 * 3, 4 * 3,
-    4 * 4, 4 * 4, 4 * 4,
-};
-
-VkVertexInputRate vulkanVertexInputRate[]  = 
-{
-    VK_VERTEX_INPUT_RATE_MAX_ENUM,
-    VK_VERTEX_INPUT_RATE_VERTEX,
-    VK_VERTEX_INPUT_RATE_INSTANCE
-};
-
-VkFormat vulkanAttributeFormat[] = 
-{
-    VK_FORMAT_R32_SINT,             VK_FORMAT_R32_UINT,             VK_FORMAT_R32_SFLOAT,
-    VK_FORMAT_R32G32_SINT,          VK_FORMAT_R32G32_UINT,          VK_FORMAT_R32G32_SFLOAT,
-    VK_FORMAT_R32G32B32_SINT,       VK_FORMAT_R32G32B32_UINT,       VK_FORMAT_R32G32B32_SFLOAT,
-    VK_FORMAT_R32G32B32A32_SINT,    VK_FORMAT_R32G32B32A32_UINT,    VK_FORMAT_R32G32B32A32_SFLOAT,
-};
-
-
-VkCullModeFlags GetCullMode(CullMode mode)
-{
-    CHROME_TRACE_FUNCTION();
-    switch (mode) 
-    {
-        case CullMode::None:
-            return VK_CULL_MODE_NONE;
-            break;
-        case CullMode::Front:
-            return VK_CULL_MODE_FRONT_BIT;
-            break;
-        case CullMode::Back:
-            return VK_CULL_MODE_BACK_BIT;
-            break;
-    }
+    mAlbedo.Load(filename);    
 }
 
-VkPrimitiveTopology GetPrimitive(PrimitiveType primitive)
+void Material::LoadShaders(std::string_view vertexShaderFilename, std::string_view fragmentShaderFilename) 
 {
-    CHROME_TRACE_FUNCTION();
-    switch (primitive)
-    {
-        case PrimitiveType::None:
-            return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-            break;
-        case PrimitiveType::Triangle:
-            return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            break;
-        case PrimitiveType::Line:
-            return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-            break;
-        case PrimitiveType::Point:
-            return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-            break;
-    };
+    mPipeline.LoadVertexShader(vertexShaderFilename);
+    mPipeline.LoadFragmentShader(fragmentShaderFilename);
 }
 
-VkFrontFace GetFrontFace(FrontFace face)
+void Material::Create() 
 {
-    CHROME_TRACE_FUNCTION();
-    switch (face) 
-    {
-        case FrontFace::None:
-            return VK_FRONT_FACE_MAX_ENUM;
-            break;
-        case FrontFace::Clockwise:
-            return VK_FRONT_FACE_CLOCKWISE;
-            break;
-        case FrontFace::CounterClockwise:
-            return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-            break;
-    }
-}
+    mAlbedoSampler.Create();
 
-Material::Material()
-{
-    mPipeline.AddBinding(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
-    mPipeline.AddAttribute(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position));
-    mPipeline.AddAttribute(0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv));
-    mPipeline.AddAttribute(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal));
-
-    if(mSettings.enableInstancing)
-    {
-        mPipeline.AddBinding(1, sizeof(glm::mat4), VK_VERTEX_INPUT_RATE_INSTANCE);
-        mPipeline.AddAttribute(1, 3, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 0);
-        mPipeline.AddAttribute(1, 4, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 1);
-        mPipeline.AddAttribute(1, 5, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 2);
-        mPipeline.AddAttribute(1, 6, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 3);
-    }
-}
-
-void Material::LoadAlbedo(std::string_view filename)
-{
-    CHROME_TRACE_FUNCTION();
-    mAlbedo.Load(filename, 0);
-}
-
-void Material::LoadShaders(std::string_view vertexShader, std::string_view fragmentShader)
-{
-    CHROME_TRACE_FUNCTION();
-    mPipeline.LoadVertexShader(vertexShader);
-    mPipeline.LoadFragmentShader(fragmentShader);
-}
-
-void Material::ClearBindingAttribute() 
-{
-    mPipeline.ClearAttributesAndBinding();
-}
-
-void Material::SetBindingAttribute(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> layout) 
-{
-    size_t stride = 0;
-
-    for(AttributeType type : layout)
-    {
-        stride += attributeTypeSize[(uint32_t)type];
-    }
-
-    mPipeline.AddBinding(binding, stride, vulkanVertexInputRate[(uint32_t)inputRate]);
-
-    int i = mFinalLocation;
-    size_t offset = 0;
-    for(AttributeType type : layout)
-    {
-        mPipeline.AddAttribute(binding, i, vulkanAttributeFormat[(uint32_t)type], offset);
-        offset += attributeTypeSize[(uint32_t)type];
-        i++;
-    }
-    mFinalLocation = i;
-}
-
-
-void Material::Create()
-{
-    CHROME_TRACE_FUNCTION();
- 
-    VkDescriptorPoolSize uniformPoolSize = 
-    {
-        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-    };
-    VkDescriptorPoolSize samplerPoolSize = 
-    {
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-    };
-
-    mDescriptorPool = CreateDescriptorPool({uniformPoolSize, samplerPoolSize}, 2);
-
-    VkDescriptorSetLayoutBinding uniformBinding = 
-    {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    };
-
-    VkDescriptorSetLayoutBinding albedoBinding = 
-    {
-        .binding = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    };
-
-
-    mSetLayout = CreateDescriptorSetLayout({uniformBinding, albedoBinding});
-
-    mDescriptorSet = AllocateDescriptorSet(mSetLayout, mDescriptorPool);
-
-
-    VkPushConstantRange pushConstantRange =
-    {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .offset = 0,
-        .size = sizeof(glm::mat4),
-    };
-
-    mPipelineLayout = CreatePipelineLayout({mSetLayout}, {pushConstantRange});
-    
-    mPipeline.EnableDepthTesting(mSettings.depthTestEnable);
-    mPipeline.EnableDepthWrite(mSettings.depthWriteEnable);
-    mPipeline.EnableBlending(mSettings.blendEnable);
-    mPipeline.EnableWireframe(mSettings.wireframe);
-
-    mPipeline.AddColorBlendAttachment(mSettings.blendEnable);
-
-    mPipeline.SetCullMode(GetCullMode(mSettings.cullMode));
-
-
-    mPipeline.SetPrimitive(GetPrimitive(mSettings.primitiveType));
-    mPipeline.SetMultisampleCount(mSettings.sampleCount);
-
-    mPipeline.SetPipelineLayout(mPipelineLayout);
-
-    Camera camera = Application::GetInstance()->GetRendererRef().GetCamera();
-
-    VkRenderPass renderPass = Application::GetInstance()->GetRendererRef().GetMainRenderPass();
-
-    mPipeline.Create(renderPass, 0);
-
+    mImageDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
+    mImageDescriptor.Create();
     if(mAlbedo.IsValid())
-        mAlbedo.SetDataToDescriptorSet(mDescriptorSet, 1);
+        mImageDescriptor.UpdateImage(mAlbedo.GetImage(), ImageLayout::ShaderRead, mAlbedoSampler, 0);
+
+    mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
+    mUniformDescriptor.Create();
+    mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetRendererUniformBuffer().GetBuffer(), 0);
+
+
+    mPipeline.SetCullMode(mCullMode);
+    mPipeline.SetPrimitive(mPrimitiveType);
+    mPipeline.SetMultisampleCount(mSampleCount);
+    mPipeline.EnableDepthWrite(mDepthWriteEnable);
+    mPipeline.EnableDepthTesting(mDepthTestEnable);
+    mPipeline.AddColorBlendAttachment(false);
+    mPipeline.AddColorBlendAttachment(false);
+    mPipeline.AddColorBlendAttachment(false);
+
+
+    if(mAttributeCount == 0)
+        SetDefaultAttribute();
+
+    mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout(), mUniformDescriptor.GetDescriptorSetLayout()}, {}));
+
+    mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
 }
 
-MaterialSettings& Material::GetSettingsRef()
+void Material::Destroy() 
 {
-    CHROME_TRACE_FUNCTION();
-    return mSettings;
+    vkDeviceWaitIdle(getDevice());
+    mAlbedoSampler.Destroy();
+    mImageDescriptor.Destroy();
+    mUniformDescriptor.Destroy();
+    mPipeline.Destroy();
+
+    *this = Material();
+}
+
+void Material::SetLineWidth(float lineWidth)
+{
+    mLineWidth = lineWidth; 
+}
+void Material::EnableDepthTestEnable(bool depthTestEnable)
+{
+    mDepthTestEnable = depthTestEnable; 
+}
+void Material::EnableDepthWriteEnable(bool depthWriteEnable)
+{
+    mDepthWriteEnable = depthWriteEnable; 
+}
+void Material::EnableInstancing(bool enableInstancing)
+{
+    mEnableInstancing = enableInstancing; 
+}
+void Material::EnableWireframe(bool wireframe)
+{
+    mWireframeEnable = wireframe; 
+}
+void Material::SetCullMode(CullMode cullMode)
+{
+    mCullMode = cullMode; 
+}
+void Material::SetPrimitiveType(PrimitiveType primitiveType)
+{
+    mPrimitiveType = primitiveType; 
+}
+void Material::SetFrontFace(FrontFace frontFace)
+{
+    mFrontFace = frontFace; 
+}
+void Material::SetSampleCount(SampleCount sampleCount)
+{
+    mSampleCount = sampleCount; 
+}
+
+ImageFormat GetAttributeFormat(AttributeType attributeType)
+{
+    ImageFormat formats[] = 
+    {
+        ImageFormat::R32U,      ImageFormat::R32U,      ImageFormat::R32,
+        ImageFormat::RG32U,     ImageFormat::RG32U,     ImageFormat::RG32,
+        ImageFormat::RGB32U,    ImageFormat::RGB32U,    ImageFormat::RGB32,
+        ImageFormat::RGBA32U,   ImageFormat::RGBA32U,   ImageFormat::RGBA32,
+    };
+
+    return formats[(int)attributeType];
+}
+
+size_t GetAttributeSize(AttributeType attributeType)
+{
+    size_t sizes[] = 
+    {
+        sizeof(int) * 1, sizeof(uint32_t) * 1, sizeof(float) * 1,
+        sizeof(int) * 2, sizeof(uint32_t) * 2, sizeof(float) * 2,
+        sizeof(int) * 3, sizeof(uint32_t) * 3, sizeof(float) * 3,
+        sizeof(int) * 4, sizeof(uint32_t) * 4, sizeof(float) * 4,
+    };
+
+    return sizes[(int)attributeType];
+}
+
+void Material::AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes) 
+{
+    size_t offset = 0;
+    uint32_t location = mLastAttributeLocation;
+
+    for (AttributeType attributeType : attributes)
+    {
+        mPipeline.AddAttribute(binding, location, GetAttributeFormat(attributeType), offset);
+        location++;
+        offset += GetAttributeSize(attributeType);
+    }
+
+    mLastAttributeLocation = location;
+
+    size_t stride = offset;
+    mPipeline.AddBinding(binding, stride, inputRate);
+
+    mAttributeCount++;
+}
+
+void Material::SetInstanceData(void* data, size_t size) 
+{
+    mInstanceBuffer.SetData(data, size);    
+}
+
+void Material::SetInstanceBuffer(const InstanceBuffer& instanceBuffer) 
+{
+    mInstanceBuffer = instanceBuffer;
+}
+
+void Material::SetDefaultAttribute() 
+{
+    AddLayout(0, InputRate::Vertex, {AttributeType::Vec3, AttributeType::Vec2, AttributeType::Vec3});    
+    if(mEnableInstancing)
+        AddLayout(1, InputRate::Instance, {AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4});    
 }

@@ -72,8 +72,6 @@ void mouseScrollCallback(GLFWwindow* window, double x, double y)
 
 Key GetKeyFromGlfwKey(int key)
 {
-	
-	
 	Key result;
 
 	switch (key)
@@ -472,6 +470,20 @@ void characterCallback(GLFWwindow* window, unsigned int codepoint)
 	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowCharacterType, &ch);
 }
 
+void minimizeCallback(GLFWwindow* window, int minimize)
+{
+	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	bool isMinimized = minimize;
+	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMinimize, &isMinimized);
+}
+
+void maximizeCallback(GLFWwindow* window, int maximize)
+{
+	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
+	bool isMaximized = maximize;
+	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMaximize, &isMaximized);
+}
+
 void Window::Create(const WindowSpecification& specification)
 {
     CHROME_TRACE_FUNCTION();
@@ -500,12 +512,15 @@ void Window::Create(const WindowSpecification& specification)
 	glfwSetScrollCallback(mData->window, mouseScrollCallback);
 	glfwSetKeyCallback(mData->window, keyCallback);
 	glfwSetCharCallback(mData->window, characterCallback);
+	glfwSetWindowIconifyCallback(mData->window, minimizeCallback);
+	glfwSetWindowMaximizeCallback(mData->window, maximizeCallback);
 }
 
 void Window::HideCursor()
 {
     CHROME_TRACE_FUNCTION();
-	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	if(glfwGetInputMode(mData->window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+		glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 
@@ -592,7 +607,8 @@ void* Window::GetNativeWindow() const
 void Window::ShowCursor()
 {
     CHROME_TRACE_FUNCTION();
-	glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	if(glfwGetInputMode(mData->window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
+		glfwSetInputMode(mData->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 bool Window::isCursorHidden()
 {
@@ -605,16 +621,22 @@ bool Window::isFullscreen()
 	return glfwGetWindowMonitor(mData->window) == glfwGetPrimaryMonitor();
 }
 
+void Window::Maximize()
+{
+	glfwMaximizeWindow(mData->window);
+}
+
 void Window::SetFullscreen(bool fullscreen)
 {
     CHROME_TRACE_FUNCTION();
+	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
 	if(fullscreen)
 	{
-		glfwSetWindowMonitor(mData->window, glfwGetPrimaryMonitor(), 0, 0, 1920, 1080, 0);
+		glfwSetWindowMonitor(mData->window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, 0);
 	}
 	else 
 	{
-		glfwSetWindowMonitor(mData->window, nullptr, 0, 0, 800, 600, 0);
+		glfwSetWindowMonitor(mData->window, nullptr, 100, 100, 800, 600, 0);
 	}
 }

@@ -1,6 +1,9 @@
 #include "Utility.hpp"
 #include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
+#include "Renderer/Converter.hpp"
+#include "Renderer/RenderPass.hpp"
+#include "Renderer/Types.hpp"
 
 uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties)
 {
@@ -23,7 +26,7 @@ uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProp
     return UINT32_MAX;
 }
 
-Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryProperties) 
+Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryProperties) 
 {
     CHROME_TRACE_FUNCTION();
     Buffer buffer;
@@ -32,7 +35,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
-        .usage = usage,
+        .usage = GetVulkanBufferUsage(usage),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
@@ -45,7 +48,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = requirements.size,
-        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, memoryProperties),
+        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperties)),
     };
 
     vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &buffer.memory);
@@ -54,7 +57,7 @@ Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropert
 
     vkBindBufferMemory(getDevice(), buffer.handle, buffer.memory, 0);
 
-    if((memoryProperties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+    if((GetVulkanMemoryProperty(memoryProperties) & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
         vkMapMemory(getDevice(), buffer.memory, 0, requirements.size, 0, &buffer.map);
     }
@@ -112,7 +115,7 @@ void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer)
     vkDestroyCommandPool(getDevice(), commandPool, nullptr);
 }
 
-void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image)
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image& image)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -124,12 +127,12 @@ void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkI
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
         .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
+        .oldLayout = GetVulkanImageLayout(oldLayout),
+        .newLayout = GetVulkanImageLayout(newLayout),
         .image = image.handle,
         .subresourceRange = 
         {
-            .aspectMask = aspectMask,
+            .aspectMask = GetVulkanImageAspect(aspectMask),
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
@@ -143,7 +146,7 @@ void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkI
     ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
 }
 
-void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFlags aspectMask) 
+void TransferImageData(const Buffer& srcBuffer, Image& dstImage, ImageAspect aspectMask) 
 {
     CHROME_TRACE_FUNCTION();
     VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
@@ -156,13 +159,13 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
         .bufferImageHeight = 0,
         .imageSubresource = 
         {
-            .aspectMask = aspectMask,
+            .aspectMask = GetVulkanImageAspect(aspectMask),
             .mipLevel = 0,
             .baseArrayLayer = 0,
             .layerCount = 1,
         },
         .imageOffset = {0,0,0},
-        .imageExtent = {dstImage.extent.width, dstImage.extent.height, 1},
+        .imageExtent = {dstImage.size.x, dstImage.size.y, 1},
     };
 
     vkCmdCopyBufferToImage(commandBuffer, srcBuffer.handle, dstImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -174,7 +177,6 @@ void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFl
 
     vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &commandBuffer);
 }
-
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool) 
 {
@@ -327,7 +329,7 @@ VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayou
     return pipelineLayout;
 }
 
-Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty)
+Image CreateImage(const glm::uvec2& size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -337,7 +339,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = format,
+        .format = GetVulkanImageFormat(format),
         .extent = 
         {
             .width = size.x,
@@ -348,7 +350,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = usage,
+        .usage = GetVulkanImageUsage(usage),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
@@ -362,7 +364,7 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = requirements.size,
-        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, memoryProperty),
+        .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperty)),
     };
 
     vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &image.memory);
@@ -375,11 +377,11 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image.handle,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = format,
+        .format = GetVulkanImageFormat(format),
         .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
         .subresourceRange = 
         {
-            .aspectMask = aspectMask,
+            .aspectMask = GetVulkanImageAspect(aspect),
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
@@ -387,9 +389,41 @@ Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usa
         },
     };
 
-    image.extent = {size.x, size.y};
+    image.size = {size.x, size.y};
 
     vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &image.view);
 
     return image;
+}
+void DestroyImage(Image& image) 
+{
+    vkDestroyImageView(getDevice(), image.view, nullptr);
+    vkDestroyImage(getDevice(), image.handle, nullptr);    
+    vkFreeMemory(getDevice(), image.memory, nullptr);
+
+    image = Image();
+}
+
+VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect)
+{
+    VkImageViewCreateInfo imageViewCreateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = GetVulkanImageFormat(format),
+        .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange = 
+        {
+            .aspectMask = GetVulkanImageAspect(aspect),
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+
+    VkImageView view;
+    vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &view);
+    return view;
 }

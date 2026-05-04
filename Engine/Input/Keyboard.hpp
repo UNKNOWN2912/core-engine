@@ -54,7 +54,6 @@ enum class Key
     World1,
     World2,
 
-/* Function keys */
     Escape,
     Enter,
     Tab,

@@ -2,9 +2,21 @@
 #include "Core/Macro.hpp"
 #include "GLFW/glfw3.h"
 
+VkBool32 validationCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, 
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+{
+    ERROR("---------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    ERROR("{}", pCallbackData->pMessage);
+    ERROR("---------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+    return VK_FALSE;
+};
+
+
 void GraphicsContext::Create(const Window& window, bool setAsCurrentContext) 
 {
     CHROME_TRACE_FUNCTION();
+
     {
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -19,6 +31,8 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
             extensions.push_back(glfwExtensions[i]);
         }
 
+        extensions.push_back("VK_EXT_debug_utils");
+
 
         uint32_t layerCount = 1;
         const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
@@ -30,6 +44,25 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
         createInfo.ppEnabledLayerNames = layers;
 
         vkCreateInstance(&createInfo, nullptr, &mInstance);
+    }
+
+    {
+        VkDebugUtilsMessengerCreateInfoEXT createInfo = 
+        {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+            .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT  | 
+                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT     |
+                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT  |
+                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+            .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
+            .pfnUserCallback = validationCallback,
+            .pUserData = nullptr,
+        };
+
+        auto CreateDebugMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkCreateDebugUtilsMessengerEXT");
+
+        VkDebugUtilsMessengerEXT messenger;
+        CreateDebugMessenger(mInstance, &createInfo, nullptr, &messenger);
     }
 
     {
@@ -222,6 +255,11 @@ VkCommandPool GraphicsContext::GetCommandPool()
     return mCommandPool;
 }
 
+VkDebugUtilsMessengerEXT GraphicsContext::GetMessenger() 
+{
+    return mMessenger;    
+}
+
 GraphicsContext* GraphicsContext::sCurrentContext = nullptr;
 
 
@@ -252,4 +290,9 @@ Queues getQueues()
 VkCommandPool getCommandPool()
 {
     return GraphicsContext::GetCurrentContext().GetCommandPool();
+}
+
+VkDebugUtilsMessengerEXT getMessenger() 
+{
+    return GraphicsContext::GetCurrentContext().GetMessenger();    
 }

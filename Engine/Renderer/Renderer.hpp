@@ -1,63 +1,47 @@
 #pragma once
+#include "Core/Window.hpp"
 #include "Renderer/Camera.hpp"
+#include "Renderer/ComputePipeline.hpp"
 #include "Renderer/InstanceBuffer.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
-#include "GraphicsPipeline.hpp"
-#include "GraphicsContext.hpp"
-#include "Renderer/Texture.hpp"
-#include "Renderer/Transform.hpp"
+#include "Renderer/RenderTarget.hpp"
+#include "Renderer/Swapchain.hpp"
+#include "Renderer/Synchronization.hpp"
 #include "Renderer/UniformBuffer.hpp"
+#include "RendererAttachments.hpp"
 
-struct Swapchain
+struct RenderCommand
 {
-    uint32_t imageCount = 0;
-    VkFormat format = VK_FORMAT_UNDEFINED;
-    VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    VkExtent2D extent = {0,0};
-    VkSwapchainKHR handle = VK_NULL_HANDLE;
-    std::vector<VkImage> images;
-    std::vector<VkImageView> views;
-};
+    Buffer vertexBuffer;
+    Buffer indexBuffer;
 
-
-struct Semaphores
-{
-    VkSemaphore imageAcquired = VK_NULL_HANDLE;
-    VkSemaphore renderingFinish = VK_NULL_HANDLE;
-};
-
-struct CommandBuffers
-{
-    VkCommandBuffer renderingCommandBuffer = VK_NULL_HANDLE;
-};
-
-struct UniformData
-{
-    glm::mat4 projection;
-    glm::mat4 view;
-    glm::vec3 cameraPosition;
-    float     _pad1;  
-    glm::vec3 cameraFront;
-    float     _pad2;  
-    float time = 0;
-    float     _pad[3];
-};
-
-struct MeshMap
-{
-    Material* material;
-    Transform* transform;
-};
-
-struct DrawSubmitInfo
-{
-    StaticMesh* mesh = nullptr;
-    Material* material = nullptr;
-    Transform transform;
-    InstanceBuffer* instanceBuffer = nullptr;
-    bool instanced = false;
+    InstanceBuffer instanceBuffer;
     uint32_t instanceCount = 0;
+    
+    GraphicsPipeline pipeline;
+    Descriptor descriptors[16];
+
+    uint32_t descriptorCount = 0;
+    uint32_t indexCount = 0;
+};
+
+struct FrameInfo
+{
+    Camera camera;
+    bool isRecording = false;
+};
+
+struct RendererUniformData
+{
+    glm::mat4 projection = glm::mat4(1.f);
+    glm::mat4 view = glm::mat4(1.f);
+    glm::vec3 cameraPosition;
+};
+
+enum class RendererEvent
+{
+    DeferredAttachmentResize,
 };
 
 class Renderer
@@ -66,60 +50,80 @@ class Renderer
         void Initialize(const Window& window);
         void Terminate();
 
-        void DrawMesh(StaticMesh& mesh);
-        void DrawMeshWithMaterial(StaticMesh& mesh, Material& material, Transform transform);
-        void DrawMeshWithMaterialInstanced(StaticMesh& mesh, Material& material, InstanceBuffer& instanceBuffer, uint32_t instanceCount);
+        void Submit(const StaticMesh& mesh, const Material& material);
+        void Submit(const RenderCommand& renderCommand);
 
-        void BeginFrame();
+        void BeginFrame(RenderTarget& renderTarget, const Camera& camera = {});
         void EndFrame();
 
-        void CreateMeshData(StaticMesh& mesh);
+        bool ResizeSwapchain(const glm::uvec2& size);
+        void DisplayToWindow(const RenderTarget& target);
 
-        void SetCamera(const Camera& camera) { mCamera = camera; }
-        const Camera& GetCamera() const { return mCamera; }
+        const RenderPass& GetDeferredRenderPass() const;
 
-        void Resize(const glm::uvec2& size);
+        const UniformBuffer& GetRendererUniformBuffer() const { return mRendererUniformBuffer; }
 
-        VkRenderPass GetMainRenderPass() const { return mRenderPass; }
+        const Swapchain& GetSwapchain() const { return mSwapchain; }
+        const DeferredSubpassAttachment& GetDeferredAttachments() const { return mDeferredAttachments; }
+        const Sampler& GetDefaultSampler() const { return mDefaultSampler; }
+
+        void AddListener(std::function<bool (uint32_t, void *)> listener);
+
+        void QueueSwapchainResize(const glm::uvec2& size);
 
     private:
-        void CreateSwapchain(const glm::uvec2& size);
-        void CreateRenderPass();
-        void CreateSwapchainFramebuffers();
-        void CreateSemaphores();
-        void CreateCommandBuffers();
-        void CreatePipelines();
-        
-        void DestroySwapchain();
-        void DestroyRenderPass();
-        void DestroySwapchainFramebuffers();
-        void DestroySemaphores();
-        void DestroyCommandBuffers();
+        // Render passes
+        void CreateDeferredRenderPass();
 
-        
+        // Attachments
+        void CreateAttachments(const glm::uvec2& size);
+        void ResizeAttachments(const glm::uvec2& size);
+        void DestroyAttachments();
+
+        // FrameBuffer
+        void CreateDeferredFrameBuffer(const glm::uvec2& size);
+
     private:
+        glm::uvec2 mSwapchainSize;
+
+        EventDispatcher mDispatcher;
+
         GraphicsContext mContext;
 
+        RendererUniformData mRendererUniformData;
+        UniformBuffer mRendererUniformBuffer;
+
         Swapchain mSwapchain;
-        Semaphores mSemaphores;
-        CommandBuffers mCommandBuffers;
-        GraphicsPipeline mDefaultPipeline;
 
-        VkRenderPass mRenderPass;
-        VkViewport mViewport;
+        Descriptor mComputeDescriptor;
+        Descriptor mDeferredAttachmentDescriptor;
+        // Render passes
+        RenderPass mDeferredRenderPass;
+        
+        // FrameBuffers
+        FrameBuffer mDeferredFrameBuffer;
+        
+        // Attachments
+        DeferredSubpassAttachment mDeferredAttachments;
+        
+        std::vector<RenderCommand> mRenderCommands;
+        RenderTarget mCurrentRenderTarget;
+        
+        CommandBuffer mRenderCommandBuffer;
+        CommandBuffer mTransferToSwapchainCommandBuffer;
 
-        std::vector<VkFramebuffer> mSwapchainFramebuffer;
+        Semaphore mImageAcquiredSemaphore;
+        Semaphore mTransferSemaphore;
 
-        std::vector<DrawSubmitInfo> mDrawSubmitInfo;
+        Sampler mDefaultSampler;
 
-        bool mFrameRunning = false;
+        ComputePipeline mComputePipeline;
 
-        UniformBuffer mUniformBuffer;
-        UniformData mUniformData;
+        Semaphore mRenderingSemaphore;
 
-        Texture mTexture;
+        Image mComputeImage;
 
-        Camera mCamera;
-
-        Image mDepthAttachment;
+        FrameInfo mFrameInfo;
+        
+        friend class Editor;
 };

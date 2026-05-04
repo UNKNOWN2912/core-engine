@@ -1,4 +1,5 @@
 #pragma once
+#include "Renderer/Types.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
@@ -7,7 +8,7 @@ struct Buffer
 {
     VkBuffer handle = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkDeviceSize size = 0;
+    size_t size = 0;
     void* map = nullptr;
 };
 
@@ -17,14 +18,17 @@ struct Image
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
     VkDeviceSize memorySize = 0;
-    VkExtent2D extent = {0, 0};
+    glm::uvec2 size = {0, 0};
 };
 
-Buffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryProperties);
+Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryProperties);
 void DestroyBuffer(Buffer& buffer);
 void TransferBufferData(const Buffer& srcBuffer, Buffer& dstBuffer); 
 
-Image CreateImage(const glm::uvec2& size, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectMask, VkMemoryPropertyFlags memoryProperty);
+Image CreateImage(const glm::uvec2& size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty);
+void DestroyImage(Image& image);
+
+VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect);
 
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool);
@@ -39,5 +43,5 @@ VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize
 VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool);
 VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts, std::initializer_list<VkPushConstantRange> pushConstant);
 
-void TransitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, Image& image);
-void TransferImageData(const Buffer& srcBuffer, Image& dstImage, VkImageAspectFlags aspectMask);
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image& image);
+void TransferImageData(const Buffer& srcBuffer, Image& dstImage, ImageAspect aspectMask);

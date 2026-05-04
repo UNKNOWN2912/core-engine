@@ -1,42 +1,10 @@
 #pragma once
+#include "Renderer/Descriptor.hpp"
 #include "Renderer/GraphicsPipeline.hpp"
+#include "Renderer/InstanceBuffer.hpp"
+#include "Renderer/Sampler.hpp"
 #include "Renderer/Texture.hpp"
-
-enum class CullMode
-{
-    None = 0,
-    Front,
-    Back,
-};
-
-enum class FrontFace
-{
-    None = 0,
-    Clockwise, 
-    CounterClockwise,
-};
-
-enum class PrimitiveType
-{
-    None = 0,
-    Triangle, 
-    Line, 
-    Point,
-};
-
-struct MaterialSettings
-{
-    bool depthTestEnable = true;
-    bool depthWriteEnable = true;
-    bool enableInstancing = false;
-    bool wireframe = false;
-    bool blendEnable = true;
-    CullMode cullMode = CullMode::Back;
-    PrimitiveType primitiveType = PrimitiveType::Triangle;
-    FrontFace frontFace = FrontFace::Clockwise;
-    float lineWidth = 1.f;
-    int sampleCount = 1; 
-};
+#include "Renderer/Types.hpp"
 
 enum class AttributeType
 {
@@ -46,39 +14,69 @@ enum class AttributeType
     IVec4, UVec4, Vec4,
 };
 
-enum class InputRate
-{
-    None = 0,
-    Vertex,
-    Instance
-};
-
 class Material
 {
     public:
-        Material();
         void LoadAlbedo(std::string_view filename);
-        void LoadShaders(std::string_view vertexShader, std::string_view fragmentShader);
-
-        void ClearBindingAttribute();
-        void SetBindingAttribute(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> layout);
+        void LoadShaders(std::string_view vertexShaderFilename,
+                        std::string_view fragmentShaderFilename);
 
         void Create();
+        void Destroy();
 
-        MaterialSettings& GetSettingsRef();
+        void SetLineWidth(float lineWidth);
+        void SetCullMode(CullMode cullMode);
+        void SetPrimitiveType(PrimitiveType primitiveType);
+        void SetFrontFace(FrontFace frontFace);
+        void SetSampleCount(SampleCount sampleCount);
+        void SetDefaultAttribute();
+
+        void SetInstanceCount(uint32_t instanceCount) { mInstanceCount = instanceCount; }
+        
+        void EnableWireframe(bool wireframe);
+        void EnableDepthTestEnable(bool depthTestEnable);
+        void EnableDepthWriteEnable(bool depthWriteEnable);
+        void EnableInstancing(bool enableInstancing);
+
+        void AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes);
+
+        const GraphicsPipeline& GetPipeline() const { return mPipeline; }
+        const Descriptor& GetImageDescriptor() const { return mImageDescriptor; }
+        const Descriptor& GetUniformDescriptor() const { return mUniformDescriptor; }
+
+        uint32_t GetInstanceCount() const { return mInstanceCount; }
+
+        void SetInstanceData(void* data, size_t size);
+        void SetInstanceBuffer(const InstanceBuffer& instanceBuffer);
+
+        bool IsInstancingEnabled() const { return mEnableInstancing; }
+
+        const InstanceBuffer& GetInstanceBuffer() const { return mInstanceBuffer; }
+
     private:
-        friend class Renderer;
+        float mLineWidth = 1.f;
+        bool mDepthTestEnable = true;
+        bool mDepthWriteEnable = true;
+        bool mEnableInstancing = false;
+        bool mWireframeEnable = false;
+
+        CullMode mCullMode = CullMode::Back;
+        PrimitiveType mPrimitiveType = PrimitiveType::Triangle;
+        FrontFace mFrontFace = FrontFace::Clockwise;
+        SampleCount mSampleCount = SampleCount::One; 
+
+        GraphicsPipeline mPipeline;
+
+        Descriptor mImageDescriptor;
+        Descriptor mUniformDescriptor;
 
         Texture mAlbedo;
-        GraphicsPipeline mPipeline;
-        MaterialSettings mSettings;
+        Sampler mAlbedoSampler;
 
-        VkDescriptorSet mDescriptorSet;
-        VkDescriptorSetLayout mSetLayout;
+        InstanceBuffer mInstanceBuffer;
+        uint32_t mInstanceCount = 0;
 
-        VkPipelineLayout mPipelineLayout;
+        uint32_t mAttributeCount = 0;
 
-        VkDescriptorPool mDescriptorPool;
-
-        uint32_t mFinalLocation = 0;
+        uint32_t mLastAttributeLocation = 0;
 };

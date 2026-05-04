@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/LayerStack.hpp"
 #include "Core/Window.hpp"
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
@@ -17,12 +18,13 @@ public:
 	virtual void OnWindowClose() { Close(); }
 	virtual void OnWindowMove(const glm::uvec2& position) {}
 	virtual void OnWindowResize(const glm::uvec2& size) {}
+	virtual void OnWindowMinimize() {}
+	virtual void OnWindowMaximize() {}
 	
 	virtual void OnMouseMove(const glm::vec2& position, const glm::vec2& offset) {}
 	virtual void OnMouseButtonPress(MouseButton button) {}
 	virtual void OnMouseButtonRelease(MouseButton button) {}
 	virtual void OnScroll(const glm::vec2& scroll) {}
-
 
 	virtual void OnKeyPress(Key key) {}
 	virtual void OnKeyRepeat(Key key) {}
@@ -35,6 +37,7 @@ public:
 	void RunApplication();
 
 	void HideCursor();
+	void ShowCursor();
 	void ToggleCursor();
 	bool IsCursorHidden();
 
@@ -55,6 +58,31 @@ public:
 	Renderer mRenderer;
 
 	float GetDeltaTime();
+	float GetElapsedTime();
+
+	template<typename T, typename ...Args> requires std::derived_from<T, Layer>
+	void AttachLayer(Args... args)
+	{
+		mLayerStack.Attach<T>(args...);
+	}
+
+	template<typename T> requires std::derived_from<T, Layer>
+	void DetachLayer()
+	{
+		mLayerStack.Detach<T>();
+	}
+
+	template<typename T> requires std::derived_from<T, Layer>
+	const T& GetLayer() const 
+	{
+		return mLayerStack.Get<T>();
+	}
+
+	template<typename T> requires std::derived_from<T, Layer>
+	T& GetLayer() 
+	{
+		return mLayerStack.Get<T>();
+	}
 
 private:
 	bool mRunning = true;
@@ -65,6 +93,9 @@ private:
 	Window mWindow;
 
 	Timer mDeltaTimer;
+	Timer mApplicationTimer;
 
 	float mDeltaTime = 0;
+
+	LayerStack mLayerStack;
 };
