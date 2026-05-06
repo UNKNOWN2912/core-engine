@@ -1,8 +1,5 @@
 #pragma once
 #include <Engine.hpp>
-#include "CameraController.hpp"
-#include "EditorLayer.hpp"
-#include "GameLayer.hpp"
 
 
 class Editor : public Application

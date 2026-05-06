@@ -5,9 +5,9 @@
 
 struct WindowSpecification
 {
-	glm::uvec2 size;
-	glm::uvec2 position;
-	std::string title;
+	glm::uvec2 size = {800, 600};
+	glm::uvec2 position = {0,0};
+	std::string title = "Untitled";
 };
 
 enum class WindowEvent
@@ -58,6 +58,8 @@ public:
 	bool isCursorHidden();
 
 	void Maximize();
+	void Restore();
+	bool IsMaximized();
 
 
 

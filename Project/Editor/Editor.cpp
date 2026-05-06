@@ -1,5 +1,6 @@
 #include "Editor.hpp"
-#include "CameraController.hpp"
+#include "EditorLayer.hpp"
+#include "GameLayer.hpp"
 
 void Editor::OnStart()
 {

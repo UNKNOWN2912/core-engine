@@ -6,11 +6,17 @@
 #include <cassert>
 #include <Core/Macro.hpp>
 
+struct PreFullscreenData
+{
+	int width = 0, height = 0, x = 0, y = 0;
+};
 
 struct WindowData
 {
 	GLFWwindow* window = nullptr;
 	EventDispatcher dispatcher;
+	bool isMaximized = false;
+	PreFullscreenData preFullscreenData;
 };
 
 void windowCloseCallback(GLFWwindow* window)
@@ -482,6 +488,7 @@ void maximizeCallback(GLFWwindow* window, int maximize)
 	WindowData* platformData = (WindowData*)glfwGetWindowUserPointer(window);
 	bool isMaximized = maximize;
 	platformData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMaximize, &isMaximized);
+	platformData->isMaximized = maximize;
 }
 
 void Window::Create(const WindowSpecification& specification)
@@ -626,6 +633,16 @@ void Window::Maximize()
 	glfwMaximizeWindow(mData->window);
 }
 
+void Window::Restore()
+{
+	glfwRestoreWindow(mData->window);
+}
+
+bool Window::IsMaximized()
+{
+	return mData->isMaximized;	
+}
+
 void Window::SetFullscreen(bool fullscreen)
 {
     CHROME_TRACE_FUNCTION();
@@ -633,10 +650,14 @@ void Window::SetFullscreen(bool fullscreen)
 
 	if(fullscreen)
 	{
+		glfwGetWindowSize(mData->window, &mData->preFullscreenData.width, &mData->preFullscreenData.height);
+		glfwGetWindowPos(mData->window, &mData->preFullscreenData.x, &mData->preFullscreenData.y);
+
+
 		glfwSetWindowMonitor(mData->window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, 0);
 	}
 	else 
 	{
-		glfwSetWindowMonitor(mData->window, nullptr, 100, 100, 800, 600, 0);
+		glfwSetWindowMonitor(mData->window, nullptr, mData->preFullscreenData.x, mData->preFullscreenData.y, mData->preFullscreenData.width, mData->preFullscreenData.height, 0);
 	}
 }

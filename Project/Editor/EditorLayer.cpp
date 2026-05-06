@@ -5,22 +5,13 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 
+
 void EditorLayer::OnAttach() 
 {
     SetRenderTarget(&GetLayer<GameLayer>().mTarget);
-
-    mRenderer = &Application::GetInstance()->GetRendererRef();
-    InitializeImGui();
-
     mEditorCameraController.SetCamera(mEditorCamera, Application::GetInstance()->GetWindowRef());
-
-    SetImage("Albedo", mRenderer->GetDeferredAttachments().albedo);
-    SetImage("Position", mRenderer->GetDeferredAttachments().position);
-    SetImage("Normal", mRenderer->GetDeferredAttachments().normal);
-    SetImage("Depth", mRenderer->GetDeferredAttachments().depth);
-
-    mRenderer->AddListener(BindMember(EditorLayer::RendererEventCallback));
-    mImageViewId = (ImTextureID)ImGui_ImplVulkan_AddTexture(mRenderer->GetDefaultSampler().GetHandle(), mRenderer->GetDeferredAttachments().albedo.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    InitializeImGui();
+    LoadImGuiStyle("style.bin", ImGui::GetStyle());
 }
 
 void EditorLayer::UpdateCamera()
@@ -41,24 +32,126 @@ void EditorLayer::OnDetach()
     TerminateImGui();
 }
 
-void EditorLayer::SetImageView(const Image& image)
+void EditorLayer::CustomizationWindow()
 {
-    VkDescriptorImageInfo imageInfo[1] = {};
-    imageInfo[0].sampler = mRenderer->GetDefaultSampler().GetHandle();
-    imageInfo[0].imageView = image.view;
-    imageInfo[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    VkWriteDescriptorSet writeDescriptor[1] = {};
-    writeDescriptor[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptor[0].dstSet = (VkDescriptorSet)mImageViewId;
-    writeDescriptor[0].descriptorCount = 1;
-    writeDescriptor[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeDescriptor[0].pImageInfo = imageInfo;
-    vkUpdateDescriptorSets(getDevice(), 1, writeDescriptor, 0, nullptr);
+    if(!mCustomizeWindowEnable)
+        return;
+
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    ImGui::Begin("Customization", &mCustomizeWindowEnable, ImGuiWindowFlags_NoCollapse);
+
+    if(ImGui::Button("Load", {ImGui::GetContentRegionAvail().x, 0}))
+    {
+        LoadImGuiStyle("style.bin", ImGui::GetStyle());
+    }
+
+    if(ImGui::Button("Store", {ImGui::GetContentRegionAvail().x, 0}))
+    {
+        StoreImGuiStyle("style.bin", ImGui::GetStyle());
+    }
+    
+    ImGui::SeparatorText("Colors");
+
+    ImGui::ColorEdit4("Text", &style.Colors[ImGuiCol_Text].x);
+    ImGui::ColorEdit4("TextDisabled", &style.Colors[ImGuiCol_TextDisabled].x);
+    ImGui::ColorEdit4("WindowBg", &style.Colors[ImGuiCol_WindowBg].x);
+    ImGui::ColorEdit4("ChildBg", &style.Colors[ImGuiCol_ChildBg].x);
+    ImGui::ColorEdit4("PopupBg", &style.Colors[ImGuiCol_PopupBg].x);
+    ImGui::ColorEdit4("Border", &style.Colors[ImGuiCol_Border].x);
+    ImGui::ColorEdit4("BorderShadow", &style.Colors[ImGuiCol_BorderShadow].x);
+    ImGui::ColorEdit4("FrameBg", &style.Colors[ImGuiCol_FrameBg].x);
+    ImGui::ColorEdit4("FrameBgHovered", &style.Colors[ImGuiCol_FrameBgHovered].x);
+    ImGui::ColorEdit4("FrameBgActive", &style.Colors[ImGuiCol_FrameBgActive].x);
+    ImGui::ColorEdit4("TitleBg", &style.Colors[ImGuiCol_TitleBg].x);
+    ImGui::ColorEdit4("TitleBgActive", &style.Colors[ImGuiCol_TitleBgActive].x);
+    ImGui::ColorEdit4("TitleBgCollapsed", &style.Colors[ImGuiCol_TitleBgCollapsed].x);
+    ImGui::ColorEdit4("MenuBarBg", &style.Colors[ImGuiCol_MenuBarBg].x);
+    ImGui::ColorEdit4("ScrollbarBg", &style.Colors[ImGuiCol_ScrollbarBg].x);
+    ImGui::ColorEdit4("ScrollbarGrab", &style.Colors[ImGuiCol_ScrollbarGrab].x);
+    ImGui::ColorEdit4("ScrollbarGrabHovered", &style.Colors[ImGuiCol_ScrollbarGrabHovered].x);
+    ImGui::ColorEdit4("ScrollbarGrabActive", &style.Colors[ImGuiCol_ScrollbarGrabActive].x);
+    ImGui::ColorEdit4("CheckMark", &style.Colors[ImGuiCol_CheckMark].x);
+    ImGui::ColorEdit4("SliderGrab", &style.Colors[ImGuiCol_SliderGrab].x);
+    ImGui::ColorEdit4("SliderGrabActive", &style.Colors[ImGuiCol_SliderGrabActive].x);
+    ImGui::ColorEdit4("Button", &style.Colors[ImGuiCol_Button].x);
+    ImGui::ColorEdit4("ButtonHovered", &style.Colors[ImGuiCol_ButtonHovered].x);
+    ImGui::ColorEdit4("ButtonActive", &style.Colors[ImGuiCol_ButtonActive].x);
+    ImGui::ColorEdit4("Header", &style.Colors[ImGuiCol_Header].x);
+    ImGui::ColorEdit4("HeaderHovered", &style.Colors[ImGuiCol_HeaderHovered].x);
+    ImGui::ColorEdit4("HeaderActive", &style.Colors[ImGuiCol_HeaderActive].x);
+    ImGui::ColorEdit4("Separator", &style.Colors[ImGuiCol_Separator].x);
+    ImGui::ColorEdit4("SeparatorHovered", &style.Colors[ImGuiCol_SeparatorHovered].x);
+    ImGui::ColorEdit4("SeparatorActive", &style.Colors[ImGuiCol_SeparatorActive].x);
+    ImGui::ColorEdit4("ResizeGrip", &style.Colors[ImGuiCol_ResizeGrip].x);
+    ImGui::ColorEdit4("ResizeGripHovered", &style.Colors[ImGuiCol_ResizeGripHovered].x);
+    ImGui::ColorEdit4("ResizeGripActive", &style.Colors[ImGuiCol_ResizeGripActive].x);
+    ImGui::ColorEdit4("InputTextCursor", &style.Colors[ImGuiCol_InputTextCursor].x);
+    ImGui::ColorEdit4("TabHovered", &style.Colors[ImGuiCol_TabHovered].x);
+    ImGui::ColorEdit4("Tab", &style.Colors[ImGuiCol_Tab].x);
+    ImGui::ColorEdit4("TabSelected", &style.Colors[ImGuiCol_TabSelected].x);
+    ImGui::ColorEdit4("TabSelectedOverline", &style.Colors[ImGuiCol_TabSelectedOverline].x);
+    ImGui::ColorEdit4("TabDimmed", &style.Colors[ImGuiCol_TabDimmed].x);
+    ImGui::ColorEdit4("TabDimmedSelected", &style.Colors[ImGuiCol_TabDimmedSelected].x);
+    ImGui::ColorEdit4("TabDimmedSelectedOverline", &style.Colors[ImGuiCol_TabDimmedSelectedOverline].x);
+    ImGui::ColorEdit4("DockingPreview", &style.Colors[ImGuiCol_DockingPreview].x);
+    ImGui::ColorEdit4("DockingEmptyBg", &style.Colors[ImGuiCol_DockingEmptyBg].x);
+    ImGui::ColorEdit4("PlotLines", &style.Colors[ImGuiCol_PlotLines].x);
+    ImGui::ColorEdit4("PlotLinesHovered", &style.Colors[ImGuiCol_PlotLinesHovered].x);
+    ImGui::ColorEdit4("PlotHistogram", &style.Colors[ImGuiCol_PlotHistogram].x);
+    ImGui::ColorEdit4("PlotHistogramHovered", &style.Colors[ImGuiCol_PlotHistogramHovered].x);
+    ImGui::ColorEdit4("TableHeaderBg", &style.Colors[ImGuiCol_TableHeaderBg].x);
+    ImGui::ColorEdit4("TableBorderStrong", &style.Colors[ImGuiCol_TableBorderStrong].x);
+    ImGui::ColorEdit4("TableBorderLight", &style.Colors[ImGuiCol_TableBorderLight].x);
+    ImGui::ColorEdit4("TableRowBg", &style.Colors[ImGuiCol_TableRowBg].x);
+    ImGui::ColorEdit4("TableRowBgAlt", &style.Colors[ImGuiCol_TableRowBgAlt].x);
+    ImGui::ColorEdit4("TextLink", &style.Colors[ImGuiCol_TextLink].x);
+    ImGui::ColorEdit4("TextSelectedBg", &style.Colors[ImGuiCol_TextSelectedBg].x);
+    ImGui::ColorEdit4("TreeLines", &style.Colors[ImGuiCol_TreeLines].x);
+    ImGui::ColorEdit4("DragDropTarget", &style.Colors[ImGuiCol_DragDropTarget].x);
+    ImGui::ColorEdit4("DragDropTargetBg", &style.Colors[ImGuiCol_DragDropTargetBg].x);
+    ImGui::ColorEdit4("UnsavedMarker", &style.Colors[ImGuiCol_UnsavedMarker].x);
+    ImGui::ColorEdit4("NavCursor", &style.Colors[ImGuiCol_NavCursor].x);
+    ImGui::ColorEdit4("NavWindowingHighlight", &style.Colors[ImGuiCol_NavWindowingHighlight].x);
+    ImGui::ColorEdit4("NavWindowingDimBg", &style.Colors[ImGuiCol_NavWindowingDimBg].x);
+    ImGui::ColorEdit4("ModalWindowDimBg", &style.Colors[ImGuiCol_ModalWindowDimBg].x);
+    ImGui::ColorEdit4("COUNT", &style.Colors[ImGuiCol_COUNT].x);
+
+    ImGui::SeparatorText("Properties");
+
+    ImGui::DragFloat("Font size", &ImGui::GetIO().FontGlobalScale);
+    ImGui::DragFloat("Indent spaceing", &style.IndentSpacing);
+    ImGui::DragFloat("Frame rounding", &style.FrameRounding, 0.01);
+    ImGui::DragFloat2("Item spaceing", &style.ItemSpacing.x);
+    ImGui::DragFloat2("Item inner spaceing", &style.ItemInnerSpacing.x);
+    ImGui::DragFloat2("Frame padding", &style.FramePadding.x, 0.01);
+    ImGui::DragFloat2("Cell padding", &style.CellPadding.x, 0.01);
+    ImGui::DragFloat2("Window padding", &style.WindowPadding.x, 0.01);
+
+    ImGui::End();
 }
 
-void EditorLayer::RenderUI() 
+void EditorLayer::StoreImGuiStyle(std::string_view filename, const ImGuiStyle& style) 
 {
-    ImGui::Begin("Game View");
+    FILE* fp = fopen(filename.data(), "wb");
+    fwrite(style.Colors, sizeof(style.Colors), 1, fp);
+    fclose(fp);
+}
+
+void EditorLayer::LoadImGuiStyle(std::string_view filename, ImGuiStyle& style) 
+{
+    FILE* fp = fopen(filename.data(), "rb");
+    fread(style.Colors, sizeof(style.Colors), 1, fp);
+    fclose(fp);
+}
+
+void EditorLayer::GameView()
+{
+    if(!mGameViewEnable)    
+        return;
+
+
+    ImGui::Begin("Game View", &mGameViewEnable, ImGuiWindowFlags_NoCollapse);
     
     mViewSize = glm::uvec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
     
@@ -67,9 +160,27 @@ void EditorLayer::RenderUI()
     mEditorCameraController.EnableMouseControl(ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left));
 
     ImGui::End();
+}
 
-    ImGui::Begin("Control Panel");
+void EditorLayer::ControlPanel()
+{
+    if(!mContentPanelEnable)    
+        return;
 
+    std::string string;
+    static bool opened = true;
+
+    try {
+        
+        ImGuiHelper::FileDialog("test", string, opened);
+    } catch (std::exception e) 
+    {
+        ImGuiHelper::ClearFileDialogData("test");
+        ERROR("{}", e.what());
+    }
+
+    ImGui::Begin("Control Panel", &mContentPanelEnable, ImGuiWindowFlags_NoCollapse);
+    
     ImGui::SeparatorText("Camera");
 
     ImGuiHelper::DragVec3("Position", mEditorCamera.GetPositionRef(), 0.01f);
@@ -85,89 +196,99 @@ void EditorLayer::RenderUI()
     ImGui::DragFloat("Speed", &mEditorCameraController.GetSpeedRef());
     ImGui::DragFloat("Sensitivity", &mEditorCameraController.GetSensitivityRef());
 
+    ImGui::SeparatorText("Other");
+
+    if(ImGui::Button("...")) { opened = !opened; }
+
     ImGui::End();
+}
 
-    if(mEnableImageViewer)
+void EditorLayer::RenderUI() 
+{
+    if(mDemoWindowEnable)
+        ImGui::ShowDemoWindow(&mDemoWindowEnable);
+
+    GameView();
+    ControlPanel();
+    CustomizationWindow();
+    MainMenuBar();
+}
+
+void IconWindowToggle(std::string_view label, char iconCharacter, bool& opened)
+{
+    ImGuiHelper::IconCharacterSameLine(iconCharacter);
+    if(ImGui::MenuItem(label.data()))
     {
-        ImGui::Begin("Image Viewer");
+        opened = !opened;
+    }
+}
+
+void EditorLayer::MainMenuBar()
+{
+    if(!ImGui::BeginMainMenuBar()) return;
+
+    if(ImGui::BeginMenu("File"))
+    {
+        ImGui::EndMenu();
+    }
+    if(ImGui::BeginMenu("Edit"))
+    {
+        ImGuiHelper::IconCharacter('W');
+        ImGui::SameLine();
+        if(ImGui::MenuItem("Reload icon font"))
+        {
+            ImGui::GetIO().Fonts->RemoveFont(ImGuiHelper::iconFont);
+            ImGuiHelper::iconFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("./icon.ttf");
+        }
+        ImGui::EndMenu();
+    }
+    if(ImGui::BeginMenu("View"))
+    {
+        IconWindowToggle("Customization Window", '@', mCustomizeWindowEnable);
+        IconWindowToggle("Demo Window", '\\', mDemoWindowEnable);
+        IconWindowToggle("Control Panel", 'Q', mContentPanelEnable);
+        IconWindowToggle("Game View", 'R', mGameViewEnable);
+        ImGui::EndMenu();
+    }
+    if(ImGui::BeginMenu("Window"))
+    {
+        ImGuiHelper::IconCharacterSameLine('A');
+        if (ImGui::MenuItem("Close"))
+        {
+            Application::GetInstance()->Close();
+        }
+
+        ImGuiHelper::IconCharacterSameLine(GetWindow().isFullscreen() ? '?' : '>');
+        if(ImGui::MenuItem("Toggle Fullscreen"))
+        {
+            GetWindow().SetFullscreen(!GetWindow().isFullscreen());
+        }
+
         
-        static std::string currentItem = "";
-
-        if(ImGui::BeginCombo("Images", currentItem.c_str()))
+        if(GetWindow().IsMaximized())
         {
-            for (auto& [name, image] : mImageMap) 
-            {
-                if(ImGui::Selectable(name.c_str(), currentItem == name))
-                {
-                    currentItem = name;
+            ImGuiHelper::IconCharacterSameLine('m');
+            if(ImGui::MenuItem("Minimize"))
+                GetWindow().Restore();
+        }
+        else
+        {
+            ImGuiHelper::IconCharacterSameLine('n');
+            if(ImGui::MenuItem("Maximize"))
+                GetWindow().Maximize();
 
-                    SetImageView(mImageMap[currentItem]);
-                }
-            }
-            ImGui::EndCombo();
         }
 
-        ImGui::Image(mImageViewId, ImGui::GetContentRegionAvail(), {0,1}, {1,0});
-        ImGui::End();
+        ImGui::EndMenu();
     }
-
-    if(ImGui::BeginMainMenuBar())
-    {
-        if(ImGui::BeginMenu("File"))
-        {
-            ImGui::EndMenu();
-        }
-        if(ImGui::BeginMenu("Edit"))
-        {
-            ImGui::EndMenu();
-        }
-        if(ImGui::BeginMenu("View"))
-        {
-            ImGui::Checkbox("Image Viewer", &mEnableImageViewer);
-            ImGui::EndMenu();
-        }
-        if(ImGui::BeginMenu("Window"))
-        {
-            if (ImGui::MenuItem("Close"))
-            {
-                Application::GetInstance()->Close();
-            }
-            if(ImGui::MenuItem("Toggle Fullscreen"))
-            {
-                Application::GetInstance()->GetWindowRef().SetFullscreen(!Application::GetInstance()->GetWindowRef().isFullscreen());
-            }
-
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
+    ImGui::EndMainMenuBar();
 }
 
-void EditorLayer::SetImage(const std::string& name, const Image& image) 
+void EditorLayer::SetRenderTarget(RenderTarget *renderTarget) 
 {
-    mImageMap[name] = image;    
+    mRenderTarget = renderTarget;
 }
-
-bool EditorLayer::RendererEventCallback(uint32_t code, void* data) 
-{
-    RendererEvent event = (RendererEvent)code;
-
-    switch (event) 
-    {
-        case RendererEvent::DeferredAttachmentResize:
-        {
-            vkDeviceWaitIdle(getDevice());
-            DeferredSubpassAttachment* attachment = (DeferredSubpassAttachment*)data;
-            SetImage("Albedo", attachment->albedo);
-            SetImage("Position", attachment->position);
-            SetImage("Normal", attachment->normal);
-            SetImage("Depth", attachment->depth);
-        }
-        break;
-    }
-
-    return false;
-}
+const Camera &EditorLayer::GetEditorCamera() const { return mEditorCamera; }
 
 bool EditorLayer::OnEvent(uint32_t code, void *data) 
 {
@@ -178,25 +299,25 @@ bool EditorLayer::OnEvent(uint32_t code, void *data)
         for (int i = 0; i < mImGuiFrameBuffer.size(); i++)
         {
             mImGuiFrameBuffer[i].Destroy();
-            mImGuiFrameBuffer[i].Create(mRenderer->GetSwapchain().GetSize(), 
-            {mRenderer->GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
+            mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(), 
+            {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
         }
     }
-
     return false;
 }
 
 
-void customStyle() 
+void EditorLayer::CustomStyle() 
 {
-    ImGui::GetIO().Fonts->AddFontFromFileTTF("./inter.ttf", 18);
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Adwaita/AdwaitaSans-Regular.ttf", 18);
+    ImGuiHelper::iconFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("./icon.ttf", 16);
 
     ImGuiStyle &style = ImGui::GetStyle(); 
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.01,0.01,0.01,1);
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.02,0.02,0.02,1);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.01,0.01,0.01,1);
-    style.Colors[ImGuiCol_Tab] = ImVec4(0,0,0,1);
- 
+    style.FramePadding = ImVec2(8, 6);
+    style.WindowPadding = ImVec2(8,8);
+    style.ItemSpacing = ImVec2(8, 4);
+    style.ItemInnerSpacing = ImVec2(4, 4);
+    style.FrameRounding = 5.5f;
 }
 
 void EditorLayer::InitializeImGui() 
@@ -206,7 +327,7 @@ void EditorLayer::InitializeImGui()
 
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    customStyle();
+    CustomStyle();
 
     VkDescriptorPoolSize poolSize = 
     {
@@ -227,7 +348,7 @@ void EditorLayer::InitializeImGui()
     VkDescriptorPool descriptorPool;
     vkCreateDescriptorPool(getDevice(), &createInfo, nullptr, &descriptorPool);
 
-    mImGuiRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
+    mImGuiRenderPass.AddAttachment(ImageFormat::BGRA8UNORM, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
     mImGuiRenderPass.AddSubpass({0}, {}, UINT32_MAX, PipelineBindPoint::Graphic);
     mImGuiRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
     mImGuiRenderPass.Create();
@@ -240,8 +361,8 @@ void EditorLayer::InitializeImGui()
         .QueueFamily = getQueueIndices().graphics,
         .Queue = getQueues().graphics,
         .DescriptorPool = descriptorPool,
-        .MinImageCount = mRenderer->GetSwapchain().GetImageCount(),
-        .ImageCount = mRenderer->GetSwapchain().GetImageCount(),
+        .MinImageCount = GetRenderer().GetSwapchain().GetImageCount(),
+        .ImageCount = GetRenderer().GetSwapchain().GetImageCount(),
         .PipelineInfoMain = 
         {
             .RenderPass = mImGuiRenderPass.GetHandle(),
@@ -253,10 +374,10 @@ void EditorLayer::InitializeImGui()
     ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)Application::GetInstance()->GetWindowRef().GetNativeWindow(), true);
     ImGui_ImplVulkan_Init(&initInfo);
 
-    for (int i = 0; i < mRenderer->GetSwapchain().GetImageCount(); i++)
+    for (int i = 0; i < GetRenderer().GetSwapchain().GetImageCount(); i++)
     {
         FrameBuffer frameBuffer;
-        frameBuffer.Create(mRenderer->GetSwapchain().GetSize(), {mRenderer->GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
+        frameBuffer.Create(GetRenderer().GetSwapchain().GetSize(), {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
         mImGuiFrameBuffer.push_back(frameBuffer);
     }
 
@@ -265,10 +386,7 @@ void EditorLayer::InitializeImGui()
     mRenderingFinished.Create();
 
     if(mRenderTarget != nullptr)
-        mRenderViewTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(mRenderer->GetDefaultSampler().GetHandle(), mRenderTarget->GetImage().view, VK_IMAGE_LAYOUT_GENERAL);
-    
-
-    mImage = (ImTextureID)ImGui_ImplVulkan_AddTexture(mRenderer->GetDefaultSampler().GetHandle(), mRenderer->GetDeferredAttachments().albedo.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        mRenderViewTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(GetRenderer().GetDefaultSampler().GetHandle(), mRenderTarget->GetImage().view, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void EditorLayer::TerminateImGui() 
@@ -288,7 +406,7 @@ void EditorLayer::RenderImGui()
 
     ImGui::Render();
 
-    uint32_t imageIndex = mRenderer->GetSwapchain().GetNextImageIndex(mImageAcquiredSemaphore, {});
+    uint32_t imageIndex = GetRenderer().GetSwapchain().GetNextImageIndex(mImageAcquiredSemaphore, {});
 
     mImGuiCommandBuffer.BeginRecording();
 
@@ -303,7 +421,7 @@ void EditorLayer::RenderImGui()
     mImGuiCommandBuffer.QueueSubmit(getQueues().graphics, mImageAcquiredSemaphore, mRenderingFinished);
 
     VkSemaphore waitSemaphores[] = {mRenderingFinished.GetHandle()};
-    VkSwapchainKHR swapchains[] = {mRenderer->GetSwapchain().GetHandle()};
+    VkSwapchainKHR swapchains[] = {GetRenderer().GetSwapchain().GetHandle()};
 
     VkPresentInfoKHR presentInfo = 
     {
@@ -323,8 +441,8 @@ void EditorLayer::RenderImGui()
         for (int i = 0; i < mImGuiFrameBuffer.size(); i++)
         {
             mImGuiFrameBuffer[i].Destroy();
-            mImGuiFrameBuffer[i].Create(mRenderer->GetSwapchain().GetSize(), 
-            {mRenderer->GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
+            mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(), 
+            {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
         }
     }
     
@@ -344,7 +462,7 @@ void EditorLayer::ResizeRenderView(const glm::uvec2& size)
 
     VkDescriptorImageInfo imageInfo = 
     {
-        .sampler = mRenderer->GetDefaultSampler().GetHandle(), 
+        .sampler = GetRenderer().GetDefaultSampler().GetHandle(), 
         .imageView = mRenderTarget->GetImage().view,
         .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
     };

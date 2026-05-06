@@ -20,7 +20,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
         mSize = {800, 600};
     }
 
-    VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
+    VkFormat format = VK_FORMAT_B8G8R8A8_UNORM;
     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
     uint32_t imageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
@@ -53,7 +53,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
 
     for (VkImage image : images)
     {
-        VkImageView view = CreateImageView(image, ImageFormat::BGRA8, ImageAspect::Color);
+        VkImageView view = CreateImageView(image, ImageFormat::BGRA8UNORM, ImageAspect::Color);
         views.push_back(view);
     } 
     

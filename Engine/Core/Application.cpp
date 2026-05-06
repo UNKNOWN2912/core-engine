@@ -172,6 +172,7 @@ void Application::MainLoop()
 	
 	while (mRunning)
 	{
+		mFrameCounter++;
 		mDeltaTimer.Start();
 		mWindow.ProcessEvent();
 		OnUpdate();
