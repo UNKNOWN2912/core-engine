@@ -84,6 +84,10 @@ public:
 		return mLayerStack.Get<T>();
 	}
 
+
+
+	uint32_t GetFrameCount() const { return mFrameCounter; }
+
 private:
 	bool mRunning = true;
 	static Application* instance;
@@ -98,4 +102,6 @@ private:
 	float mDeltaTime = 0;
 
 	LayerStack mLayerStack;
+
+	uint32_t mFrameCounter = 0;
 };

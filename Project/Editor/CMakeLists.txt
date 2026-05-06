@@ -5,6 +5,7 @@ file(GLOB sources
     "imgui/*.cpp",
     "imgui/backends/imgui_impl_glfw.cpp",
     "imgui/backends/imgui_impl_vulkan.cpp",
+    "imgui/misc/cpp/imgui_stdlib.cpp",
 )
 
 add_executable(Editor ${sources}) 

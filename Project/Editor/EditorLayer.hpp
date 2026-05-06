@@ -1,13 +1,13 @@
 #pragma once
 #include "CameraController.hpp"
 #include "Core/LayerStack.hpp"
-#include "Renderer/Renderer.hpp"
 #include "imgui.h"
 
 
 class EditorLayer : public Layer
 {
     public: 
+
         void OnAttach() override;
         void OnUpdate() override;
         void OnDetach() override;
@@ -18,23 +18,12 @@ class EditorLayer : public Layer
         void RenderImGui();
 
         void RenderUI();
-        void SetRenderTarget(RenderTarget* renderTarget) 
-        {
-            mRenderTarget = renderTarget;
-        }
-        const Camera& GetEditorCamera() const { return mEditorCamera; }
-
-        void SetImage(const std::string& name, const Image& image);
-
-        bool RendererEventCallback(uint32_t code, void* data);
-
-        ImTextureID mImageViewId;
-        std::unordered_map<std::string, Image> mImageMap;
+        void SetRenderTarget(RenderTarget *renderTarget);
+        const Camera &GetEditorCamera() const;
 
         glm::uvec2 mViewSize = glm::uvec2(0);
 
         RenderPass mImGuiRenderPass;
-        Renderer* mRenderer;
         std::vector<FrameBuffer> mImGuiFrameBuffer;
 
         CommandBuffer mImGuiCommandBuffer;
@@ -43,7 +32,6 @@ class EditorLayer : public Layer
         Semaphore mRenderingFinished;
 
         ImTextureID mRenderViewTexture;
-        ImTextureID mImage;
 
         Sampler mSampler;
 
@@ -52,13 +40,27 @@ class EditorLayer : public Layer
         Camera mEditorCamera;
         CameraController mEditorCameraController;
 
-        bool mEnableImageViewer = false;
 
         void ResizeRenderView(const glm::uvec2& size);
 
         void UpdateCamera();
 
-        void SetImageView(const Image& image);
+        void CustomStyle();
 
+        void CustomizationWindow();
+
+        bool mCustomizeWindowEnable = false;
+        bool mDemoWindowEnable = false;
+        bool mContentPanelEnable = true;
+        bool mGameViewEnable = true;
+
+        void StoreImGuiStyle(std::string_view filename, const ImGuiStyle& style);
+        void LoadImGuiStyle(std::string_view filename, ImGuiStyle& style);
+
+        void MainMenuBar();
+
+        void GameView();
+
+        void ControlPanel();
 
 };
