@@ -8,7 +8,7 @@ A lightweight game engine written in C++ capable of 2d and 3d rendering
 - [Features](#features)
 - [Building Engine](#building-engine)
   - [Dependencies](#dependencies)
-  - [Building](#building)
+  - [Building editor](#building-editor)
 - [TODO List (More will be added in the future)](#todo-list-more-will-be-added-in-the-future)
 # Features
 <!-- - Editor(work in progress) -->
@@ -19,43 +19,17 @@ A lightweight game engine written in C++ capable of 2d and 3d rendering
 - `cmake`
 - `g++`
 - `vulkan sdk`
-## Building
+## Building editor
 ```bash
-mkdir out
-cd out
-cmake ..
-make -j12
+./buildAndRunEditor
 ```
 #### Single Line version
 ```bash
 mkdir out && cd out && cmake .. && make -j12
 ```
-
-<!-- # Running Editor
-- Goto project root directory
-```bash
-cd ..
-```
-- move Editor executable from `out/Project/Editor/` to `Project/Editor` (This is temporary and will be removed in the future)
-```bash
-mv out/Project/Editor/Editor Project/Editor
-```
-- Goto `Project/Editor`
-```bash
-cd Project/Editor
-```
-- Run the executable
-```bash
-./Editor
-```
-### Single Line version
-```bash
-cd .. && mv out/Project/Editor/Editor Project/Editor && cd Project/Editor && ./Editor
-``` -->
 # TODO List (More will be added in the future)
-- [ ] Abstract renderer and graphic (Currently Renderer is implemented directly in Vulkan.
+- [x] Abstract renderer and graphic (Currently Renderer is implemented directly in Vulkan.
 - [ ] Model Loading
-- [ ] Add Entity Component System(ECS)
-- [ ] Functional editor (Can make anything with current editor)
+- [x] Add Entity Component System(ECS)
 - [ ] Scripting language support
-- [ ] Editor
+- [x] Editor
