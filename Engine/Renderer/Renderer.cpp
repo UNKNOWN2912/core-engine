@@ -1,9 +1,11 @@
 #include "Renderer.hpp"
+#include <cstring>
 
 void Renderer::Initialize(const Window& window)
 {
     mContext.Create(window, true);
 
+    mDefaultSampler.SetFilter(Filter::Linear, Filter::Linear);
     mDefaultSampler.Create();
 
     mSwapchain.Create(window.GetSize(), PresentMode::Fifo);
@@ -19,7 +21,6 @@ void Renderer::Initialize(const Window& window)
 
     mComputeDescriptor.UpdateImage(mComputeImage, ImageLayout::General, mDefaultSampler, 0);
 
-
     mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
     mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
     mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
@@ -32,7 +33,7 @@ void Renderer::Initialize(const Window& window)
     mDeferredAttachmentDescriptor.UpdateImage(mDeferredAttachments.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
 
     mComputePipeline.LoadShader("Shaders/swapchain.comp.spv");
-    mComputePipeline.Create({mComputeDescriptor, mDeferredAttachmentDescriptor});
+    mComputePipeline.Create({&mComputeDescriptor, &mDeferredAttachmentDescriptor});
 
     // Render pass
     CreateDeferredRenderPass();
@@ -55,25 +56,63 @@ void Renderer::Initialize(const Window& window)
 
 void Renderer::Terminate() 
 {
-    
+    vkDeviceWaitIdle(getDevice());
+    mRendererUniformBuffer.Destroy();
 }
 
-void Renderer::Submit(const StaticMesh& mesh, const Material& material) 
+void Renderer::Submit(StaticMesh& mesh, Material& material) 
 {
+    assert(mFrameInfo.isRecording == true);
+
+
+    // RenderCommand renderCommand;
+    // renderCommand.vertexBuffer = &mesh.mVertexBuffer;    
+    // renderCommand.indexBuffer = &mesh.mIndexBuffer;
+    // renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
+    // renderCommand.pipeline = &material.GetPipelineRef();
+    // renderCommand.descriptors[0] = &material.GetImageDescriptorRef();    
+    // renderCommand.descriptors[1] = &material.GetUniformDescriptorRef();    
+    // renderCommand.descriptors[2] = &material.GetUserDescriptorRef();    
+    // renderCommand.descriptorCount = 3;
+
+    // if(material.IsInstancingEnabled())
+    // {
+    //     renderCommand.instanceBuffer = &material.GetInstanceBufferRef();
+    //     renderCommand.instanceCount = material.GetInstanceCount();
+    // }
+
+
+    // glm::mat4 matrix = Transform().GetMatrix();
+    // memcpy(renderCommand.pushContantData, &matrix, sizeof(matrix));
+    // renderCommand.pushContantSize = sizeof(matrix);
+
+    Submit(mesh, material, Transform());
+}
+
+void Renderer::Submit(StaticMesh& mesh, Material& material, const Transform& transform) 
+{
+    assert(mFrameInfo.isRecording == true);
+
     RenderCommand renderCommand;
-    renderCommand.vertexBuffer = mesh.mVertexBuffer;    
-    renderCommand.indexBuffer = mesh.mIndexBuffer;
+    renderCommand.vertexBuffer = &mesh.mVertexBuffer;    
+    renderCommand.indexBuffer = &mesh.mIndexBuffer;
     renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
-    renderCommand.pipeline = material.GetPipeline();
-    renderCommand.descriptors[0] = material.GetImageDescriptor();    
-    renderCommand.descriptors[1] = material.GetUniformDescriptor();    
+    renderCommand.pipeline = &material.GetPipelineRef();
+    renderCommand.descriptors[0] = &material.GetImageDescriptorRef();    
+    renderCommand.descriptors[1] = &material.GetUniformDescriptorRef();    
     renderCommand.descriptorCount = 2;
+
+    
 
     if(material.IsInstancingEnabled())
     {
-        renderCommand.instanceBuffer = material.GetInstanceBuffer();
+        renderCommand.instanceBuffer = &material.GetInstanceBufferRef();
         renderCommand.instanceCount = material.GetInstanceCount();
     }
+
+    glm::mat4 matrix = transform.GetMatrix();
+    memcpy(renderCommand.pushContantData, &matrix, sizeof(matrix));
+    renderCommand.pushContantSize = sizeof(matrix);
 
     Submit(renderCommand);
 }
@@ -117,28 +156,28 @@ void Renderer::EndFrame()
 
     // Begin Deferred render pass
 
-    mDeferredRenderPass.CmdBeginRenderPass(mRenderCommandBuffer, mDeferredFrameBuffer, mDeferredAttachments.size, {{0,0,0,1}, {0,0,0,1}, {0,0,0,1}, {1,1,1,1}, {0,0,0,1}});
+    mDeferredRenderPass.CmdBeginRenderPass(mRenderCommandBuffer, mDeferredFrameBuffer, mDeferredAttachments.size, {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {1,1,1,1}, {0,0,0,1}});
 
     for (int i = 0; i < mRenderCommands.size(); i++)
     {
         const RenderCommand& renderCommand = mRenderCommands[i];
 
         uint32_t vertexBufferCount = (renderCommand.instanceCount == 0) ? 1 : 2;
-        VkBuffer vertexBuffer[] = {renderCommand.vertexBuffer.handle, renderCommand.instanceBuffer.mBuffer.handle};
+        VkBuffer vertexBuffer[] = {renderCommand.vertexBuffer->handle, renderCommand.instanceBuffer->mBuffer.handle};
         VkDeviceSize offsets[] = {0, 0};
 
         vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, vertexBufferCount, vertexBuffer, offsets);
-        vkCmdBindIndexBuffer(mRenderCommandBuffer.GetHandle(), renderCommand.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(mRenderCommandBuffer.GetHandle(), renderCommand.indexBuffer->handle, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetHandle());
+        vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline->GetHandle());
 
         VkDescriptorSet descriptorSets[16];
         for (int j = 0; j < renderCommand.descriptorCount; j++)
         {
-            descriptorSets[j] = renderCommand.descriptors[j].GetDescriptorSet();
+            descriptorSets[j] = renderCommand.descriptors[j]->GetDescriptorSet();
         }
 
-        vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline.GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets, 0, nullptr);
+        vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline->GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets, 0, nullptr);
 
         VkViewport viewport = 
         {
@@ -155,6 +194,8 @@ void Renderer::EndFrame()
 
         vkCmdSetViewport(mRenderCommandBuffer.GetHandle(), 0, 1, &viewport);
         vkCmdSetScissor(mRenderCommandBuffer.GetHandle(), 0, 1, &scissor);
+
+        vkCmdPushConstants(mRenderCommandBuffer.GetHandle(), renderCommand.pipeline->GetPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, renderCommand.pushContantSize, renderCommand.pushContantData);
 
         if(renderCommand.instanceCount == 0)
             vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
@@ -275,7 +316,7 @@ void Renderer::CreateDeferredRenderPass()
 {
     mDeferredRenderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
     mDeferredRenderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA16, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferredRenderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
     mDeferredRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
 
     mDeferredRenderPass.AddSubpass({0,1,2}, {}, 3, PipelineBindPoint::Graphic);

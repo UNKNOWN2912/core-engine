@@ -11,7 +11,11 @@ class FrameBuffer
         void Destroy();
 
         VkFramebuffer GetHandle() const;
-    private:
+
+        FrameBuffer() {}
+        FrameBuffer(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass);
+        ~FrameBuffer();
+      private:
         VkFramebuffer mHandle = VK_NULL_HANDLE;
         glm::uvec2 size;
 };

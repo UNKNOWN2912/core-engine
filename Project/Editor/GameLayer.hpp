@@ -1,8 +1,16 @@
 #pragma once
 #include "CameraController.hpp"
 #include "Core/LayerStack.hpp"
+#include "EntityComponentSystem.hpp"
 #include "Renderer/Camera.hpp"
-#include "Renderer/Renderer.hpp"
+#include "Renderer/Transform.hpp"
+#include "assimp/scene.h"
+
+struct UniformData
+{
+    glm::vec3 lightPosition = glm::vec3(0);
+    float intensity = 0;
+};
 
 class GameLayer : public Layer
 {
@@ -16,6 +24,17 @@ class GameLayer : public Layer
         void DestroyMaterial();
 
         void CreateMaterial();
+
+        void ReloadMaterial();
+
+        Scene scene;
+
+
+        std::vector<std::shared_ptr<StaticMesh>> mModel;
+        std::vector<std::shared_ptr<Material>> mMaterial;
+        std::vector<Transform> mTransforms;
+
+        std::vector<std::pair<uint32_t, uint32_t>> mMeshMaterialPair;
 
         Camera mCamera;
         CameraController mCameraController;
@@ -35,5 +54,11 @@ class GameLayer : public Layer
 
 
         StaticMesh mesh;
+
+        void LoadNode(const aiScene* scene, aiNode* node, std::vector<std::shared_ptr<StaticMesh>>& meshes, std::vector<std::shared_ptr<Material>>& materials, std::vector<Transform>& transforms);
+
+        std::shared_ptr<StaticMesh> GetMeshFromAiMesh(const aiMesh* mesh);
+
+        std::shared_ptr<Material> GetMaterialFromAiMaterial(const aiMaterial* material);
 
 };

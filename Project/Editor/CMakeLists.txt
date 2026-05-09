@@ -10,3 +10,4 @@ file(GLOB sources
 
 add_executable(Editor ${sources}) 
 target_link_libraries(Editor Engine)
+target_link_libraries(Editor assimp)

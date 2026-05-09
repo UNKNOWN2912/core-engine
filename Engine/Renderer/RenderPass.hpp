@@ -1,7 +1,6 @@
 #pragma once
 #include "Renderer/FrameBuffer.hpp"
 #include "Renderer/Types.hpp"
-#include "glm/glm.hpp"
 #include <cstdint>
 #include <initializer_list>
 #include <vector>
@@ -36,7 +35,11 @@ class RenderPass
 
         void Create();
         void Destroy();
-    private:
+
+        RenderPass(){}
+        ~RenderPass();
+
+      private:
         std::vector<VkAttachmentDescription> mAttachments; 
         std::vector<VkSubpassDescription> mSubpasses; 
         std::vector<VkSubpassDependency> mDependencies; 

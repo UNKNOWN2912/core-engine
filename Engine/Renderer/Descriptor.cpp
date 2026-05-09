@@ -33,17 +33,21 @@ void Descriptor::Destroy()
 	DestroyDescriptorSetLayout();
 }
 
+Descriptor::~Descriptor() 
+{ 
+	Destroy(); 
+}
 
-void Descriptor::CreateDescriptorSetLayout()
+void Descriptor::CreateDescriptorSetLayout() 
 {
 	VkDescriptorSetLayoutCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .bindingCount = (uint32_t)mDescriptorBinding.size(),
-        .pBindings = mDescriptorBinding.data(),
-    };    
-
-    vkCreateDescriptorSetLayout(getDevice(), &createInfo, nullptr, &mSetLayout);
+	{
+	    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+	    .bindingCount = (uint32_t)mDescriptorBinding.size(),
+	    .pBindings = mDescriptorBinding.data(),
+	};
+	
+	vkCreateDescriptorSetLayout(getDevice(), &createInfo, nullptr, &mSetLayout);
 }
 void Descriptor::CreateDescriptorPool()
 {
@@ -87,16 +91,13 @@ void Descriptor::AllocateDescriptorSet()
 void Descriptor::DestroyDescriptorSetLayout() 
 {
 	vkDestroyDescriptorSetLayout(getDevice(), mSetLayout, nullptr);	
+	mSetLayout = VK_NULL_HANDLE;
 }
 
 void Descriptor::DestroyDescriptorPool() 
 {
 	vkDestroyDescriptorPool(getDevice(), mDescriptorPool, nullptr);	
-}
-
-void Descriptor::FreeDescriptorSet() 
-{
-	vkFreeDescriptorSets(getDevice(), mDescriptorPool, 1, &mSet);	
+	mDescriptorPool = VK_NULL_HANDLE;
 }
 
 

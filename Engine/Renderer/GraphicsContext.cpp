@@ -1,6 +1,5 @@
 #include "GraphicsContext.hpp"
 #include "Core/Macro.hpp"
-#include "GLFW/glfw3.h"
 
 VkBool32 validationCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, 
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -86,7 +85,7 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
     }
 
     {
-        glfwCreateWindowSurface(mInstance, (GLFWwindow*)window.GetNativeWindow(), nullptr, &mSurface);
+        glfwCreateWindowSurface(mInstance, window.GetNativeWindow(), nullptr, &mSurface);
     }
 
     {

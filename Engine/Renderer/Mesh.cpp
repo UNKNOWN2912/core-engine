@@ -7,13 +7,19 @@ StaticMesh::StaticMesh()
     CHROME_TRACE_FUNCTION();
 }
 
-StaticMesh::StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
+StaticMesh::StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();
     SetData(vertices, vertexSize, indices, indexSize);
+
 }
 
-void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize)
+StaticMesh::StaticMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+{
+    SetData(vertices, indices);
+}
+
+void StaticMesh::SetData(const void* vertices, size_t vertexSize, const uint32_t* indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();
     if(vertexSize != mVertexSize)
@@ -41,6 +47,11 @@ void StaticMesh::SetData(void* vertices, size_t vertexSize, uint32_t* indices, s
     TransferBufferData(mStagingIndexBuffer, mIndexBuffer);
 
     mIsValid = true;
+}
+
+void StaticMesh::SetData(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) 
+{
+    SetData(vertices.data(), sizeof(Vertex) * vertices.size(), indices.data(), sizeof(uint32_t) * indices.size());
 }
 
 void StaticMesh::Destroy() 

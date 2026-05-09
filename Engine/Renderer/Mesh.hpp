@@ -20,9 +20,11 @@ class StaticMesh
 {
     public:
         StaticMesh();
-        StaticMesh(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+        StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
+        StaticMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 
-        void SetData(void* vertices, size_t vertexSize, uint32_t* indices, size_t indexSize);
+        void SetData(const void* vertices, size_t vertexSize, const uint32_t* indices, size_t indexSize);
+        void SetData(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         bool IsValid() const { return mIsValid; }
 
         void Destroy();

@@ -25,6 +25,11 @@ void Layer::Transition()
     mLayerStack->Transition<Destination>(this);
 }
 
+Application* Layer::GetApplication() 
+{
+    return Application::GetInstance(); 
+}
+
 
 Window& Layer::GetWindow() 
 {

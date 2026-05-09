@@ -21,6 +21,8 @@ class Descriptor
 		VkDescriptorSetLayout GetDescriptorSetLayout() const { return mSetLayout; }
 		VkDescriptorPool GetDescriptorPool() const { return mDescriptorPool; }
 
+		~Descriptor();
+
 	private:
 		void CreateDescriptorSetLayout();
 		void CreateDescriptorPool();
@@ -28,7 +30,6 @@ class Descriptor
 
 		void DestroyDescriptorSetLayout();
 		void DestroyDescriptorPool();
-		void FreeDescriptorSet();
 
 		std::unordered_map<VkDescriptorType, uint32_t> mDescriptorTypeCount;
 		std::vector<VkDescriptorSetLayoutBinding> mDescriptorBinding;

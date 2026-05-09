@@ -15,7 +15,8 @@ void Editor::OnUpdate()
 
 void Editor::OnEnd()
 {
-    
+    DetachLayer<EditorLayer>();
+    DetachLayer<GameLayer>();
 }
 
 void Editor::OnKeyPress(Key key) 

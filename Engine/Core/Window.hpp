@@ -1,14 +1,9 @@
 #pragma once
+#define GLFW_INCLUDE_VULKAN
+#include "GLFW/glfw3.h"
 #include <Core/Event.hpp>
 #include <glm/glm.hpp>
 #include <string>
-
-struct WindowSpecification
-{
-	glm::uvec2 size = {800, 600};
-	glm::uvec2 position = {0,0};
-	std::string title = "Untitled";
-};
 
 enum class WindowEvent
 {
@@ -30,12 +25,24 @@ enum class WindowEvent
 	WindowCharacterType
 };
 
-struct WindowData;
+struct WindowData
+{
+	GLFWwindow* window = nullptr;
+	EventDispatcher dispatcher;
+	bool isMaximized = false;
+	struct PreFullscreenData 
+	{
+		int width = 0;
+		int height = 0;
+		int x = 0;
+		int y = 0;
+	} preFullscreenData;
+};
 
 class Window
 {
 public:
-	void Create(const WindowSpecification &specification);
+	void Create(const glm::uvec2& size, std::string_view title);
 	void Destroy();
 
 	glm::uvec2 GetSize() const;
@@ -48,7 +55,7 @@ public:
 	void SetTitle(const std::string& title);
 	void AddListener(std::function<bool(uint32_t code, void* data)> listener);
 	void ProcessEvent();
-	void* GetNativeWindow() const;
+	GLFWwindow* GetNativeWindow() const;
 
 	bool isFullscreen();
 	void SetFullscreen(bool fullscreen);
@@ -61,11 +68,16 @@ public:
 	void Restore();
 	bool IsMaximized();
 
+	Window() 
+	{
 
+	}
 
+	~Window();
 private:
-	WindowData* mData = nullptr;
+	WindowData mWindowData;
 };
+
 
 
 

@@ -367,7 +367,7 @@ Image CreateImage(const glm::uvec2& size, ImageFormat format, ImageUsage usage, 
         .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperty)),
     };
 
-    vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &image.memory);
+    VK_CHECK(vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &image.memory));
     vkBindImageMemory(getDevice(), image.handle, image.memory, 0);
 
     image.memorySize = requirements.size;
@@ -401,7 +401,7 @@ void DestroyImage(Image& image)
     vkDestroyImage(getDevice(), image.handle, nullptr);    
     vkFreeMemory(getDevice(), image.memory, nullptr);
 
-    image = Image();
+    image = {};
 }
 
 VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect)
