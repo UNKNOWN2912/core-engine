@@ -4,7 +4,6 @@
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
 #include "Renderer/Renderer.hpp"
-#include "Core/Macro.hpp"
 
 
 class Application
@@ -83,8 +82,6 @@ public:
 	{
 		return mLayerStack.Get<T>();
 	}
-
-
 
 	uint32_t GetFrameCount() const { return mFrameCounter; }
 

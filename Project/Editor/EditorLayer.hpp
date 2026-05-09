@@ -1,6 +1,7 @@
 #pragma once
 #include "CameraController.hpp"
 #include "Core/LayerStack.hpp"
+#include "EntityComponentSystem.hpp"
 #include "imgui.h"
 
 
@@ -19,48 +20,46 @@ class EditorLayer : public Layer
 
         void RenderUI();
         void SetRenderTarget(RenderTarget *renderTarget);
+        void ResizeRenderView(const glm::uvec2& size);
+        void UpdateCamera();
+        void CustomStyle();
+        void CustomizationWindow();
+        void StoreImGuiStyle(std::string_view filename, const ImGuiStyle& style);
+        void LoadImGuiStyle(std::string_view filename, ImGuiStyle& style);
+        void MainMenuBar();
+        void GameView();
+        void ControlPanel();
+        void EntityPanel();
+
         const Camera &GetEditorCamera() const;
+
+        bool mPropertyPanelEnable = true;
+        bool mCustomizeWindowEnable = false;
+        bool mDemoWindowEnable = false;
+        bool mContentPanelEnable = true;
+        bool mGameViewEnable = true;
+        bool mEntityPanelEnable = true;
+
+        Scene* mScene;
+        Entity mSelectedEntity;
 
         glm::uvec2 mViewSize = glm::uvec2(0);
 
         RenderPass mImGuiRenderPass;
         std::vector<FrameBuffer> mImGuiFrameBuffer;
-
         CommandBuffer mImGuiCommandBuffer;
-
         Semaphore mImageAcquiredSemaphore;
         Semaphore mRenderingFinished;
-
-        ImTextureID mRenderViewTexture;
-
         Sampler mSampler;
-
+        ImTextureID mRenderViewTexture;
         RenderTarget* mRenderTarget;
 
         Camera mEditorCamera;
         CameraController mEditorCameraController;
 
+        void PropertyPanel();
 
-        void ResizeRenderView(const glm::uvec2& size);
+        void LoadState(std::string_view filename);
 
-        void UpdateCamera();
-
-        void CustomStyle();
-
-        void CustomizationWindow();
-
-        bool mCustomizeWindowEnable = false;
-        bool mDemoWindowEnable = false;
-        bool mContentPanelEnable = true;
-        bool mGameViewEnable = true;
-
-        void StoreImGuiStyle(std::string_view filename, const ImGuiStyle& style);
-        void LoadImGuiStyle(std::string_view filename, ImGuiStyle& style);
-
-        void MainMenuBar();
-
-        void GameView();
-
-        void ControlPanel();
-
+        void StoreState(std::string_view filename);
 };

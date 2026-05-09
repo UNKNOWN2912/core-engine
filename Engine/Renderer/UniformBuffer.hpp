@@ -6,9 +6,13 @@ class UniformBuffer
 {
     public:
         void Create(size_t capacity);
+        void Destroy();
+        
         void SetData(size_t size, void* data);
         const Buffer& GetBuffer() const { return mBuffer; }
         size_t GetCapacity();
+
+
         
         UniformBuffer();
         ~UniformBuffer();

@@ -44,6 +44,11 @@ class Material
         const Descriptor& GetImageDescriptor() const { return mImageDescriptor; }
         const Descriptor& GetUniformDescriptor() const { return mUniformDescriptor; }
 
+        GraphicsPipeline& GetPipelineRef() { return mPipeline; }
+        Descriptor& GetImageDescriptorRef() { return mImageDescriptor; }
+        Descriptor& GetUniformDescriptorRef() { return mUniformDescriptor; }
+
+
         uint32_t GetInstanceCount() const { return mInstanceCount; }
 
         void SetInstanceData(void* data, size_t size);
@@ -52,6 +57,8 @@ class Material
         bool IsInstancingEnabled() const { return mEnableInstancing; }
 
         const InstanceBuffer& GetInstanceBuffer() const { return mInstanceBuffer; }
+        InstanceBuffer& GetInstanceBufferRef() { return mInstanceBuffer; }
+
 
     private:
         float mLineWidth = 1.f;

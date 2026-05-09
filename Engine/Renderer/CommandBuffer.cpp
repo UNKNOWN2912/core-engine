@@ -57,3 +57,8 @@ void CommandBuffer::QueueSubmit(VkQueue queue, const Semaphore& waitSemaphore, c
 
     vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 }
+
+CommandBuffer::~CommandBuffer()
+{
+    Destroy();
+}

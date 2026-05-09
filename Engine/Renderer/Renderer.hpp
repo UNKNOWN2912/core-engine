@@ -8,22 +8,25 @@
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Swapchain.hpp"
 #include "Renderer/Synchronization.hpp"
+#include "Renderer/Transform.hpp"
 #include "Renderer/UniformBuffer.hpp"
 #include "RendererAttachments.hpp"
 
 struct RenderCommand
 {
-    Buffer vertexBuffer;
-    Buffer indexBuffer;
+    Buffer* vertexBuffer;
+    Buffer* indexBuffer;
+    uint32_t indexCount = 0;
 
-    InstanceBuffer instanceBuffer;
+    InstanceBuffer* instanceBuffer;
     uint32_t instanceCount = 0;
     
-    GraphicsPipeline pipeline;
-    Descriptor descriptors[16];
-
+    GraphicsPipeline* pipeline;
+    Descriptor* descriptors[16];
     uint32_t descriptorCount = 0;
-    uint32_t indexCount = 0;
+
+    std::byte pushContantData[128];
+    size_t pushContantSize = 0;
 };
 
 struct FrameInfo
@@ -50,7 +53,8 @@ class Renderer
         void Initialize(const Window& window);
         void Terminate();
 
-        void Submit(const StaticMesh& mesh, const Material& material);
+        void Submit(StaticMesh& mesh, Material& material);
+        void Submit(StaticMesh& mesh, Material& material, const Transform& transform);
         void Submit(const RenderCommand& renderCommand);
 
         void BeginFrame(RenderTarget& renderTarget, const Camera& camera = {});
@@ -70,6 +74,11 @@ class Renderer
         void AddListener(std::function<bool (uint32_t, void *)> listener);
 
         void QueueSwapchainResize(const glm::uvec2& size);
+
+        ~Renderer()
+        {
+            Terminate();
+        }
 
     private:
         // Render passes

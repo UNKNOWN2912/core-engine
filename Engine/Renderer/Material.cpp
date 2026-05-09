@@ -14,6 +14,7 @@ void Material::LoadShaders(std::string_view vertexShaderFilename, std::string_vi
 
 void Material::Create() 
 {
+    mAlbedoSampler.SetFilter(Filter::Linear, Filter::Linear);
     mAlbedoSampler.Create();
 
     mImageDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
@@ -24,6 +25,7 @@ void Material::Create()
     mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
     mUniformDescriptor.Create();
     mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetRendererUniformBuffer().GetBuffer(), 0);
+
 
 
     mPipeline.SetCullMode(mCullMode);
@@ -39,7 +41,14 @@ void Material::Create()
     if(mAttributeCount == 0)
         SetDefaultAttribute();
 
-    mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout(), mUniformDescriptor.GetDescriptorSetLayout()}, {}));
+    VkPushConstantRange range = 
+    {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(glm::mat4),
+    };
+
+    mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout(), mUniformDescriptor.GetDescriptorSetLayout()}, {range}));
 
     mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
 }
@@ -147,6 +156,7 @@ void Material::SetInstanceBuffer(const InstanceBuffer& instanceBuffer)
 {
     mInstanceBuffer = instanceBuffer;
 }
+
 
 void Material::SetDefaultAttribute() 
 {

@@ -4,7 +4,10 @@
 #include "ImGuiHelper.hpp"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
+#include "imgui_internal.h"
+#include "misc/cpp/imgui_stdlib.h"
 
+#include <string>
 
 void EditorLayer::OnAttach() 
 {
@@ -12,6 +15,40 @@ void EditorLayer::OnAttach()
     mEditorCameraController.SetCamera(mEditorCamera, Application::GetInstance()->GetWindowRef());
     InitializeImGui();
     LoadImGuiStyle("style.bin", ImGui::GetStyle());
+
+    LoadState("state.bin");
+
+    mScene = &GetLayer<GameLayer>().scene;
+}
+
+void EditorLayer::LoadState(std::string_view filename)
+{
+    FILE* fp = fopen(filename.data(), "rb");
+    if(fp == nullptr)
+        return;
+
+    fread(&mContentPanelEnable, sizeof(bool), 1, fp);
+    fread(&mPropertyPanelEnable, sizeof(bool), 1, fp);
+    fread(&mCustomizeWindowEnable, sizeof(bool), 1, fp);
+    fread(&mDemoWindowEnable, sizeof(bool), 1, fp);
+    fread(&mContentPanelEnable, sizeof(bool), 1, fp);
+    fread(&mGameViewEnable, sizeof(bool), 1, fp);
+    fread(&mEntityPanelEnable, sizeof(bool), 1, fp);
+    fclose(fp);
+}
+
+void EditorLayer::StoreState(std::string_view filename) 
+{
+    FILE* fp = fopen(filename.data(), "wb");
+
+    fwrite(&mContentPanelEnable, sizeof(bool), 1, fp);
+    fwrite(&mPropertyPanelEnable, sizeof(bool), 1, fp);
+    fwrite(&mCustomizeWindowEnable, sizeof(bool), 1, fp);
+    fwrite(&mDemoWindowEnable, sizeof(bool), 1, fp);
+    fwrite(&mContentPanelEnable, sizeof(bool), 1, fp);
+    fwrite(&mGameViewEnable, sizeof(bool), 1, fp);
+    fwrite(&mEntityPanelEnable, sizeof(bool), 1, fp);
+    fclose(fp);
 }
 
 void EditorLayer::UpdateCamera()
@@ -29,6 +66,7 @@ void EditorLayer::OnUpdate()
 
 void EditorLayer::OnDetach() 
 {
+    LOG("deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
     TerminateImGui();
 }
 
@@ -141,6 +179,9 @@ void EditorLayer::StoreImGuiStyle(std::string_view filename, const ImGuiStyle& s
 void EditorLayer::LoadImGuiStyle(std::string_view filename, ImGuiStyle& style) 
 {
     FILE* fp = fopen(filename.data(), "rb");
+    if(fp == nullptr)
+        return;
+    
     fread(style.Colors, sizeof(style.Colors), 1, fp);
     fclose(fp);
 }
@@ -159,7 +200,165 @@ void EditorLayer::GameView()
     mEditorCameraController.EnableKeyboardControl(ImGui::IsItemHovered());
     mEditorCameraController.EnableMouseControl(ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left));
 
+    if(ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+    {
+        GetWindow().HideCursor();
+    }
+    else
+    {
+        GetWindow().ShowCursor();
+    }
+
     ImGui::End();
+}
+
+void EditorLayer::EntityPanel()
+{
+    if(!mEntityPanelEnable)
+        return;
+
+    ImGui::Begin("Entity Panel", &mEntityPanelEnable, ImGuiWindowFlags_NoCollapse);
+
+    bool focus = false;
+    static bool createEntityBox = false;
+
+    if(ImGui::IsWindowHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+    {
+        ImGui::OpenPopup("Right click menu");
+    }
+
+    static bool cfocus = false;
+
+    if(ImGui::IsWindowHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    {
+        cfocus = true;
+        createEntityBox = true;
+    }
+
+    if(ImGui::BeginPopup("Right click menu"))
+    {
+        if(ImGui::Button("Create entity"))
+        {
+            cfocus = true;
+            createEntityBox = true;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+
+
+    auto entities = mScene->GetEntities<EntityMetadata>();
+
+    for (auto pair : entities) 
+    {
+        bool selected = false;
+        if(mSelectedEntity.IsValid())
+        {
+            if(mSelectedEntity == pair.first)
+                selected = true;
+        }
+        ImGuiHelper::IconCharacterSameLine('r');
+        if(ImGui::Selectable(pair.second.name.c_str(), selected))
+        {
+            mSelectedEntity = pair.first;
+        }
+    }
+
+    if(createEntityBox)
+    {
+        static std::string name;
+
+        ImGuiHelper::IconCharacterSameLine('r');
+        if(ImGui::InputText("##name", &name, ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            mScene->CreateEntity(name);
+            createEntityBox = false;
+        }
+        
+        if(!ImGui::IsItemActive() && cfocus == false)
+        {
+            createEntityBox = false;
+        }
+
+        if(cfocus)
+        {
+            ImGui::ActivateItemByID(ImGui::GetItemID());
+            cfocus = false;
+        }
+
+        if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
+            createEntityBox = false;
+        }
+    }
+
+    ImGui::End();
+}
+
+void EditorLayer::PropertyPanel()
+{
+    if(!mPropertyPanelEnable)    
+        return;
+
+
+
+    ImGui::Begin("Properties", &mPropertyPanelEnable, ImGuiWindowFlags_NoCollapse);
+
+    if(!mSelectedEntity.IsValid())
+    {
+        ImGui::End();
+        return;
+    }
+
+    if(ImGui::Button("Add Component"))
+    {
+        ImGui::OpenPopup("Components");
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, {0.5, 0.5});
+    }
+
+    if(ImGui::BeginPopup("Components"))
+    {
+        if((ImGui::Button("Transform")))
+        {
+            mSelectedEntity.AddComponent<Transform>();
+        }
+        ImGui::EndPopup();
+    }
+
+
+    ImGui::SeparatorText("Entity");
+    ImGui::Text("Id: %d", mSelectedEntity.GetId());
+
+    if(mSelectedEntity.HasComponent<Transform>())
+    {
+        ImGui::SeparatorText("Transform");
+        Transform& transform = mSelectedEntity.GetComponent<Transform>();
+
+        bool hideCursor = false;
+
+        ImGuiHelper::DragVec3("Position", transform.position, 0.01f);
+        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left)) ? true : hideCursor;
+        ImGuiHelper::DragVec3("Rotation", transform.rotation, 0.01f);
+        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left)) ? true : hideCursor;
+        ImGuiHelper::DragVec3("Scale", transform.scale, 0.01f);
+        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left)) ? true : hideCursor;
+
+        if(hideCursor)
+        {
+            GetWindow().HideCursor();
+        }
+        else if(GetWindow().isCursorHidden())
+        {
+            GetWindow().ShowCursor();
+        }
+    }
+
+
+    ImGui::End();
+
+
+    
 }
 
 void EditorLayer::ControlPanel()
@@ -167,17 +366,6 @@ void EditorLayer::ControlPanel()
     if(!mContentPanelEnable)    
         return;
 
-    std::string string;
-    static bool opened = true;
-
-    try {
-        
-        ImGuiHelper::FileDialog("test", string, opened);
-    } catch (std::exception e) 
-    {
-        ImGuiHelper::ClearFileDialogData("test");
-        ERROR("{}", e.what());
-    }
 
     ImGui::Begin("Control Panel", &mContentPanelEnable, ImGuiWindowFlags_NoCollapse);
     
@@ -196,10 +384,6 @@ void EditorLayer::ControlPanel()
     ImGui::DragFloat("Speed", &mEditorCameraController.GetSpeedRef());
     ImGui::DragFloat("Sensitivity", &mEditorCameraController.GetSensitivityRef());
 
-    ImGui::SeparatorText("Other");
-
-    if(ImGui::Button("...")) { opened = !opened; }
-
     ImGui::End();
 }
 
@@ -211,6 +395,8 @@ void EditorLayer::RenderUI()
     GameView();
     ControlPanel();
     CustomizationWindow();
+    EntityPanel();
+    PropertyPanel();
     MainMenuBar();
 }
 
@@ -240,6 +426,12 @@ void EditorLayer::MainMenuBar()
             ImGui::GetIO().Fonts->RemoveFont(ImGuiHelper::iconFont);
             ImGuiHelper::iconFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("./icon.ttf");
         }
+        ImGuiHelper::IconCharacter('W');
+        ImGui::SameLine();
+        if(ImGui::MenuItem("Reload material"))
+        {
+            GetLayer<GameLayer>().ReloadMaterial();
+        }
         ImGui::EndMenu();
     }
     if(ImGui::BeginMenu("View"))
@@ -248,6 +440,8 @@ void EditorLayer::MainMenuBar()
         IconWindowToggle("Demo Window", '\\', mDemoWindowEnable);
         IconWindowToggle("Control Panel", 'Q', mContentPanelEnable);
         IconWindowToggle("Game View", 'R', mGameViewEnable);
+        IconWindowToggle("Property View", '<', mPropertyPanelEnable);
+        IconWindowToggle("Entity Panel", 'r', mEntityPanelEnable);
         ImGui::EndMenu();
     }
     if(ImGui::BeginMenu("Window"))
@@ -298,6 +492,7 @@ bool EditorLayer::OnEvent(uint32_t code, void *data)
     {
         for (int i = 0; i < mImGuiFrameBuffer.size(); i++)
         {
+            vkDeviceWaitIdle(getDevice());
             mImGuiFrameBuffer[i].Destroy();
             mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(), 
             {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
@@ -326,6 +521,7 @@ void EditorLayer::InitializeImGui()
     ImGui::CreateContext();
 
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 
     CustomStyle();
 
@@ -374,11 +570,10 @@ void EditorLayer::InitializeImGui()
     ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)Application::GetInstance()->GetWindowRef().GetNativeWindow(), true);
     ImGui_ImplVulkan_Init(&initInfo);
 
+    mImGuiFrameBuffer.reserve(GetRenderer().GetSwapchain().GetImageCount());
     for (int i = 0; i < GetRenderer().GetSwapchain().GetImageCount(); i++)
     {
-        FrameBuffer frameBuffer;
-        frameBuffer.Create(GetRenderer().GetSwapchain().GetSize(), {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
-        mImGuiFrameBuffer.push_back(frameBuffer);
+        mImGuiFrameBuffer.emplace_back(GetRenderer().GetSwapchain().GetSize(), std::initializer_list<Image>{GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
     }
 
     mImGuiCommandBuffer.Create();
@@ -391,7 +586,10 @@ void EditorLayer::InitializeImGui()
 
 void EditorLayer::TerminateImGui() 
 {
-    
+    StoreState("state.bin");
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void EditorLayer::RenderImGui() 

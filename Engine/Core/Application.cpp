@@ -1,5 +1,5 @@
-#include "Application.hpp"
 #include "Input/Mouse.hpp"
+#include "Application.hpp"
 #include <cassert>
 
 void Application::InitializeApplication()
@@ -8,11 +8,7 @@ void Application::InitializeApplication()
 
 	mApplicationTimer.Start();
 
-	WindowSpecification windowSpecification;
-	windowSpecification.size = glm::uvec2(800, 600);
-	windowSpecification.title = "world";
-
-	mWindow.Create(windowSpecification);
+	mWindow.Create(glm::uvec2(800, 600), "Untitled");
 	mWindow.AddListener(BindMember(Application::WindowEventCallback));
 
 	mRenderer.Initialize(mWindow);
@@ -22,8 +18,6 @@ void Application::InitializeApplication()
 void Application::TerminateApplication()
 {
 	CHROME_TRACE_FUNCTION();
-	mRenderer.Terminate();
-	mWindow.Destroy();
 }
 
 void Application::RunApplication()

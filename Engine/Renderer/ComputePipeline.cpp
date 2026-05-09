@@ -2,14 +2,14 @@
 #include "Renderer/GraphicsContext.hpp"
 #include "Renderer/Utility.hpp"
 
-void ComputePipeline::Create(std::initializer_list<Descriptor> descriptors) 
+void ComputePipeline::Create(const std::vector<Descriptor*>& descriptors) 
 {
 
     std::vector<VkDescriptorSetLayout> setLayouts;
 
-    for (const Descriptor& des : descriptors) 
+    for (const Descriptor* des : descriptors) 
     {
-        setLayouts.push_back(des.GetDescriptorSetLayout());
+        setLayouts.push_back(des->GetDescriptorSetLayout());
     }
 
     VkPipelineLayoutCreateInfo pipelineCreateInfo = 
@@ -39,6 +39,13 @@ void ComputePipeline::Create(std::initializer_list<Descriptor> descriptors)
     vkCreateComputePipelines(getDevice(), VK_NULL_HANDLE, 1, &createInfo, nullptr, &mHandle);
 }
 
+void ComputePipeline::Destroy() 
+{
+    vkDestroyPipelineLayout(getDevice(), mLayout, nullptr);
+    vkDestroyShaderModule(getDevice(), mShader, nullptr);    
+    vkDestroyPipeline(getDevice(), mHandle, nullptr);
+}
+
 VkPipelineLayout ComputePipeline::GetPipelineLayout() const 
 {
     return mLayout;    
@@ -47,6 +54,11 @@ VkPipelineLayout ComputePipeline::GetPipelineLayout() const
 VkPipeline ComputePipeline::GetHandle() const 
 {
     return mHandle; 
+}
+
+ComputePipeline::~ComputePipeline()
+{
+    Destroy();
 }
 
 void ComputePipeline::LoadShader(std::string_view filename) 

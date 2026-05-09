@@ -10,13 +10,13 @@ class Texture
 {
     public:
         void Create(void* data, const glm::uvec2& size, ImageFormat format);
-        void Load(std::string_view filename);
         void Destroy();
-        
+
+        void Load(std::string_view filename);
+        const Image& GetImage() const { return mImage; }
         bool IsValid() const { return mIsValid; }
 
-        const Image& GetImage() const { return mImage; }
-
+        ~Texture();
       private:
         bool mIsValid = false;
         Image mImage;

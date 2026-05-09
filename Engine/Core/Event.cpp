@@ -12,3 +12,12 @@ void EventDispatcher::RemoveListener(std::function<bool(uint32_t code, void* dat
         }
     }
 }
+void EventDispatcher::Dispatch(int code, void *data) {
+  for (size_t i = 0; i < mListeners.size(); i++) {
+    if (mListeners[i](code, data) == true) {
+      return;
+    }
+  }
+}
+
+EventDispatcher::~EventDispatcher() { mListeners.clear(); }

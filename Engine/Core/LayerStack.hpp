@@ -7,6 +7,8 @@
 
 class LayerStack;
 
+class Application;
+
 class Layer
 {
     public:
@@ -23,6 +25,8 @@ class Layer
 
         void EnableLayer(bool enable) { mEnabled = enable; }
         bool isEnabled() const { return mEnabled; }
+
+        Application* GetApplication();
 
 
         
@@ -144,6 +148,15 @@ class LayerStack
         }
 
         static const uint32_t InvalidPosition = UINT32_MAX;
+
+        LayerStack()
+        {
+            mLayers.reserve(32);
+        }
+        ~LayerStack()
+        {
+            mLayers.clear();
+        }
     private:
         std::vector<std::unique_ptr<Layer>> mLayers;
 };

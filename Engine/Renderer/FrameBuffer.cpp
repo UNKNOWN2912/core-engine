@@ -31,3 +31,12 @@ void FrameBuffer::Destroy()
 
 VkFramebuffer FrameBuffer::GetHandle() const { return mHandle; }
 
+FrameBuffer::FrameBuffer(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass)
+{
+    Create(size, attachments, renderPass);
+}
+
+FrameBuffer::~FrameBuffer() 
+{ 
+    Destroy(); 
+}

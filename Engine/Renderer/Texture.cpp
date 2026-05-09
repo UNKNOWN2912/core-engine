@@ -41,14 +41,11 @@ void Texture::Load(std::string_view filename)
 
     Create(data, size, ImageFormat::RGBA8);
 }
+Texture::~Texture() { Destroy(); }
 
 void Texture::Destroy() 
 {
     DestroyImage(mImage);
     DestroyBuffer(mStagingBuffer);
-
-    mImage = {};
-    mStagingBuffer = {};
-
     mIsValid = false;
 }

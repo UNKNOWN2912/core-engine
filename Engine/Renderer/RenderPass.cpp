@@ -182,5 +182,7 @@ void RenderPass::Create()
 }
 void RenderPass::Destroy() 
 {
-    vkDestroyRenderPass(getDevice(), mHandle, nullptr);    
+    vkDestroyRenderPass(getDevice(), mHandle, nullptr);
 }
+
+RenderPass::~RenderPass() { Destroy(); }

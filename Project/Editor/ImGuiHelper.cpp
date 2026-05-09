@@ -1,19 +1,24 @@
 #include "ImGuiHelper.hpp"
-#include "Core/Application.hpp"
-#include "Core/Macro.hpp"
 #include "imgui.h"
 #include <filesystem>
 #include <string>
-#include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
 
 namespace ImGuiHelper
 {
-    void DragVec3(std::string_view label, glm::vec3& value, float speed) 
+    bool DragVec3(std::string_view label, glm::vec3& value, float speed) 
     {
-        ImGui::DragFloat3(label.data(), &value.x, speed);    
+        return ImGui::DragFloat3(label.data(), &value.x, speed);    
     }
 
+    bool IconButton(char icon, const ImVec2& size)
+    {
+        char str[2] = {icon, 0};
+        ImGui::PushFont(iconFont);
+        bool result = ImGui::Button(str, size);
+        ImGui::PopFont();
+        return result;
+    }
 
     struct FileDialogData
     {
@@ -22,6 +27,9 @@ namespace ImGuiHelper
         std::string searchItem;
         uint32_t selected = UINT32_MAX;
         bool searchEnable = false;
+
+
+        std::vector<std::string> history;
     };
 
     std::string toLower(const std::string& string)
@@ -89,7 +97,8 @@ namespace ImGuiHelper
             directories.emplace_back(entry);
         }
 
-        ImGui::Begin(label.data(), &opened);
+        ImGui::Begin(label.data(), &opened, ImGuiWindowFlags_NoTitleBar);
+
 
         if(ImGui::InputText("##path", &data.editingPath, ImGuiInputTextFlags_EnterReturnsTrue))
         {
@@ -97,18 +106,25 @@ namespace ImGuiHelper
         }
         ImGui::SameLine();
         ImGui::PushFont(iconFont);
-        if(ImGui::Button("C"))
+        if(ImGui::Button("C") || ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
         {
+            if(data.currentPath != "/")
+            {
+                data.history.emplace_back(data.currentPath);
+            }
+
+
             size_t pos = data.editingPath.find_last_of('/');
             data.editingPath.erase(data.editingPath.begin() + pos, data.editingPath.end());
             data.currentPath = data.editingPath;
         }
         ImGui::SameLine();
-        if(ImGui::Button("D"))
+        if(ImGui::Button("D") || ImGui::IsKeyPressed(ImGuiKey_RightArrow) && data.history.size() != 0)
         {
-            size_t pos = data.editingPath.find_last_of('/');
-            data.editingPath.erase(data.editingPath.begin() + pos, data.editingPath.end());
-            data.currentPath = data.editingPath;
+            const std::string& path = data.history[data.history.size() - 1];
+            data.editingPath = path;
+            data.currentPath = path;
+            data.history.pop_back();
         }
         ImGui::SameLine();
         ImGui::PopFont();
@@ -172,6 +188,7 @@ namespace ImGuiHelper
                     data.selected = UINT32_MAX;
                     if(directories[i].is_directory())
                     {
+                        data.history.emplace_back(data.currentPath);
                         data.editingPath = directories[i].path();
                         data.currentPath = data.editingPath;
                     }
@@ -213,6 +230,24 @@ namespace ImGuiHelper
             else
             {
                 data.selected = (data.selected - 1) % directories.size();
+            }
+        }
+    
+        data.selected = glm::clamp(data.selected, 0u, (uint32_t)directories.size());
+
+        if(ImGui::IsKeyPressed(ImGuiKey_Enter))
+        {
+            if(directories[data.selected].is_directory())
+            {
+                data.currentPath = directories[data.selected].path();
+                data.editingPath = directories[data.selected].path();
+            }
+            else
+            {
+                filename = directories[data.selected].path();
+                fileDialogDataMap.erase(label);
+                opened = false;
+                return true;
             }
         }
 

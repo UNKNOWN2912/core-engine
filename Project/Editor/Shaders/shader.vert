@@ -17,11 +17,16 @@ layout(set = 1, binding = 0) uniform UniformData
     vec3 cameraPosition;
 } data;
 
+layout(push_constant) uniform PushConstantData
+{
+    mat4 model;
+} pushContantData;
+
 void main()
 {
-    Output.fragPos = aPosition;
+    Output.fragPos = vec3(pushContantData.model * vec4(aPosition, 1.0));
     Output.uv = aUv;
     Output.normal = aNormal;
     
-    gl_Position = data.projection * data.view * vec4(aPosition, 1.0);
+    gl_Position = data.projection * data.view * pushContantData.model * vec4(aPosition, 1.0);
 }

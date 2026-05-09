@@ -1,8 +1,10 @@
 #pragma once
 #include <print>
-#include "Profiler/ChromeTraceProfiler.hpp"
 #include "Timer.hpp"
+#include "Profiler/ChromeTraceProfiler.hpp"
 #include <cassert>
+
+#define LOG_ALLOCATION 0
 
 #define CREATE_APPLICATION(applicationClass) Application* Application::Create() { return new applicationClass; }
 
@@ -71,3 +73,5 @@ inline ChromeTraceProfiler __global_profiler__("profile.json");
 #define CHROME_DISABLE_TRACING()
 #endif
 
+
+#define VK_CHECK(x) if(x != VK_SUCCESS) { LOG("Failed: {}", #x); }

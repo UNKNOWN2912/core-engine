@@ -11,3 +11,6 @@
 	path = Project/Editor/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "Engine/Vendor/assimp"]
+	path = Engine/Vendor/assimp
+	url = https://github.com/assimp/assimp.git
