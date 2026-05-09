@@ -62,6 +62,13 @@ void EditorLayer::OnUpdate()
     UpdateCamera();
     RenderImGui();
     ResizeRenderView(mViewSize);
+
+    if(mDisableCursor)
+        GetWindow().HideCursor();
+    else
+        GetWindow().ShowCursor();
+
+    mDisableCursor = false;
 }
 
 void EditorLayer::OnDetach() 
@@ -202,11 +209,7 @@ void EditorLayer::GameView()
 
     if(ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
     {
-        GetWindow().HideCursor();
-    }
-    else
-    {
-        GetWindow().ShowCursor();
+        mDisableCursor = true;
     }
 
     ImGui::End();
@@ -338,19 +341,15 @@ void EditorLayer::PropertyPanel()
         bool hideCursor = false;
 
         ImGuiHelper::DragVec3("Position", transform.position, 0.01f);
-        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left)) ? true : hideCursor;
+        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) ? true : hideCursor;
         ImGuiHelper::DragVec3("Rotation", transform.rotation, 0.01f);
-        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left)) ? true : hideCursor;
+        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) ? true : hideCursor;
         ImGuiHelper::DragVec3("Scale", transform.scale, 0.01f);
-        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left)) ? true : hideCursor;
+        hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) ? true : hideCursor;
 
         if(hideCursor)
         {
-            GetWindow().HideCursor();
-        }
-        else if(GetWindow().isCursorHidden())
-        {
-            GetWindow().ShowCursor();
+            mDisableCursor = true;
         }
     }
 

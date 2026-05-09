@@ -40,6 +40,9 @@ class EditorLayer : public Layer
         bool mGameViewEnable = true;
         bool mEntityPanelEnable = true;
 
+
+        bool mDisableCursor = false;
+
         Scene* mScene;
         Entity mSelectedEntity;
 
