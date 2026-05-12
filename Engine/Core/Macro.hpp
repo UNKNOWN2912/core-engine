@@ -4,7 +4,7 @@
 #include "Profiler/ChromeTraceProfiler.hpp"
 #include <cassert>
 
-#define LOG_ALLOCATION 0
+#define LOG_ALLOCATION 1
 
 #define CREATE_APPLICATION(applicationClass) Application* Application::Create() { return new applicationClass; }
 

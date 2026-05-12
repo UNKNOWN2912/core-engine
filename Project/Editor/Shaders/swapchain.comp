@@ -9,7 +9,12 @@ layout(set = 1, binding = 3) uniform sampler2D depthMap;
 
 layout(set = 0, binding = 0, rgba8) uniform writeonly image2D outputImage; 
 
-vec3 lightPosition = vec3(0,3,0);
+layout(set = 2, binding = 0) uniform InputData
+{
+    vec3 cameraPos;
+} Input; 
+
+vec3 lightPosition = vec3(0,10,0);
 
 float random(vec3 p) 
 {
@@ -26,6 +31,8 @@ void main()
 
     if(coord.x > size.x || coord.y > size.y)
         return;
+    
+    
 
     vec3 albedo = texture(albedoMap, uv).rgb;
     vec3 position = texture(positionMap, uv).rgb;   
@@ -35,24 +42,31 @@ void main()
     vec3 lightDirection = lightPosition - position;
     
     float dis = length(lightDirection);
-    float inv = 1.0 / pow(dis, 2.0);
+    float inv = 1.0 / dis;
 
-    lightDirection = normalize(lightDirection);
+    // lightDirection = vec3(1,1,1); //normalize(lightDirection);
+    // inv = 1;
 
     float diffuse = max(dot(normal, lightDirection), 0.0);
 
-    vec4 color = vec4(1,1,1,1);
+    vec3 reflectedDirection = normalize(reflect(-lightDirection, normal));
+    vec3 viewDirection = normalize(Input.cameraPos - position);
+
+    float k = 10;
+
+    float specular = k * pow(max(dot(viewDirection, reflectedDirection), 0.0), 32); 
+
+
+    vec4 color = vec4(albedo, 1.0);
 
     float ambient = 0.1;
 
-    float intensity = 5;
+    float intensity = 0.8;
     // color.a = 1.0;
-    color.rgb *= (diffuse * intensity * inv) + ambient;
+    color.rgb *= (diffuse + specular) * ((inv) * intensity) + ambient;
 
-    float originDistance = distance(position, vec3(0));
+    // float originDistance = distance(position, vec3(0));
 
-    // if(depth > 0.9)
-    //     color.rgb = albedo;
 
     imageStore(outputImage, ivec2(coord), color);
 }

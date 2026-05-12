@@ -68,7 +68,7 @@ class Renderer
         const UniformBuffer& GetRendererUniformBuffer() const { return mRendererUniformBuffer; }
 
         const Swapchain& GetSwapchain() const { return mSwapchain; }
-        const DeferredSubpassAttachment& GetDeferredAttachments() const { return mDeferredAttachments; }
+        const DeferredAttachment& GetDeferredAttachments() const { return mDeferred.attachment; }
         const Sampler& GetDefaultSampler() const { return mDefaultSampler; }
 
         void AddListener(std::function<bool (uint32_t, void *)> listener);
@@ -79,6 +79,10 @@ class Renderer
         {
             Terminate();
         }
+
+        void DeferredPass();
+
+        void LightingPass();
 
     private:
         // Render passes
@@ -93,6 +97,46 @@ class Renderer
         void CreateDeferredFrameBuffer(const glm::uvec2& size);
 
     private:
+
+        friend class EditorLayer;
+
+        struct Skybox
+        {
+            RenderPass renderPass;
+            GraphicsPipeline graphicPipeline;
+            FrameBuffer frameBuffer;
+        } mSkybox;
+        void CreateSkyboxPassObjects();
+
+        struct Deferred
+        {
+            FrameBuffer frameBuffer;
+            RenderPass renderPass;
+            DeferredAttachment attachment;
+        } mDeferred;
+        void CreateDeferredPassObjects();
+        
+        struct Lighting
+        {
+            Descriptor descriptor;
+            ComputePipeline pipeline;
+            Image image;
+
+            UniformBuffer uniformBuffer;
+
+            struct UniformData
+            {
+                glm::vec3 cameraPosition;
+            } uniformData;
+
+            Descriptor uniformDescriptor;
+
+        } mLighting;
+
+        void CreateLightingPassObjects();
+
+        void SkyboxPass();
+
         glm::uvec2 mSwapchainSize;
 
         EventDispatcher mDispatcher;
@@ -104,16 +148,12 @@ class Renderer
 
         Swapchain mSwapchain;
 
-        Descriptor mComputeDescriptor;
         Descriptor mDeferredAttachmentDescriptor;
         // Render passes
-        RenderPass mDeferredRenderPass;
         
         // FrameBuffers
-        FrameBuffer mDeferredFrameBuffer;
         
         // Attachments
-        DeferredSubpassAttachment mDeferredAttachments;
         
         std::vector<RenderCommand> mRenderCommands;
         RenderTarget mCurrentRenderTarget;
@@ -126,11 +166,9 @@ class Renderer
 
         Sampler mDefaultSampler;
 
-        ComputePipeline mComputePipeline;
 
         Semaphore mRenderingSemaphore;
 
-        Image mComputeImage;
 
         FrameInfo mFrameInfo;
         

@@ -4,21 +4,30 @@
 
 using namespace std; 
 
+float GlobalMemoryUsage = 0;
+uint32_t GlobalAllocationCount = 0;
+uint32_t GlobalDeallocationCount = 0;
 
 #if LOG_ALLOCATION
 
 void* operator new(size_t size)
 {
-	static uint32_t count = 0;
-	printf("allocation: %li count: %u\n", size, count++);
 	return malloc(size);
 }
 
 void* operator new[](size_t size)
 {
-	static uint32_t count = 0;
-	printf("allocation array: %li count: %u\n", size, count++);
 	return malloc(size);
+}
+
+void operator delete(void* ptr) noexcept
+{
+	free(ptr);
+}
+
+void operator delete[](void* ptr) noexcept
+{
+	free(ptr);
 }
 
 #endif

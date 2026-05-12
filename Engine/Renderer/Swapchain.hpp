@@ -14,7 +14,7 @@ class Swapchain
 
         uint32_t GetNextImageIndex(const Semaphore& semaphore, const Fence& fence) const;
 
-        void Create(const glm::uvec2& size, PresentMode presentMode);
+        void CreateSwapchain(const glm::uvec2& size, PresentMode presentMode);
         void Destroy();
     private:
         VkSwapchainKHR mHandle = VK_NULL_HANDLE;

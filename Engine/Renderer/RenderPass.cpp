@@ -154,7 +154,7 @@ void RenderPass::CmdEndRenderPass(const CommandBuffer& commandBuffer)
     vkCmdEndRenderPass(commandBuffer.GetHandle());
 }
 
-void RenderPass::Create() 
+void RenderPass::CreateRenderPass() 
 {
     VkRenderPassCreateInfo createInfo = 
     {
@@ -180,9 +180,9 @@ void RenderPass::Create()
     mAttachments.clear();
     mDependencies.clear();
 }
-void RenderPass::Destroy() 
+void RenderPass::DestroyRenderPass() 
 {
     vkDestroyRenderPass(getDevice(), mHandle, nullptr);
 }
 
-RenderPass::~RenderPass() { Destroy(); }
+RenderPass::~RenderPass() { DestroyRenderPass(); }
