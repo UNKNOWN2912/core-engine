@@ -35,13 +35,6 @@ struct FrameInfo
     bool isRecording = false;
 };
 
-struct RendererUniformData
-{
-    glm::mat4 projection = glm::mat4(1.f);
-    glm::mat4 view = glm::mat4(1.f);
-    glm::vec3 cameraPosition;
-};
-
 enum class RendererEvent
 {
     DeferredAttachmentResize,
@@ -65,7 +58,7 @@ class Renderer
 
         const RenderPass& GetDeferredRenderPass() const;
 
-        const UniformBuffer& GetRendererUniformBuffer() const { return mRendererUniformBuffer; }
+        const UniformBuffer& GetDeferredUniformBuffer() const { return mDeferred.uniformBuffer; }
 
         const Swapchain& GetSwapchain() const { return mSwapchain; }
         const DeferredAttachment& GetDeferredAttachments() const { return mDeferred.attachment; }
@@ -81,39 +74,30 @@ class Renderer
         }
 
         void DeferredPass();
-
         void LightingPass();
-
-    private:
-        // Render passes
-        void CreateDeferredRenderPass();
-
-        // Attachments
-        void CreateAttachments(const glm::uvec2& size);
         void ResizeAttachments(const glm::uvec2& size);
-        void DestroyAttachments();
-
-        // FrameBuffer
-        void CreateDeferredFrameBuffer(const glm::uvec2& size);
 
     private:
 
         friend class EditorLayer;
-
-        struct Skybox
-        {
-            RenderPass renderPass;
-            GraphicsPipeline graphicPipeline;
-            FrameBuffer frameBuffer;
-        } mSkybox;
-        void CreateSkyboxPassObjects();
 
         struct Deferred
         {
             FrameBuffer frameBuffer;
             RenderPass renderPass;
             DeferredAttachment attachment;
+            Descriptor descriptor;
+
+            struct UniformData
+            {
+                glm::mat4 projection = glm::mat4(1.f);
+                glm::mat4 view = glm::mat4(1.f);
+                glm::vec3 cameraPosition;
+            } uniformData;
+
+            UniformBuffer uniformBuffer;
         } mDeferred;
+        
         void CreateDeferredPassObjects();
         
         struct Lighting
@@ -135,25 +119,12 @@ class Renderer
 
         void CreateLightingPassObjects();
 
-        void SkyboxPass();
 
         glm::uvec2 mSwapchainSize;
-
+        
         EventDispatcher mDispatcher;
-
         GraphicsContext mContext;
-
-        RendererUniformData mRendererUniformData;
-        UniformBuffer mRendererUniformBuffer;
-
         Swapchain mSwapchain;
-
-        Descriptor mDeferredAttachmentDescriptor;
-        // Render passes
-        
-        // FrameBuffers
-        
-        // Attachments
         
         std::vector<RenderCommand> mRenderCommands;
         RenderTarget mCurrentRenderTarget;
@@ -163,11 +134,10 @@ class Renderer
 
         Semaphore mImageAcquiredSemaphore;
         Semaphore mTransferSemaphore;
+        Semaphore mRenderingSemaphore;
 
         Sampler mDefaultSampler;
 
-
-        Semaphore mRenderingSemaphore;
 
 
         FrameInfo mFrameInfo;

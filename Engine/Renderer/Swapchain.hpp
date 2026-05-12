@@ -16,8 +16,12 @@ class Swapchain
 
         void CreateSwapchain(const glm::uvec2& size, PresentMode presentMode);
         void Destroy();
+
+        ImageFormat GetFormat() const { return mFormat; }
     private:
         VkSwapchainKHR mHandle = VK_NULL_HANDLE;
         std::vector<Image> mImages;
         glm::uvec2 mSize;
+
+        ImageFormat mFormat;
 };

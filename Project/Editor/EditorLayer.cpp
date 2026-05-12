@@ -90,7 +90,6 @@ void EditorLayer::OnUpdate()
 
 void EditorLayer::OnDetach() 
 {
-    LOG("deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
     TerminateImGui();
 }
 
@@ -278,6 +277,7 @@ void EditorLayer::EntityPanel()
 
     for (auto& [entity, metadata] : entities) 
     {
+        ImGui::PushID((uint32_t)entity.GetId());
         if(search.size() != 0)
         {
             std::string name = ImGuiHelper::toLower(metadata.name);
@@ -297,6 +297,8 @@ void EditorLayer::EntityPanel()
         {
             mSelectedEntity = entity;
         }
+        ImGui::PopID();
+
     }
 
     if(createEntityBox)
@@ -556,7 +558,7 @@ void EditorLayer::MainMenuBar()
             GetLayer<GameLayer>().ReloadMaterial();
             GetRenderer().mLighting.pipeline.Destroy();
             GetRenderer().mLighting.pipeline.LoadShader("Shaders/swapchain.comp.spv");
-            GetRenderer().mLighting.pipeline.Create({&GetRenderer().mLighting.descriptor, &GetRenderer().mDeferredAttachmentDescriptor, &GetRenderer().mLighting.uniformDescriptor});
+            GetRenderer().mLighting.pipeline.Create({&GetRenderer().mLighting.descriptor, &GetRenderer().mDeferred.descriptor, &GetRenderer().mLighting.uniformDescriptor});
         }
         ImGui::EndMenu();
     }
@@ -671,7 +673,7 @@ void EditorLayer::InitializeImGui()
     VkDescriptorPool descriptorPool;
     vkCreateDescriptorPool(getDevice(), &createInfo, nullptr, &descriptorPool);
 
-    mImGuiRenderPass.AddAttachment(ImageFormat::BGRA8UNORM, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
+    mImGuiRenderPass.AddAttachment(GetRenderer().GetSwapchain().GetFormat(), ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
     mImGuiRenderPass.AddSubpass({0}, {}, UINT32_MAX, PipelineBindPoint::Graphic);
     mImGuiRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
     mImGuiRenderPass.CreateRenderPass();
@@ -714,6 +716,8 @@ void EditorLayer::InitializeImGui()
 void EditorLayer::TerminateImGui() 
 {
     StoreState("state.bin");
+
+    vkDeviceWaitIdle(getDevice());
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

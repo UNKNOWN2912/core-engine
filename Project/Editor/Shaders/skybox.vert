@@ -9,7 +9,6 @@ layout(set = 1, binding = 0) uniform UniformData
 {
     mat4 projection;
     mat4 view;
-    vec3 cameraPosition;
 } uniformData;
 
 layout(location = 0) out OutData

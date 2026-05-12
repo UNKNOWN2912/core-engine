@@ -194,7 +194,7 @@ void GameLayer::OnUpdate()
     UpdateCamera();
 
     GetRenderer().BeginFrame(mTarget, mCamera);
-
+    GetRenderer().Submit(mesh, skyboxMaterial);
     for(auto& [entity, component] : scene.GetEntities<MeshRendererComponent>())
     {
         GetRenderer().Submit(*component.mesh, *component.material, entity.GetComponent<Transform>());

@@ -2,6 +2,7 @@
 #include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
 #include "Renderer/Converter.hpp"
+#include "Renderer/Descriptor.hpp"
 #include "Utility.hpp"
 
 void GraphicsPipeline::LoadVertexShader(std::string_view filename)
@@ -121,12 +122,6 @@ void GraphicsPipeline::SetViewport(const VkViewport& viewport)
     mViewport = viewport;
 }
 
-void GraphicsPipeline::SetPipelineLayout(VkPipelineLayout layout) 
-{ 
-    CHROME_TRACE_FUNCTION();
-    mPipelineLayout = layout; 
-}
-
 void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
 {
     CHROME_TRACE_FUNCTION();
@@ -217,6 +212,24 @@ void GraphicsPipeline::Create(const RenderPass& renderPass, uint32_t subpassInde
     depthStencil.depthTestEnable = mDepthTestEnable;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
+    std::vector<VkPushConstantRange> ranges;
+    for (auto& [stage, range] : mPushConstants) 
+    {
+        ranges.push_back(range);
+    }
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = 
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = (uint32_t)mSetLayouts.size(),
+        .pSetLayouts = mSetLayouts.data(),
+        .pushConstantRangeCount = (uint32_t)ranges.size(),
+        .pPushConstantRanges = ranges.data(),
+    };
+
+    vkCreatePipelineLayout(getDevice(), &pipelineLayoutCreateInfo, nullptr, &mPipelineLayout);
+
+
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     pipelineCreateInfo.layout = mPipelineLayout;
     pipelineCreateInfo.renderPass = renderPass.GetHandle();
@@ -248,6 +261,18 @@ VkPipelineLayout GraphicsPipeline::GetPipelineLayout() const
 {
     CHROME_TRACE_FUNCTION();
     return mPipelineLayout;
+}
+
+void GraphicsPipeline::SetPushConstant(ShaderStage stage, size_t size) 
+{
+    VkPushConstantRange range = 
+    {
+        .stageFlags = GetVulkanShaderStage(stage),
+        .offset = 0,
+        .size = uint32_t(size),
+    };
+
+    mPushConstants[stage] = range;
 }
 
 void GraphicsPipeline::ClearAttributesAndBinding() 

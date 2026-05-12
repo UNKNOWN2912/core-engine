@@ -21,11 +21,10 @@ float random(vec3 p)
     return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453123);
 }
 
-
 void main()
 {
-    uvec2 coord = gl_GlobalInvocationID.xy;
     uvec2 size = imageSize(outputImage);
+    uvec2 coord = gl_GlobalInvocationID.xy;
 
     vec2 uv = vec2(coord) / vec2(size);
 
@@ -34,7 +33,7 @@ void main()
     
     
 
-    vec3 albedo = texture(albedoMap, uv).rgb;
+    vec4 albedo = texture(albedoMap, uv);
     vec3 position = texture(positionMap, uv).rgb;   
     vec3 normal = texture(normalMap, uv).rgb;
     float depth = texture(depthMap, uv).r;
@@ -58,7 +57,7 @@ void main()
     float specular = k * pow(max(dot(viewDirection, reflectedDirection), 0.0), 2); 
 
 
-    vec4 color = vec4(albedo, 1.0);
+    vec4 color = vec4(vec3(albedo), 1.0);
 
     float ambient = 0.5;
 
@@ -66,8 +65,8 @@ void main()
     // color.a = 1.0;
     color.rgb *= (diffuse + specular + ambient);
 
-    // float originDistance = distance(position, vec3(0));
-
+    if(depth == 1.0)
+        color.rgb = albedo.rgb;
 
     imageStore(outputImage, ivec2(coord), color);
 }
