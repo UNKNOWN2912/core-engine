@@ -94,9 +94,9 @@ void GameLayer::OnAttach()
 
 
     Assimp::Importer importer;
-    const aiScene* aiscene = importer.ReadFile("./Model/map/scene.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* aiscene = importer.ReadFile("./Model/city/Untitled.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
 
-    LoadNode(scene, aiscene, aiscene->mRootNode, "./Model/map/");
+    LoadNode(scene, aiscene, aiscene->mRootNode, "./Model/city/");
 
     commandBuffer.Create();
 
