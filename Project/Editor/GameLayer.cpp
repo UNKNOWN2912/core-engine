@@ -92,7 +92,7 @@ void GameLayer::OnAttach()
 
     mesh.SetData(cubeVertices, sizeof(cubeVertices), cubeIndices, sizeof(cubeIndices));
 
-
+  
     Assimp::Importer importer;
     const aiScene* aiscene = importer.ReadFile("./Model/city/Untitled.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
 
