@@ -42,6 +42,8 @@ class EditorLayer : public Layer
         bool mEntityPanelEnable = true;
         bool mPerformancePanel = true;
 
+        ImGuiStyle mOriginalStyle;
+
 
         bool mDisableCursor = false;
 

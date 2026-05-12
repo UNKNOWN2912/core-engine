@@ -14,9 +14,24 @@ void EditorLayer::OnAttach()
     SetRenderTarget(&GetLayer<GameLayer>().mTarget);
     mEditorCameraController.SetCamera(mEditorCamera, Application::GetInstance()->GetWindowRef());
     InitializeImGui();
-    LoadImGuiStyle("style.bin", ImGui::GetStyle());
+    LoadImGuiStyle("style.bin", mOriginalStyle);
+
+    ImGui::GetStyle() = mOriginalStyle;
+
+    ImGuiStyle &style = ImGui::GetStyle();
+    for (int i = 0; i < ImGuiCol_COUNT; i++) 
+    {
+        ImVec4 &col = style.Colors[i];
+        col.x = col.x <= 0.04045f ? col.x / 12.92f
+                                : pow((col.x + 0.055f) / 1.055f, 2.4f);
+        col.y = col.y <= 0.04045f ? col.y / 12.92f
+                                : pow((col.y + 0.055f) / 1.055f, 2.4f);
+        col.z = col.z <= 0.04045f ? col.z / 12.92f
+                                : pow((col.z + 0.055f) / 1.055f, 2.4f);
+    }
 
     LoadState("state.bin");
+
 
     mScene = &GetLayer<GameLayer>().scene;
 }
@@ -84,18 +99,18 @@ void EditorLayer::CustomizationWindow()
     if(!mCustomizeWindowEnable)
         return;
 
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle& style = mOriginalStyle;
 
     ImGui::Begin("Customization", &mCustomizeWindowEnable, ImGuiWindowFlags_NoCollapse);
 
     if(ImGui::Button("Load", {ImGui::GetContentRegionAvail().x, 0}))
     {
-        LoadImGuiStyle("style.bin", ImGui::GetStyle());
+        LoadImGuiStyle("style.bin", style);
     }
 
     if(ImGui::Button("Store", {ImGui::GetContentRegionAvail().x, 0}))
     {
-        StoreImGuiStyle("style.bin", ImGui::GetStyle());
+        StoreImGuiStyle("style.bin", style);
     }
     
     ImGui::SeparatorText("Colors");
@@ -181,7 +196,7 @@ void EditorLayer::CustomizationWindow()
 void EditorLayer::StoreImGuiStyle(std::string_view filename, const ImGuiStyle& style) 
 {
     FILE* fp = fopen(filename.data(), "wb");
-    fwrite(style.Colors, sizeof(style.Colors), 1, fp);
+    fwrite(&style.Colors, sizeof(style.Colors), 1, fp);
     fclose(fp);
 }
 
@@ -191,7 +206,7 @@ void EditorLayer::LoadImGuiStyle(std::string_view filename, ImGuiStyle& style)
     if(fp == nullptr)
         return;
     
-    fread(style.Colors, sizeof(style.Colors), 1, fp);
+    fread(&style.Colors, sizeof(style.Colors), 1, fp);
     fclose(fp);
 }
 
