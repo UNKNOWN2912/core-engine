@@ -20,7 +20,7 @@ void Swapchain::CreateSwapchain(const glm::uvec2& size, PresentMode presentMode)
         mSize = {800, 600};
     }
 
-    ImageFormat format = ImageFormat::BGRA8UNORM;
+    ImageFormat format = ImageFormat::BGRA8;
     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
     uint32_t imageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
