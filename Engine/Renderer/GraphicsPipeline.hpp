@@ -1,4 +1,5 @@
 #pragma once
+#include "Renderer/Descriptor.hpp"
 #include "Renderer/RenderPass.hpp"
 #include "Renderer/Types.hpp"
 #include <string_view>
@@ -27,7 +28,6 @@ class GraphicsPipeline
         void SetMultisampleCount(SampleCount count);
         void SetFrontFace(FrontFace frontFace);
         void SetViewport(const VkViewport& viewport);
-        void SetPipelineLayout(VkPipelineLayout layout);
         
         
         void Create(const RenderPass& renderPass, uint32_t subpassIndex);
@@ -35,6 +35,22 @@ class GraphicsPipeline
         
         VkPipelineLayout GetPipelineLayout() const;
         VkPipeline GetHandle() const { return mHandle; }
+
+        template<typename ...Descriptors>
+        void AddDescriptors(const Descriptor& descriptor, const Descriptors& ...descriptors)
+        {
+            static_assert((std::is_same_v<const Descriptors&, const Descriptor&> && ...), "Argument type must be descriptors");
+            mSetLayouts.push_back(descriptor.GetDescriptorSetLayout());
+            AddDescriptors(descriptors...);
+        }
+
+        void AddDescriptors(const Descriptor& descriptor)
+        {
+            mSetLayouts.push_back(descriptor.GetDescriptorSetLayout());
+        }
+
+
+        void SetPushConstant(ShaderStage stage, size_t size);
 
         void ClearAttributesAndBinding();
     private:
@@ -56,6 +72,9 @@ class GraphicsPipeline
         VkPrimitiveTopology mPrimitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         VkSampleCountFlagBits mSampleCount = VK_SAMPLE_COUNT_1_BIT;
         VkFrontFace mFrontFace = VK_FRONT_FACE_CLOCKWISE;
+
+        std::vector<VkDescriptorSetLayout> mSetLayouts;
+        std::unordered_map<ShaderStage, VkPushConstantRange> mPushConstants;
 
         bool mDepthTestEnable = false;
         bool mDepthWriteEnable = false;

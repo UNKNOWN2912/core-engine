@@ -66,6 +66,8 @@ void Swapchain::CreateSwapchain(const glm::uvec2& size, PresentMode presentMode)
         mImages.push_back(image);
     }
 
+    mFormat = format;
+
 }
 
 void Swapchain::Destroy() 

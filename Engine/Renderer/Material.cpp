@@ -24,7 +24,7 @@ void Material::Create()
 
     mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
     mUniformDescriptor.Create();
-    mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetRendererUniformBuffer().GetBuffer(), 0);
+    mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetDeferredUniformBuffer().GetBuffer(), 0);
 
 
 
@@ -41,15 +41,8 @@ void Material::Create()
     if(mAttributeCount == 0)
         SetDefaultAttribute();
 
-    VkPushConstantRange range = 
-    {
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .offset = 0,
-        .size = sizeof(glm::mat4),
-    };
-
-    mPipeline.SetPipelineLayout(CreatePipelineLayout({mImageDescriptor.GetDescriptorSetLayout(), mUniformDescriptor.GetDescriptorSetLayout()}, {range}));
-
+    mPipeline.AddDescriptors(mImageDescriptor, mUniformDescriptor);
+    mPipeline.SetPushConstant(ShaderStage::Vertex, sizeof(glm::mat4));
     mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
 }
 

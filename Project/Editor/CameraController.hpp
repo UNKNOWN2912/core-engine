@@ -58,4 +58,6 @@ class CameraController
         bool mEnableControl = true;
         bool mEnableKeyboardControl = true;
         bool mEnableMouseControl = true;
+
+        float mSmoothness = 1.f;
 };

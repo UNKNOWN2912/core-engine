@@ -40,49 +40,54 @@ void CameraController::Update()
 {
     CHROME_TRACE_FUNCTION();
 
-    glm::vec3 cameraPosition = mCamera->GetPosition();
+    
     glm::vec3 cameraFront = mCamera->GetFront();
-
-
-    cameraFront.x = sin(glm::radians(mYaw)) * cos(glm::radians(-mPitch));
-    cameraFront.y = sin(glm::radians(-mPitch));
-    cameraFront.z = cos(glm::radians(mYaw)) * cos(glm::radians(-mPitch));
-
-
-    glm::vec3 forward = normalize(glm::vec3(cameraFront.x, 0, cameraFront.z));
-    glm::vec3 side = normalize(cross(glm::vec3(cameraFront.x, 0, cameraFront.z), mCamera->GetUp()));
-
-    float deltaTime = Application::GetInstance()->GetDeltaTime();
-
-    if(mMoveForward)
-    {
-        cameraPosition +=  forward * mSpeed * deltaTime;
-    }
-    if(mMoveBackward)
-    {
-        cameraPosition -= forward * mSpeed * deltaTime;
-    }
-    if(mMoveLeft)
-    {
-        cameraPosition -= side * mSpeed * deltaTime;
-    }
-    if(mMoveRight)
-    {
-        cameraPosition += side * mSpeed * deltaTime;
-    }
-    if(mMoveUp)
-    {
-        cameraPosition += mCamera->GetUp() * mSpeed * deltaTime;
-    }
-    if(mMoveDown)
-    {
-        cameraPosition -= mCamera->GetUp() * mSpeed * deltaTime;
-    }
-
     if(mEnableMouseControl)
+    {
+        
+        
+        cameraFront.x = sin(glm::radians(mYaw)) * cos(glm::radians(-mPitch));
+        cameraFront.y = sin(glm::radians(-mPitch));
+        cameraFront.z = cos(glm::radians(mYaw)) * cos(glm::radians(-mPitch));
+
         mCamera->SetFront(cameraFront);
+    }
+
+    glm::vec3 cameraPosition = mCamera->GetPosition();
     if(mEnableKeyboardControl)
+    {
+        glm::vec3 forward = normalize(glm::vec3(cameraFront.x, 0, cameraFront.z));
+        glm::vec3 side = normalize(cross(glm::vec3(cameraFront.x, 0, cameraFront.z), mCamera->GetUp()));
+        float deltaTime = Application::GetInstance()->GetDeltaTime();
+        
+        if(mMoveForward)
+        {
+            cameraPosition +=  forward * mSpeed * deltaTime;
+        }
+        if(mMoveBackward)
+        {
+            cameraPosition -= forward * mSpeed * deltaTime;
+        }
+        if(mMoveLeft)
+        {
+            cameraPosition -= side * mSpeed * deltaTime;
+        }
+        if(mMoveRight)
+        {
+            cameraPosition += side * mSpeed * deltaTime;
+        }
+        if(mMoveUp)
+        {
+            cameraPosition += mCamera->GetUp() * mSpeed * deltaTime;
+        }
+        if(mMoveDown)
+        {
+            cameraPosition -= mCamera->GetUp() * mSpeed * deltaTime;
+        }
+
         mCamera->SetPosition(cameraPosition);
+    }
+
 }
 
 void CameraController::OnKeyPress(Key key)

@@ -1,5 +1,7 @@
 #include "Renderer.hpp"
+#include "Renderer/Helper.hpp"
 #include <cstring>
+
 
 void Renderer::Initialize(const Window& window)
 {
@@ -9,31 +11,11 @@ void Renderer::Initialize(const Window& window)
     mDefaultSampler.Create();
 
     mSwapchain.CreateSwapchain(window.GetSize(), PresentMode::Fifo);
-    CreateAttachments(mSwapchain.GetSize());
 
-
-
-    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
-    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
-    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
-    mDeferredAttachmentDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
-    mDeferredAttachmentDescriptor.Create();
-
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
-
+    CreateDeferredPassObjects();
     CreateLightingPassObjects();
 
     // Render pass
-    CreateDeferredRenderPass();
-
-    // Attachments
-
-    // Frame buffer
-    CreateDeferredFrameBuffer(mSwapchain.GetSize());
-
     
     mRenderCommandBuffer.Create();
     mTransferToSwapchainCommandBuffer.Create();
@@ -41,41 +23,17 @@ void Renderer::Initialize(const Window& window)
     mImageAcquiredSemaphore.Create();
     mTransferSemaphore.Create();
 
-    mRendererUniformBuffer.Create(sizeof(RendererUniformData));
-    mRendererUniformBuffer.SetData(&mRendererUniformData);
 }
 
 void Renderer::Terminate() 
 {
     vkDeviceWaitIdle(getDevice());
-    mRendererUniformBuffer.Destroy();
+    mDeferred.uniformBuffer.Destroy();
 }
 
 void Renderer::Submit(StaticMesh& mesh, Material& material) 
 {
     assert(mFrameInfo.isRecording == true);
-
-
-    // RenderCommand renderCommand;
-    // renderCommand.vertexBuffer = &mesh.mVertexBuffer;    
-    // renderCommand.indexBuffer = &mesh.mIndexBuffer;
-    // renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
-    // renderCommand.pipeline = &material.GetPipelineRef();
-    // renderCommand.descriptors[0] = &material.GetImageDescriptorRef();    
-    // renderCommand.descriptors[1] = &material.GetUniformDescriptorRef();    
-    // renderCommand.descriptors[2] = &material.GetUserDescriptorRef();    
-    // renderCommand.descriptorCount = 3;
-
-    // if(material.IsInstancingEnabled())
-    // {
-    //     renderCommand.instanceBuffer = &material.GetInstanceBufferRef();
-    //     renderCommand.instanceCount = material.GetInstanceCount();
-    // }
-
-
-    // glm::mat4 matrix = Transform().GetMatrix();
-    // memcpy(renderCommand.pushContantData, &matrix, sizeof(matrix));
-    // renderCommand.pushContantSize = sizeof(matrix);
 
     Submit(mesh, material, Transform());
 }
@@ -92,8 +50,6 @@ void Renderer::Submit(StaticMesh& mesh, Material& material, const Transform& tra
     renderCommand.descriptors[0] = &material.GetImageDescriptorRef();    
     renderCommand.descriptors[1] = &material.GetUniformDescriptorRef();    
     renderCommand.descriptorCount = 2;
-
-    
 
     if(material.IsInstancingEnabled())
     {
@@ -128,12 +84,12 @@ void Renderer::BeginFrame(RenderTarget& renderTarget, const Camera& camera)
     ResizeAttachments(renderTarget.GetImage().size);
 
     mFrameInfo.camera = camera;
-    mRendererUniformData.cameraPosition = camera.GetPosition();
-    mRendererUniformData.view = camera.GetView();
-    mRendererUniformData.projection = camera.GetProjection();
-    mRendererUniformData.projection[1][1] *= -1;
+    mDeferred.uniformData.cameraPosition = camera.GetPosition();
+    mDeferred.uniformData.view = camera.GetView();
+    mDeferred.uniformData.projection = camera.GetProjection();
+    mDeferred.uniformData.projection[1][1] *= -1;
     
-    mRendererUniformBuffer.SetData(&mRendererUniformData);
+    mDeferred.uniformBuffer.SetData(&mDeferred.uniformData);
 
     mLighting.uniformData.cameraPosition = camera.GetPosition();
     mLighting.uniformBuffer.SetData(&mLighting.uniformData);
@@ -195,9 +151,8 @@ void Renderer::DeferredPass()
 
 void Renderer::LightingPass()
 {
-    VkDescriptorSet descriptorSets[] = {mLighting.descriptor.GetDescriptorSet(), mDeferredAttachmentDescriptor.GetDescriptorSet(), mLighting.uniformDescriptor.GetDescriptorSet()};
-    vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_COMPUTE, mLighting.pipeline.GetPipelineLayout(), 0, sizeof(descriptorSets) / sizeof(VkDescriptorSet), descriptorSets, 0, nullptr);
-    vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_COMPUTE, mLighting.pipeline.GetHandle());
+    CmdBindPipeline(mRenderCommandBuffer, mLighting.pipeline);
+    CmdBindDescriptors(mRenderCommandBuffer, mLighting.pipeline, {mLighting.descriptor, mDeferred.descriptor, mLighting.uniformDescriptor});
 
     glm::ivec3 groupCount;
     groupCount.x = (mSwapchain.GetSize().x / 16) + 1;
@@ -206,10 +161,7 @@ void Renderer::LightingPass()
     vkCmdDispatch(mRenderCommandBuffer.GetHandle(), groupCount.x, groupCount.y, groupCount.z);
 }
 
-void Renderer::SkyboxPass()
-{
 
-}
 
 void Renderer::EndFrame() 
 {
@@ -219,15 +171,9 @@ void Renderer::EndFrame()
 
     mRenderCommandBuffer.BeginRecording();
 
-    // Begin Deferred render pass
-
     DeferredPass();
     LightingPass();
-    SkyboxPass();
 
-    // End Deferred render pass
-
-   
 
     mRenderCommandBuffer.EndRecording();
     mRenderCommandBuffer.QueueSubmit(getQueues().graphics, {}, mRenderingSemaphore, PipelineStage::ColorAttachmentOutput);
@@ -252,10 +198,10 @@ bool Renderer::ResizeSwapchain(const glm::uvec2& size)
     
     mLighting.descriptor.UpdateImage(mLighting.image, ImageLayout::General, mDefaultSampler, 0);
 
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
 
     return true;
 }
@@ -322,24 +268,6 @@ void Renderer::QueueSwapchainResize(const glm::uvec2& size)
     mSwapchainSize = size;
 }
 
-void Renderer::CreateDeferredRenderPass() 
-{
-    mDeferred.renderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mDeferred.renderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mDeferred.renderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    mDeferred.renderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-
-    mDeferred.renderPass.AddSubpass({0,1,2}, {}, 3, PipelineBindPoint::Graphic);
-
-    mDeferred.renderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
-
-    mDeferred.renderPass.CreateRenderPass();
-}
-
-void Renderer::CreateAttachments(const glm::uvec2& size) 
-{
-    mDeferred.attachment.CreateAttachment(mSwapchain.GetSize());
-}
 
 void Renderer::ResizeAttachments(const glm::uvec2& size) 
 {
@@ -347,22 +275,7 @@ void Renderer::ResizeAttachments(const glm::uvec2& size)
     mDeferred.attachment.ResizeAttachment(size);
     mDeferred.frameBuffer.Destroy();
     mDispatcher.Dispatch((uint32_t)RendererEvent::DeferredAttachmentResize, &mDeferred.attachment);
-    CreateDeferredFrameBuffer(size);
 
-
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
-    mDeferredAttachmentDescriptor.UpdateImage(mDeferred.attachment.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
-}
-
-void Renderer::DestroyAttachments() 
-{
-    mDeferred.attachment.DestroyAttachment();
-}
-
-void Renderer::CreateDeferredFrameBuffer(const glm::uvec2& size) 
-{
     std::initializer_list<Image> attachments = 
     {   mDeferred.attachment.albedo,
         mDeferred.attachment.position,
@@ -371,18 +284,47 @@ void Renderer::CreateDeferredFrameBuffer(const glm::uvec2& size)
     };
 
     mDeferred.frameBuffer.Create(size, attachments, mDeferred.renderPass);
-}
-void Renderer::CreateSkyboxPassObjects() 
-{
-    mSkybox.renderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Load, StoreOperation::Store);
-    mSkybox.renderPass.AddSubpass({0}, {}, 0, PipelineBindPoint::Graphic);
-    mSkybox.renderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);    
-    mSkybox.renderPass.CreateRenderPass();
 
-    mSkybox.graphicPipeline.SetPipelineLayout(CreatePipelineLayout({}, {}));
-    mSkybox.graphicPipeline.SetCullMode(CullMode::None);
-    mSkybox.graphicPipeline.EnableDepthTesting(false);
-    mSkybox.graphicPipeline.EnableDepthWrite(false);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+}
+
+void Renderer::CreateDeferredPassObjects() 
+{
+    mDeferred.descriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferred.descriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferred.descriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferred.descriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
+    mDeferred.descriptor.Create();
+
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
+    mDeferred.descriptor.UpdateImage(mDeferred.attachment.depth, ImageLayout::ShaderRead, mDefaultSampler, 3);
+
+    mDeferred.renderPass.AddAttachment(ImageFormat::RGBA8, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferred.renderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferred.renderPass.AddAttachment(ImageFormat::RGBA32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferred.renderPass.AddAttachment(ImageFormat::D32, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    mDeferred.renderPass.AddSubpass({0,1,2}, {}, 3, PipelineBindPoint::Graphic);
+    mDeferred.renderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
+    mDeferred.renderPass.CreateRenderPass();
+
+    mDeferred.attachment.CreateAttachment(mSwapchain.GetSize());
+
+    std::initializer_list<Image> attachments = 
+    {   mDeferred.attachment.albedo,
+        mDeferred.attachment.position,
+        mDeferred.attachment.normal,
+        mDeferred.attachment.depth,
+    };
+
+    mDeferred.frameBuffer.Create(mSwapchain.GetSize(), attachments, mDeferred.renderPass);
+
+    mDeferred.uniformBuffer.Create(sizeof(mDeferred.uniformData));
+    mDeferred.uniformBuffer.SetData(&mDeferred.uniformData);
 }
 
 void Renderer::CreateLightingPassObjects() 
@@ -401,5 +343,5 @@ void Renderer::CreateLightingPassObjects()
     mLighting.uniformDescriptor.UpdateBuffer(mLighting.uniformBuffer.GetBuffer(), 0);
     
     mLighting.pipeline.LoadShader("Shaders/swapchain.comp.spv");
-    mLighting.pipeline.Create({&mLighting.descriptor, &mDeferredAttachmentDescriptor, &mLighting.uniformDescriptor});
+    mLighting.pipeline.Create({&mLighting.descriptor, &mDeferred.descriptor, &mLighting.uniformDescriptor});
 }

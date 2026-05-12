@@ -19,8 +19,6 @@ float f(float d)
     return sqrt(d);
 }
 
-
-
 void main()
 {
     vec3 lightDirection = normalize(vec3(1,1,1));

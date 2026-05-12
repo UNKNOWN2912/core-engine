@@ -293,5 +293,5 @@ VkCommandPool getCommandPool()
 
 VkDebugUtilsMessengerEXT getMessenger() 
 {
-    return GraphicsContext::GetCurrentContext().GetMessenger();    
+    return GraphicsContext::GetCurrentContext().GetMessenger();
 }

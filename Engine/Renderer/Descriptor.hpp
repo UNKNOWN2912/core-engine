@@ -21,6 +21,11 @@ class Descriptor
 		VkDescriptorSetLayout GetDescriptorSetLayout() const { return mSetLayout; }
 		VkDescriptorPool GetDescriptorPool() const { return mDescriptorPool; }
 
+		operator VkDescriptorSet()
+		{
+			return mSet;
+		}
+
 		~Descriptor();
 
 	private:
