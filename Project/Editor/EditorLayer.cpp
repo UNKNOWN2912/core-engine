@@ -6,8 +6,8 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
-
 #include <string>
+
 
 void EditorLayer::OnAttach() 
 {
@@ -34,6 +34,7 @@ void EditorLayer::LoadState(std::string_view filename)
     fread(&mContentPanelEnable, sizeof(bool), 1, fp);
     fread(&mGameViewEnable, sizeof(bool), 1, fp);
     fread(&mEntityPanelEnable, sizeof(bool), 1, fp);
+    fread(&mPerformancePanel, sizeof(bool), 1, fp);
     fclose(fp);
 }
 
@@ -48,6 +49,7 @@ void EditorLayer::StoreState(std::string_view filename)
     fwrite(&mContentPanelEnable, sizeof(bool), 1, fp);
     fwrite(&mGameViewEnable, sizeof(bool), 1, fp);
     fwrite(&mEntityPanelEnable, sizeof(bool), 1, fp);
+    fwrite(&mPerformancePanel, sizeof(bool), 1, fp);
     fclose(fp);
 }
 
@@ -225,6 +227,12 @@ void EditorLayer::EntityPanel()
     bool focus = false;
     static bool createEntityBox = false;
 
+    static std::string search;
+
+    ImGui::InputText("Search", &search);
+
+    search = ImGuiHelper::toLower(search);
+
     if(ImGui::IsWindowHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Right))
     {
         ImGui::OpenPopup("Right click menu");
@@ -253,18 +261,26 @@ void EditorLayer::EntityPanel()
 
     auto entities = mScene->GetEntities<EntityMetadata>();
 
-    for (auto pair : entities) 
+    for (auto& [entity, metadata] : entities) 
     {
+        if(search.size() != 0)
+        {
+            std::string name = ImGuiHelper::toLower(metadata.name);
+            if(!name.contains(search))
+            {
+                continue;
+            }
+        }
         bool selected = false;
         if(mSelectedEntity.IsValid())
         {
-            if(mSelectedEntity == pair.first)
+            if(mSelectedEntity == entity)
                 selected = true;
         }
-        ImGuiHelper::IconCharacterSameLine('r');
-        if(ImGui::Selectable(pair.second.name.c_str(), selected))
+        ImGuiHelper::IconCharacterSameLine('Q');
+        if(ImGui::Selectable(metadata.name.c_str(), selected))
         {
-            mSelectedEntity = pair.first;
+            mSelectedEntity = entity;
         }
     }
 
@@ -299,11 +315,97 @@ void EditorLayer::EntityPanel()
     ImGui::End();
 }
 
+void EditorLayer::PerformancePanel() 
+{
+    if(!mPerformancePanel)
+        return;
+
+    ImGui::Begin("Performance", &mPerformancePanel);
+
+    const uint32_t count = 512;
+
+    struct FrameData
+    {
+        float values[count];
+        float sortedValues[count];
+        float max = 0;
+        float average = 0;
+
+    } static frameData;
+
+    for (int i = 0; i < count; i++)
+    {
+        if(i == count - 1)
+            frameData.values[count-1] = GetApplication()->GetDeltaTime();
+        else
+            frameData.values[i] = frameData.values[i+1];
+        
+        if(frameData.max < frameData.values[i])
+            frameData.max = frameData.values[i];
+        frameData.average += frameData.values[i];
+    }
+
+    memcpy(frameData.sortedValues, frameData.values, sizeof(frameData.values));
+    std::sort(&frameData.sortedValues[0], &frameData.sortedValues[count], std::greater<float>());
+
+    uint32_t onePercentFrameCount = count * 0.01f;
+
+    float onePercentAverage = 0;
+    for (int i = 0; i < onePercentFrameCount; i++)
+    {
+        onePercentAverage += frameData.sortedValues[i];
+    }
+
+    onePercentAverage /= onePercentFrameCount;
+
+    uint32_t zeroPointOnePercentFrameCount = count * 0.001f;
+    float zeroPointOnePercentAverage = 0;
+    for (int i = 0; i < zeroPointOnePercentFrameCount; i++)
+    {
+        zeroPointOnePercentAverage += frameData.sortedValues[i];
+    }
+
+    zeroPointOnePercentAverage /= zeroPointOnePercentFrameCount;
+
+    // float onePercentAverage = 
+    // uint32_t onePercentFrameCount = count * 0.001f;
+
+    frameData.average /= float(count);
+    static int zoom = 0;
+    
+    if(ImGuiHelper::IconButton('W'))
+    {
+        memset(frameData.values, 0, sizeof(frameData.values));
+    }
+    ImGui::SameLine();
+    ImGui::SliderInt("Zoom", &zoom, 0, count - 1);
+    ImGui::Text("Sample count: %u", count);
+    if(frameData.values[0] == 0)
+    {
+        ImGui::Text("Frame average: --.--");
+        ImGui::Text("Fps average: --.--");
+        ImGui::Text("%%1 Fps: --.--");
+        ImGui::Text("%%0.1 Fps: --.--");
+    }
+    else 
+    {
+        ImGui::Text("Frame average: %.4f", frameData.average);
+        ImGui::Text("Fps average: %.2f", 1.f / frameData.average);
+        ImGui::Text("%%1 Fps: %0.2f", 1.f / onePercentAverage);
+        ImGui::Text("%%0.1 Fps: %f", 1.f / zeroPointOnePercentAverage);
+    }
+
+    ImGui::Text("Fps: %d", GetApplication()->GetFps());
+    ImGui::PlotLines("Frame time", frameData.values + zoom, count - zoom, 0, NULL, 0, frameData.max, {ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y * 0.5f});
+    ImGui::End();
+
+
+}
+
 void EditorLayer::PropertyPanel()
 {
     if(!mPropertyPanelEnable)    
         return;
-
 
 
     ImGui::Begin("Properties", &mPropertyPanelEnable, ImGuiWindowFlags_NoCollapse);
@@ -332,6 +434,12 @@ void EditorLayer::PropertyPanel()
 
     ImGui::SeparatorText("Entity");
     ImGui::Text("Id: %d", mSelectedEntity.GetId());
+
+    std::string& name = mSelectedEntity.GetComponent<EntityMetadata>().name;
+    ImGui::InputText("Name", &name);
+    if(name.size() == 0)
+        name = "Untitled";
+
 
     if(mSelectedEntity.HasComponent<Transform>())
     {
@@ -396,6 +504,7 @@ void EditorLayer::RenderUI()
     CustomizationWindow();
     EntityPanel();
     PropertyPanel();
+    PerformancePanel();
     MainMenuBar();
 }
 
@@ -430,17 +539,21 @@ void EditorLayer::MainMenuBar()
         if(ImGui::MenuItem("Reload material"))
         {
             GetLayer<GameLayer>().ReloadMaterial();
+            GetRenderer().mLighting.pipeline.Destroy();
+            GetRenderer().mLighting.pipeline.LoadShader("Shaders/swapchain.comp.spv");
+            GetRenderer().mLighting.pipeline.Create({&GetRenderer().mLighting.descriptor, &GetRenderer().mDeferredAttachmentDescriptor, &GetRenderer().mLighting.uniformDescriptor});
         }
         ImGui::EndMenu();
     }
     if(ImGui::BeginMenu("View"))
     {
-        IconWindowToggle("Customization Window", '@', mCustomizeWindowEnable);
-        IconWindowToggle("Demo Window", '\\', mDemoWindowEnable);
-        IconWindowToggle("Control Panel", 'Q', mContentPanelEnable);
-        IconWindowToggle("Game View", 'R', mGameViewEnable);
-        IconWindowToggle("Property View", '<', mPropertyPanelEnable);
-        IconWindowToggle("Entity Panel", 'r', mEntityPanelEnable);
+        IconWindowToggle("Customization", '@', mCustomizeWindowEnable);
+        IconWindowToggle("Demo", '\\', mDemoWindowEnable);
+        IconWindowToggle("Control", 'Q', mContentPanelEnable);
+        IconWindowToggle("Game", 'R', mGameViewEnable);
+        IconWindowToggle("Property", '<', mPropertyPanelEnable);
+        IconWindowToggle("Entity", 'r', mEntityPanelEnable);
+        IconWindowToggle("Performance", 's', mPerformancePanel);
         ImGui::EndMenu();
     }
     if(ImGui::BeginMenu("Window"))
@@ -546,7 +659,7 @@ void EditorLayer::InitializeImGui()
     mImGuiRenderPass.AddAttachment(ImageFormat::BGRA8UNORM, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
     mImGuiRenderPass.AddSubpass({0}, {}, UINT32_MAX, PipelineBindPoint::Graphic);
     mImGuiRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
-    mImGuiRenderPass.Create();
+    mImGuiRenderPass.CreateRenderPass();
     
     ImGui_ImplVulkan_InitInfo initInfo = 
     {

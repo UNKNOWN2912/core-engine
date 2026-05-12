@@ -42,8 +42,8 @@ struct WindowData
 class Window
 {
 public:
-	void Create(const glm::uvec2& size, std::string_view title);
-	void Destroy();
+	void CreateWindow(const glm::uvec2& size, std::string_view title);
+	void DestroyWindow();
 
 	glm::uvec2 GetSize() const;
 	glm::uvec2 GetPosition() const;

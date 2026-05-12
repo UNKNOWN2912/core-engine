@@ -84,7 +84,7 @@ public:
 	}
 
 	uint32_t GetFrameCount() const { return mFrameCounter; }
-
+	uint32_t GetFps() const { return mFps; }
 private:
 	bool mRunning = true;
 	static Application* instance;
@@ -92,6 +92,8 @@ private:
 
 	glm::vec2 previousMousePos = glm::vec2(0);
 	Window mWindow;
+
+	uint32_t mFps = 0;
 
 	Timer mDeltaTimer;
 	Timer mApplicationTimer;

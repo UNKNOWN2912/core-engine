@@ -16,6 +16,12 @@ struct std::formatter<Transform> : std::formatter<std::string>
     }
 };
 
+struct MeshRendererComponent
+{
+    std::shared_ptr<StaticMesh> mesh;
+    std::shared_ptr<Material> material;
+};
+
 void GameLayer::OnAttach() 
 {
     GetWindow().Maximize();
@@ -88,9 +94,9 @@ void GameLayer::OnAttach()
 
 
     Assimp::Importer importer;
-    const aiScene* aiscene = importer.ReadFile("./Model/map/Untitled.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* aiscene = importer.ReadFile("./Model/map/scene.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
 
-    LoadNode(aiscene, aiscene->mRootNode, mModel, mMaterial, mTransforms);
+    LoadNode(scene, aiscene, aiscene->mRootNode, "./Model/map/");
 
     commandBuffer.Create();
 
@@ -125,22 +131,25 @@ std::shared_ptr<StaticMesh> GameLayer::GetMeshFromAiMesh(const aiMesh* aimesh)
     return std::make_shared<StaticMesh>(vertices, indices);
 }
 
-std::shared_ptr<Material> GameLayer::GetMaterialFromAiMaterial(const aiMaterial* aimaterial)
+std::shared_ptr<Material> GameLayer::GetMaterialFromAiMaterial(const aiMaterial* aimaterial, std::string_view basePath)
 {
     std::shared_ptr<Material> material = std::make_shared<Material>();
 
     material->LoadShaders("Shaders/shader.vert.spv", "Shaders/shader.frag.spv");
-    material->SetCullMode(CullMode::None);
+    material->SetCullMode(CullMode::Back);
 
     aiString path;
-    std::string fullPath = "./Model/map/";
+    std::string fullPath = basePath.data();
     if(aimaterial->GetTexture(aiTextureType_DIFFUSE, 0, &path) == aiReturn_SUCCESS)
     {
         fullPath += path.C_Str();
         material->LoadAlbedo(fullPath);
     }
+    else
+    {
+        material->LoadAlbedo("white.png");
+    }
     
-
     material->Create();
 
     return material;
@@ -158,22 +167,24 @@ Transform GetTransformFromAiTransform(aiMatrix4x4 aimatrix)
     return Transform(GetVec3FromAiVec3(position), GetVec3FromAiVec3(rotation), GetVec3FromAiVec3(scale));
 }
 
-void GameLayer::LoadNode(const aiScene* scene, aiNode* node, std::vector<std::shared_ptr<StaticMesh>>& meshes, std::vector<std::shared_ptr<Material>>& materials, std::vector<Transform>& transforms)
+void GameLayer::LoadNode(Scene& scene, const aiScene* aiscene, aiNode* node, std::string_view basePath)
 {
     for (int i = 0; i < node->mNumMeshes; i++)
     {
-        std::shared_ptr<StaticMesh> mesh = GetMeshFromAiMesh(scene->mMeshes[node->mMeshes[i]]);
-        std::shared_ptr<Material> material = GetMaterialFromAiMaterial(scene->mMaterials[scene->mMeshes[node->mMeshes[i]]->mMaterialIndex]);
+        MeshRendererComponent component;
+
+        component.mesh = GetMeshFromAiMesh(aiscene->mMeshes[node->mMeshes[i]]);
+        component.material = GetMaterialFromAiMaterial(aiscene->mMaterials[aiscene->mMeshes[node->mMeshes[i]]->mMaterialIndex], basePath);
         Transform transform = GetTransformFromAiTransform(node->mTransformation);
 
-        meshes.push_back(mesh);
-        materials.push_back(material);
-        transforms.push_back(transform);
+        Entity entity = scene.CreateEntity(node->mName.C_Str());
+        entity.AddComponent<Transform>(transform);
+        entity.AddComponent<MeshRendererComponent>() = component;
     }
 
     for (int i = 0; i < node->mNumChildren; i++)
     {
-        LoadNode(scene, node->mChildren[i], meshes, materials, transforms);
+        LoadNode(scene, aiscene, node->mChildren[i], basePath);
     }
 }
 
@@ -184,16 +195,9 @@ void GameLayer::OnUpdate()
 
     GetRenderer().BeginFrame(mTarget, mCamera);
 
-    auto& transforms = scene.GetEntities<Transform>();
-
-    for(std::pair<Entity, Transform> entity : transforms)
+    for(auto& [entity, component] : scene.GetEntities<MeshRendererComponent>())
     {
-        GetRenderer().Submit(mesh, material, entity.second);
-    }
-    
-    for (int i = 0; i < mModel.size(); i++)
-    {
-        GetRenderer().Submit(*mModel[i], *mMaterial[i], mTransforms[i]);
+        GetRenderer().Submit(*component.mesh, *component.material, entity.GetComponent<Transform>());
     }
 
     GetRenderer().EndFrame();

@@ -15,6 +15,15 @@ class Timer
 
         float GetElapsedTime();
         float GetDuration();
+
+        Timer(){}
+        Timer(bool start)
+        {
+            if(start)
+            {
+                Start();
+            }
+        }
     private:
         std::chrono::time_point<std::chrono::system_clock> mStart;
         std::chrono::time_point<std::chrono::system_clock> mEnd;

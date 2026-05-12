@@ -9,6 +9,7 @@ namespace ImGuiHelper
 
     bool DragVec3(std::string_view label, glm::vec3& value, float speed = 1.f);
     bool IconButton(char icon, const ImVec2& size = {0,0});
+    std::string toLower(const std::string& string);
     bool FileDialog(const std::string& label, std::string& filename, bool& opened);
 
     void ClearFileDialogData(std::string_view label);

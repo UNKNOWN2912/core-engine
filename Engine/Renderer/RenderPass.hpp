@@ -33,8 +33,8 @@ class RenderPass
         void CmdBeginRenderPass(const CommandBuffer& commandBuffer, const FrameBuffer& frameBuffer, const glm::uvec2& size, std::initializer_list<VkClearValue> clearValues);
         void CmdEndRenderPass(const CommandBuffer& commandBuffer);
 
-        void Create();
-        void Destroy();
+        void CreateRenderPass();
+        void DestroyRenderPass();
 
         RenderPass(){}
         ~RenderPass();

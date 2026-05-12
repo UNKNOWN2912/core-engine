@@ -29,11 +29,11 @@ void UniformBuffer::Destroy()
     DestroyBuffer(mBuffer);    
 }
 
-void UniformBuffer::SetData(size_t size, void* data)
+void UniformBuffer::SetData(void* data)
 {
     CHROME_TRACE_FUNCTION();
 
     vkDeviceWaitIdle(getDevice());
     
-    memcpy(mBuffer.map, data, size);
+    memcpy(mBuffer.map, data, mBuffer.size);
 }

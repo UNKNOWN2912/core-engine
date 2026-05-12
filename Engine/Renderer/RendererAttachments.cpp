@@ -1,7 +1,7 @@
 #include "RendererAttachments.hpp"
 
 
-void DeferredSubpassAttachment::CreateAttachment(const glm::uvec2& size) 
+void DeferredAttachment::CreateAttachment(const glm::uvec2& size) 
 {
     albedo = CreateImage(size, ImageFormat::RGBA8, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
     position = CreateImage(size, ImageFormat::RGBA32, ImageUsage::Color | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
@@ -11,7 +11,7 @@ void DeferredSubpassAttachment::CreateAttachment(const glm::uvec2& size)
     this->size = size;
 }
 
-void DeferredSubpassAttachment::ResizeAttachment(const glm::uvec2& size) 
+void DeferredAttachment::ResizeAttachment(const glm::uvec2& size) 
 {
     if(size == this->size)
         return;
@@ -20,7 +20,7 @@ void DeferredSubpassAttachment::ResizeAttachment(const glm::uvec2& size)
     CreateAttachment(size);
 }
 
-void DeferredSubpassAttachment::DestroyAttachment() 
+void DeferredAttachment::DestroyAttachment() 
 {
     DestroyImage(albedo);    
     DestroyImage(position);    

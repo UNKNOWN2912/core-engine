@@ -55,10 +55,11 @@ class GameLayer : public Layer
 
         StaticMesh mesh;
 
-        void LoadNode(const aiScene* scene, aiNode* node, std::vector<std::shared_ptr<StaticMesh>>& meshes, std::vector<std::shared_ptr<Material>>& materials, std::vector<Transform>& transforms);
 
         std::shared_ptr<StaticMesh> GetMeshFromAiMesh(const aiMesh* mesh);
 
-        std::shared_ptr<Material> GetMaterialFromAiMaterial(const aiMaterial* material);
+        std::shared_ptr<Material> GetMaterialFromAiMaterial(const aiMaterial* aimaterial, std::string_view basePath);
+
+        void LoadNode(Scene& scene, const aiScene* aiscene, aiNode* node, std::string_view basePath);
 
 };

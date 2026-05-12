@@ -30,6 +30,7 @@ class EditorLayer : public Layer
         void GameView();
         void ControlPanel();
         void EntityPanel();
+        void PerformancePanel();
 
         const Camera &GetEditorCamera() const;
 
@@ -39,6 +40,7 @@ class EditorLayer : public Layer
         bool mContentPanelEnable = true;
         bool mGameViewEnable = true;
         bool mEntityPanelEnable = true;
+        bool mPerformancePanel = true;
 
 
         bool mDisableCursor = false;
@@ -61,8 +63,6 @@ class EditorLayer : public Layer
         CameraController mEditorCameraController;
 
         void PropertyPanel();
-
         void LoadState(std::string_view filename);
-
         void StoreState(std::string_view filename);
 };

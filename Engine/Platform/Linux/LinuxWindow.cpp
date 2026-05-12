@@ -485,9 +485,11 @@ void maximizeCallback(GLFWwindow* window, int maximize)
 	w->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMaximize, &isMaximized);
 }
 
-void Window::Create(const glm::uvec2& size, std::string_view title)
+void Window::CreateWindow(const glm::uvec2& size, std::string_view title)
 {
     CHROME_TRACE_FUNCTION();
+
+	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 
 	glfwInit();
 
@@ -524,7 +526,7 @@ void Window::HideCursor()
 }
 
 
-void Window::Destroy()
+void Window::DestroyWindow()
 {
     CHROME_TRACE_FUNCTION();
 	assert(mWindowData.window != nullptr);
@@ -655,5 +657,5 @@ void Window::SetFullscreen(bool fullscreen)
 
 Window::~Window()
 {
-	Destroy();
+	DestroyWindow();
 }

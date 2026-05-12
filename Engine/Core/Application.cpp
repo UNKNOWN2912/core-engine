@@ -8,7 +8,7 @@ void Application::InitializeApplication()
 
 	mApplicationTimer.Start();
 
-	mWindow.Create(glm::uvec2(800, 600), "Untitled");
+	mWindow.CreateWindow(glm::uvec2(800, 600), "Untitled");
 	mWindow.AddListener(BindMember(Application::WindowEventCallback));
 
 	mRenderer.Initialize(mWindow);
@@ -163,9 +163,17 @@ void Application::MainLoop()
 {
 	CHROME_TRACE_FUNCTION();
 
-	
+	Timer fpsTimer(true);
+	uint32_t fps = 0;
 	while (mRunning)
 	{
+		fps++;
+		if(fpsTimer.GetElapsedTime() > 1.f)
+		{
+			mFps = fps;
+			fps = 0;
+			fpsTimer.Start();
+		}
 		mFrameCounter++;
 		mDeltaTimer.Start();
 		mWindow.ProcessEvent();

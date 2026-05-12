@@ -9,7 +9,7 @@ uint32_t Swapchain::GetNextImageIndex(const Semaphore& semaphore, const Fence& f
     return imageIndex;
 }
 
-void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode) 
+void Swapchain::CreateSwapchain(const glm::uvec2& size, PresentMode presentMode) 
 {
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(getPhysicalDevice(), getSurface(), &capabilities);
@@ -20,7 +20,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
         mSize = {800, 600};
     }
 
-    VkFormat format = VK_FORMAT_B8G8R8A8_UNORM;
+    ImageFormat format = ImageFormat::BGRA8UNORM;
     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
     uint32_t imageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
@@ -30,7 +30,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = getSurface(),
         .minImageCount = imageCount,
-        .imageFormat = format,
+        .imageFormat = GetVulkanImageFormat(format),
         .imageColorSpace = colorSpace,
         .imageExtent = {size.x, size.y},
         .imageArrayLayers = 1,
@@ -53,7 +53,7 @@ void Swapchain::Create(const glm::uvec2& size, PresentMode presentMode)
 
     for (VkImage image : images)
     {
-        VkImageView view = CreateImageView(image, ImageFormat::BGRA8UNORM, ImageAspect::Color);
+        VkImageView view = CreateImageView(image, format, ImageAspect::Color);
         views.push_back(view);
     } 
     
