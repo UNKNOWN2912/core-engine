@@ -15,7 +15,14 @@ void Texture::Create(void* data, const glm::uvec2& size, ImageFormat format)
 
     mImage = CreateImage(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
     mStagingBuffer = CreateBuffer(mImage.memorySize, BufferUsage::TransferSource, MemoryProperty::HostVisible | MemoryProperty::HostCoherent);
-    memcpy(mStagingBuffer.map, data, mImage.memorySize);
+    // memcpy(mStagingBuffer.map, data, mImage.memorySize);
+
+    unsigned char* staging = (unsigned char*)mStagingBuffer.map;
+    unsigned char* idata = (unsigned char*)data;
+    for (int i = 0; i < mImage.memorySize; i++)
+    {
+        staging[i] = idata[i];
+    }
 
     TransitionImageLayout(ImageLayout::None, ImageLayout::TransferDestination, ImageAspect::Color, mImage);
 

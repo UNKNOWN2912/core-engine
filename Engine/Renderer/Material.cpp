@@ -3,7 +3,14 @@
 
 void Material::LoadAlbedo(std::string_view filename) 
 {
-    mAlbedo.Load(filename);    
+    mAlbedo = std::make_shared<Texture>();
+    mAlbedo->Load(filename);    
+}
+
+void Material::CreateAlbedo(void* data, const glm::uvec2& size) 
+{
+    mAlbedo = std::make_shared<Texture>();
+    mAlbedo->Create(data, size, ImageFormat::RGBA8);    
 }
 
 void Material::LoadShaders(std::string_view vertexShaderFilename, std::string_view fragmentShaderFilename) 
@@ -19,8 +26,8 @@ void Material::Create()
 
     mImageDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
     mImageDescriptor.Create();
-    if(mAlbedo.IsValid())
-        mImageDescriptor.UpdateImage(mAlbedo.GetImage(), ImageLayout::ShaderRead, mAlbedoSampler, 0);
+    if(mAlbedo != nullptr)
+        mImageDescriptor.UpdateImage(mAlbedo->GetImage(), ImageLayout::ShaderRead, mAlbedoSampler, 0);
 
     mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
     mUniformDescriptor.Create();

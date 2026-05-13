@@ -2,7 +2,6 @@
 #include "Renderer/Helper.hpp"
 #include <cstring>
 
-
 void Renderer::Initialize(const Window& window)
 {
     mContext.Create(window, true);
@@ -22,7 +21,6 @@ void Renderer::Initialize(const Window& window)
 
     mImageAcquiredSemaphore.Create();
     mTransferSemaphore.Create();
-
 }
 
 void Renderer::Terminate() 

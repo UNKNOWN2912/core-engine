@@ -5,6 +5,7 @@
 #include "Renderer/Sampler.hpp"
 #include "Renderer/Texture.hpp"
 #include "Renderer/Types.hpp"
+#include <memory>
 
 enum class AttributeType
 {
@@ -18,6 +19,8 @@ class Material
 {
     public:
         void LoadAlbedo(std::string_view filename);
+        void CreateAlbedo(void* data, const glm::uvec2& size);
+
         void LoadShaders(std::string_view vertexShaderFilename,
                         std::string_view fragmentShaderFilename);
 
@@ -59,6 +62,9 @@ class Material
         const InstanceBuffer& GetInstanceBuffer() const { return mInstanceBuffer; }
         InstanceBuffer& GetInstanceBufferRef() { return mInstanceBuffer; }
 
+        void SetAlbedoTexture(std::shared_ptr<Texture> texture) { mAlbedo = texture; }
+        const std::shared_ptr<Texture> GetAlbedo() const { return mAlbedo; }
+        std::shared_ptr<Texture> GetAlbedo() { return mAlbedo; }
 
     private:
         float mLineWidth = 1.f;
@@ -77,7 +83,7 @@ class Material
         Descriptor mImageDescriptor;
         Descriptor mUniformDescriptor;
 
-        Texture mAlbedo;
+        std::shared_ptr<Texture> mAlbedo;
         Sampler mAlbedoSampler;
 
         InstanceBuffer mInstanceBuffer;

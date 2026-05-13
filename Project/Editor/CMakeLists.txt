@@ -1,7 +1,7 @@
 include_directories("imgui/")
 
 file(GLOB sources 
-    "*.cpp",
+    "Sources/*.cpp",
     "imgui/*.cpp",
     "imgui/backends/imgui_impl_glfw.cpp",
     "imgui/backends/imgui_impl_vulkan.cpp",
