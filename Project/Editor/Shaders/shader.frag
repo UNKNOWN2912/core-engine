@@ -16,8 +16,8 @@ layout(location = 0) in InputData
 void main()
 {
     albedo = texture(tex0, Input.uv);
-    // if(albedo.a < 0.5)
-    //     discard;
+    if(albedo.a == 0.0)
+        discard;
     position = vec4(Input.fragPos, 1.0);
     normal = vec4(Input.normal,1);
 }

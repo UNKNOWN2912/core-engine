@@ -296,7 +296,9 @@ void Renderer::CreateDeferredPassObjects()
     mDeferred.descriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
     mDeferred.descriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Compute);
     mDeferred.descriptor.Create();
-
+    
+    mDeferred.attachment.CreateAttachment(mSwapchain.GetSize());
+    
     mDeferred.descriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
     mDeferred.descriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
     mDeferred.descriptor.UpdateImage(mDeferred.attachment.normal, ImageLayout::ShaderRead, mDefaultSampler, 2);
@@ -310,7 +312,6 @@ void Renderer::CreateDeferredPassObjects()
     mDeferred.renderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests, PipelineStage::ColorAttachmentOutput | PipelineStage::EarlyFragmentTests | PipelineStage::LateFragmentTests);
     mDeferred.renderPass.CreateRenderPass();
 
-    mDeferred.attachment.CreateAttachment(mSwapchain.GetSize());
 
     std::initializer_list<Image> attachments = 
     {   mDeferred.attachment.albedo,

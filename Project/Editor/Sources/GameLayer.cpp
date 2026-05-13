@@ -96,48 +96,24 @@ void GameLayer::OnAttach()
 
   
     Assimp::Importer importer;
-    const aiScene* aiscene = importer.ReadFile("./Model/bistro/Untitled.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
-    if (aiscene == nullptr)
-    {
-        LOG("importer error: {}", importer.GetErrorString());
-    }
-    LoadNode(scene, aiscene, aiscene->mRootNode, "./Model/bistro/");
+    // const aiScene* aiscene = importer.ReadFile("./Model/bistro/Untitled.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    // if (aiscene == nullptr)
+    // {
+    //     LOG("importer error: {}", importer.GetErrorString());
+    // }
+    // LoadNode(scene, aiscene, aiscene->mRootNode, "./Model/bistro/");
 
-    for (auto& [entity, transform] : scene.GetEntities<Transform>()) 
-    {
-        transform.scale *= 0.01f;
-    }
-    
-    const aiScene* carScene = importer.ReadFile("./Model/mercedes/Untitled.gltf", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    // for (auto& [entity, transform] : scene.GetEntities<Transform>()) 
+    // {
+    //     transform.scale *= 0.01f;
+    // }
+
+    const aiScene* carScene = importer.ReadFile("./Model/porsche/Untitled.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
     if (carScene == nullptr)
     {
         LOG("importer error: {}", importer.GetErrorString());
     }
-
-    // LoadNode(scene, carScene, carScene->mRootNode, "./Model/mercedes/");
-
-    for (auto& [entity, MeshRendererComponent] : scene.GetEntities<MeshRendererComponent>())
-    {
-        if (entity.GetComponent<EntityMetadata>().name == "Object_500")
-        {
-            frontRightTier.push_back(entity);
-        }
-        else if (entity.GetComponent<EntityMetadata>().name == "Object_532")
-        {
-            frontLeftTier.push_back(entity);
-        }
-        else if (entity.GetComponent<EntityMetadata>().name == "Object_516")
-        {
-            backRightTier.push_back(entity);
-        }
-        else if (entity.GetComponent<EntityMetadata>().name == "Object_485")
-        {
-            backLeftTier.push_back(entity);
-        }
-        
-    }
-
-
+    LoadNode(scene, carScene, carScene->mRootNode, "./Model/porsche/");
 
     commandBuffer.Create();
 

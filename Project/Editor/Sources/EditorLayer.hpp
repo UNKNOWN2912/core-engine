@@ -31,6 +31,15 @@ class EditorLayer : public Layer
         void ControlPanel();
         void EntityPanel();
         void PerformancePanel();
+        void ImageViewerPanel();
+
+        Image* normal = nullptr;
+        VkDescriptorSet mImageViewTextureId;
+
+        std::unordered_map<std::string, Image*> mImageViewerSelection;
+
+        std::string selection = "";
+        void SetSelection(const std::string& string, Image* image);
 
         const Camera &GetEditorCamera() const;
 
@@ -41,6 +50,7 @@ class EditorLayer : public Layer
         bool mGameViewEnable = true;
         bool mEntityPanelEnable = true;
         bool mPerformancePanel = true;
+        bool mImageViewEnable = false;
 
         ImGuiStyle mOriginalStyle;
 

@@ -34,7 +34,13 @@ void EditorLayer::OnAttach()
 
 
     mScene = &GetLayer<GameLayer>().scene;
-}
+
+
+    SetSelection("Albedo", &GetRenderer().mDeferred.attachment.albedo);
+    SetSelection("Position", &GetRenderer().mDeferred.attachment.position);
+    SetSelection("Normal", &GetRenderer().mDeferred.attachment.normal);
+    SetSelection("Depth", &GetRenderer().mDeferred.attachment.depth);
+}   
 
 void EditorLayer::LoadState(std::string_view filename)
 {
@@ -76,6 +82,30 @@ void EditorLayer::UpdateCamera()
 
 void EditorLayer::OnUpdate() 
 {
+    if(mImageViewerSelection.contains(selection))
+    {
+        VkDescriptorImageInfo imageInfo = 
+        {
+            .sampler = GetRenderer().GetDefaultSampler().GetHandle(), 
+            .imageView = mImageViewerSelection[selection]->view,
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        };
+        
+        VkWriteDescriptorSet writeDescriptor = 
+        {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = mImageViewTextureId,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+        };
+        
+        vkUpdateDescriptorSets(getDevice(), 1, &writeDescriptor, 0, nullptr);
+    }
+
+
     UpdateCamera();
     RenderImGui();
     ResizeRenderView(mViewSize);
@@ -86,6 +116,8 @@ void EditorLayer::OnUpdate()
         GetWindow().ShowCursor();
 
     mDisableCursor = false;
+
+
 }
 
 void EditorLayer::OnDetach() 
@@ -416,8 +448,48 @@ void EditorLayer::PerformancePanel()
     ImGui::Text("Fps: %d", GetApplication()->GetFps());
     ImGui::PlotLines("Frame time", frameData.values + zoom, count - zoom, 0, NULL, 0, frameData.max, {ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y * 0.5f});
     ImGui::End();
+}
 
+void EditorLayer::ImageViewerPanel() 
+{
+    if(!mImageViewEnable)
+        return;
 
+    ImGui::Begin("Image Viewer");
+
+    if(ImGui::BeginCombo("Images", selection.c_str()))
+    {
+        
+        for(const auto& [name, image] : mImageViewerSelection)
+        {
+            if(ImGui::Selectable(name.c_str(), name == selection))
+            {
+                selection = name;
+                ImGui::EndCombo();
+                ImGui::End();
+                return;
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    if(mImageViewerSelection.contains(selection))
+    {
+        if(mImageViewTextureId != 0)
+        {
+            auto nsize = mViewSize;
+            ImVec2 size = {float(nsize.x), float(nsize.y)};
+            ImGui::Image((ImTextureID)mImageViewTextureId, size, {0,1}, {1,0});
+        }
+    }
+
+    ImGui::End();
+}
+
+void EditorLayer::SetSelection(const std::string& string, Image* image) 
+{
+    mImageViewerSelection[string] = image;    
 }
 
 void EditorLayer::PropertyPanel()
@@ -521,6 +593,7 @@ void EditorLayer::RenderUI()
     EntityPanel();
     PropertyPanel();
     PerformancePanel();
+    ImageViewerPanel();
     MainMenuBar();
 }
 
@@ -570,6 +643,7 @@ void EditorLayer::MainMenuBar()
         IconWindowToggle("Property", '<', mPropertyPanelEnable);
         IconWindowToggle("Entity", 'r', mEntityPanelEnable);
         IconWindowToggle("Performance", 's', mPerformancePanel);
+        IconWindowToggle("Image Viewer", 's', mImageViewEnable);
         ImGui::EndMenu();
     }
     if(ImGui::BeginMenu("Window"))
@@ -710,6 +784,8 @@ void EditorLayer::InitializeImGui()
 
     if(mRenderTarget != nullptr)
         mRenderViewTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(GetRenderer().GetDefaultSampler().GetHandle(), mRenderTarget->GetImage().view, VK_IMAGE_LAYOUT_GENERAL);
+
+    mImageViewTextureId = ImGui_ImplVulkan_AddTexture(GetRenderer().mDefaultSampler.GetHandle(), GetRenderer().mDeferred.attachment.normal.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void EditorLayer::TerminateImGui() 
@@ -807,6 +883,8 @@ void EditorLayer::ResizeRenderView(const glm::uvec2& size)
     };
 
     vkUpdateDescriptorSets(getDevice(), 1, &writeDescriptor, 0, nullptr);
+
+    
 
     mEditorCamera.SetAspectRatio(float(size.x) / float(size.y));
 }
