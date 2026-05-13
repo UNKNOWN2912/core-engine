@@ -1,4 +1,7 @@
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
+Project/Editor/Model/bistro/Untitled.glb filter=lfs diff=lfs merge=lfs -text
+Project/Editor/Model/bistro/Untitled.gltf filter=lfs diff=lfs merge=lfs -text
+Project/Editor/Model/bistro/Untitled.bin filter=lfs diff=lfs merge=lfs -text
 *.gltf filter=lfs diff=lfs merge=lfs -text
 Project/RendererRework/RendererRework filter=lfs diff=lfs merge=lfs -text
