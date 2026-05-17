@@ -2,7 +2,7 @@
 #include "CameraController.hpp"
 #include "Core/LayerStack.hpp"
 #include "EntityComponentSystem.hpp"
-#include "imgui.h"
+#include "Panel.hpp"
 
 
 class EditorLayer : public Layer
@@ -20,61 +20,31 @@ class EditorLayer : public Layer
 
         void RenderUI();
         void SetRenderTarget(RenderTarget *renderTarget);
-        void ResizeRenderView(const glm::uvec2& size);
         void UpdateCamera();
-        void CustomStyle();
-        void CustomizationWindow();
-        void StoreImGuiStyle(std::string_view filename, const ImGuiStyle& style);
-        void LoadImGuiStyle(std::string_view filename, ImGuiStyle& style);
         void MainMenuBar();
-        void GameView();
-        void ControlPanel();
-        void EntityPanel();
-        void PerformancePanel();
-        void ImageViewerPanel();
 
-        Image* normal = nullptr;
-        VkDescriptorSet mImageViewTextureId;
-
-        std::unordered_map<std::string, Image*> mImageViewerSelection;
-
-        std::string selection = "";
-        void SetSelection(const std::string& string, Image* image);
+        PanelManager mPanelManager;
 
         const Camera &GetEditorCamera() const;
 
-        bool mPropertyPanelEnable = true;
-        bool mCustomizeWindowEnable = false;
-        bool mDemoWindowEnable = false;
-        bool mContentPanelEnable = true;
-        bool mGameViewEnable = true;
-        bool mEntityPanelEnable = true;
-        bool mPerformancePanel = true;
-        bool mImageViewEnable = false;
-
-        ImGuiStyle mOriginalStyle;
-
-
-        bool mDisableCursor = false;
-
         Scene* mScene;
-        Entity mSelectedEntity;
-
-        glm::uvec2 mViewSize = glm::uvec2(0);
-
         RenderPass mImGuiRenderPass;
         std::vector<FrameBuffer> mImGuiFrameBuffer;
         CommandBuffer mImGuiCommandBuffer;
         Semaphore mImageAcquiredSemaphore;
         Semaphore mRenderingFinished;
-        Sampler mSampler;
-        ImTextureID mRenderViewTexture;
+        
         RenderTarget* mRenderTarget;
-
         Camera mEditorCamera;
         CameraController mEditorCameraController;
 
-        void PropertyPanel();
-        void LoadState(std::string_view filename);
-        void StoreState(std::string_view filename);
+        void CustomStyle();
+
+        void EditMenu();
+
+        void FileMenu();
+
+        void ViewMenu();
+
+        void WindowMenu();
 };

@@ -108,12 +108,12 @@ void GameLayer::OnAttach()
     //     transform.scale *= 0.01f;
     // }
 
-    const aiScene* carScene = importer.ReadFile("./Model/porsche/Untitled.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* carScene = importer.ReadFile("./Model/barber/testMap.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
     if (carScene == nullptr)
     {
         LOG("importer error: {}", importer.GetErrorString());
     }
-    LoadNode(scene, carScene, carScene->mRootNode, "./Model/porsche/");
+    LoadNode(scene, carScene, carScene->mRootNode, "./Model/barber/");
 
     commandBuffer.Create();
 

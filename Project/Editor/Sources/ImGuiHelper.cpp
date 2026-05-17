@@ -275,4 +275,10 @@ namespace ImGuiHelper
         ImGui::PopFont();
         ImGui::SameLine();
     }
+
+    bool IconMenuItem(std::string_view label, char icon)
+    {
+        IconCharacterSameLine(icon);
+        return ImGui::MenuItem(label.data());
+    }
 }

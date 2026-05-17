@@ -6,7 +6,7 @@ void Renderer::Initialize(const Window& window)
 {
     mContext.Create(window, true);
 
-    mDefaultSampler.SetFilter(Filter::Linear, Filter::Linear);
+    mDefaultSampler.SetFilter(Filter::Nearest, Filter::Nearest);
     mDefaultSampler.Create();
 
     mSwapchain.CreateSwapchain(window.GetSize(), PresentMode::Fifo);

@@ -2,7 +2,6 @@
 #include "Core/Macro.hpp"
 #include "GraphicsContext.hpp"
 #include "Renderer/Converter.hpp"
-#include "Renderer/RenderPass.hpp"
 #include "Renderer/Types.hpp"
 
 uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties)

@@ -103,4 +103,6 @@ private:
 	LayerStack mLayerStack;
 
 	uint32_t mFrameCounter = 0;
+
+	bool mHideCursor = false;
 };

@@ -167,6 +167,11 @@ void Application::MainLoop()
 	uint32_t fps = 0;
 	while (mRunning)
 	{
+		if(mHideCursor)
+			mWindow.HideCursor();
+		else
+			mWindow.ShowCursor();
+		
 		fps++;
 		if(fpsTimer.GetElapsedTime() > 1.f)
 		{
@@ -188,12 +193,12 @@ void Application::MainLoop()
 void Application::HideCursor()
 {
 	CHROME_TRACE_FUNCTION();
-	mWindow.HideCursor();
+	mHideCursor = true;
 }
 
 void Application::ShowCursor() 
 {
-	mWindow.ShowCursor();	
+	mHideCursor = false;	
 }
 
 void Application::ToggleCursor()

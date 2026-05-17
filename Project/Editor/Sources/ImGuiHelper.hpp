@@ -17,5 +17,7 @@ namespace ImGuiHelper
     void IconCharacter(char ch);
 
     void IconCharacterSameLine(char ch);
+
+    bool IconMenuItem(std::string_view label, char icon);
     
 }
