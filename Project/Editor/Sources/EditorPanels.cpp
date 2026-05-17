@@ -212,7 +212,7 @@ void ImageViewerPanel::OnRenderUi()
 
 void ImageViewerPanel::AddImage(std::string identifier, Image* image) 
 {
-    mImageMap[identifier] = image;   
+    mImageMap[identifier] = image;
 }
 
 EntityPanel::EntityPanel()

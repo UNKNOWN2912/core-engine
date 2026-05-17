@@ -96,24 +96,12 @@ void GameLayer::OnAttach()
 
   
     Assimp::Importer importer;
-    // const aiScene* aiscene = importer.ReadFile("./Model/bistro/Untitled.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
-    // if (aiscene == nullptr)
-    // {
-    //     LOG("importer error: {}", importer.GetErrorString());
-    // }
-    // LoadNode(scene, aiscene, aiscene->mRootNode, "./Model/bistro/");
-
-    // for (auto& [entity, transform] : scene.GetEntities<Transform>()) 
-    // {
-    //     transform.scale *= 0.01f;
-    // }
-
-    const aiScene* carScene = importer.ReadFile("./Model/barber/testMap.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* carScene = importer.ReadFile("./Model/sponza/sponza.glb", aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
     if (carScene == nullptr)
     {
         LOG("importer error: {}", importer.GetErrorString());
     }
-    LoadNode(scene, carScene, carScene->mRootNode, "./Model/barber/");
+    LoadNode(scene, carScene, carScene->mRootNode, "./Model/sponza/");
 
     commandBuffer.Create();
 
@@ -266,11 +254,6 @@ void GameLayer::OnUpdate()
 {
     mCameraController.EnableControl(true);
     UpdateCamera();
-
-    // for (int i = 0; i < frontLeftTier.size(); i++)
-    // {
-    //     frontLeftTier[i].GetComponent<Transform>().rotation.x += 24;
-    // }
 
     static float speed = 0;
 

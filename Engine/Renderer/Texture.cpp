@@ -15,7 +15,6 @@ void Texture::Create(void* data, const glm::uvec2& size, ImageFormat format)
 
     mImage = CreateImage(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
     mStagingBuffer = CreateBuffer(mImage.memorySize, BufferUsage::TransferSource, MemoryProperty::HostVisible | MemoryProperty::HostCoherent);
-    // memcpy(mStagingBuffer.map, data, mImage.memorySize);
 
     unsigned char* staging = (unsigned char*)mStagingBuffer.map;
     unsigned char* idata = (unsigned char*)data;
@@ -31,6 +30,8 @@ void Texture::Create(void* data, const glm::uvec2& size, ImageFormat format)
     TransitionImageLayout(ImageLayout::TransferDestination, ImageLayout::ShaderRead, ImageAspect::Color, mImage);
 
     mIsValid = true;
+
+    DestroyBuffer(mStagingBuffer);
 }
 
 void Texture::Load(std::string_view filename)
@@ -47,6 +48,8 @@ void Texture::Load(std::string_view filename)
     stbi_uc* data = stbi_load(filename.data(), &size.x, &size.y, nullptr, 4);
 
     Create(data, size, ImageFormat::RGBA8);
+
+    stbi_image_free(data);
 }
 Texture::~Texture() { Destroy(); }
 
