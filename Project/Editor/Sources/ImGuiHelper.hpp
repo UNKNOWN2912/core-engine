@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include <glm/glm.hpp>
 #include <string_view>
+#include <string>
 
 namespace ImGuiHelper
 {

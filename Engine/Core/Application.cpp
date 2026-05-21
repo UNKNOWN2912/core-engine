@@ -12,7 +12,6 @@ void Application::InitializeApplication()
 	mWindow.AddListener(BindMember(Application::WindowEventCallback));
 
 	mRenderer.Initialize(mWindow);
-
 }
 
 void Application::TerminateApplication()
@@ -27,7 +26,7 @@ void Application::RunApplication()
 	OnStart();
 	MainLoop();
 	OnEnd();
-	TerminateApplication();
+    TerminateApplication();
 }
 
 void Application::Close()

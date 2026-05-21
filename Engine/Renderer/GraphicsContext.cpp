@@ -1,8 +1,8 @@
 #include "GraphicsContext.hpp"
 #include "Core/Macro.hpp"
 
-VkBool32 validationCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, 
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+VkBool32 validationCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                            const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
     ERROR("---------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     ERROR("{}", pCallbackData->pMessage);
@@ -11,52 +11,59 @@ VkBool32 validationCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeveri
     return VK_FALSE;
 };
 
-
-void GraphicsContext::Create(const Window& window, bool setAsCurrentContext) 
+void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
 {
     CHROME_TRACE_FUNCTION();
+
+    bool validationEnabled = true;
 
     {
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 
         uint32_t glfwExtensionCount;
-        const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-        std::vector<const char*> extensions;
+        std::vector<const char *> extensions;
 
         for (uint32_t i = 0; i < glfwExtensionCount; i++)
         {
             extensions.push_back(glfwExtensions[i]);
         }
 
-        extensions.push_back("VK_EXT_debug_utils");
+        // uint32_t layerCount = 1;
+        // const char *layers[] = {"VK_LAYER_KHRONOS_validation"};
 
+        std::vector<const char *> layers;
 
-        uint32_t layerCount = 1;
-        const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
+        if (validationEnabled)
+        {
+            extensions.push_back("VK_EXT_debug_utils");
+            layers.push_back("VK_LAYER_KHRONOS_validation");
+        }
 
         createInfo.enabledExtensionCount = extensions.size();
         createInfo.ppEnabledExtensionNames = extensions.data();
 
-        createInfo.enabledLayerCount = layerCount;
-        createInfo.ppEnabledLayerNames = layers;
+        createInfo.enabledLayerCount = layers.size();
+        createInfo.ppEnabledLayerNames = layers.data();
 
         vkCreateInstance(&createInfo, nullptr, &mInstance);
     }
 
+    if (validationEnabled)
     {
-        VkDebugUtilsMessengerCreateInfoEXT createInfo = 
-        {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-            .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT  | 
-                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT     |
-                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT  |
-                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-            .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-            .pfnUserCallback = validationCallback,
-            .pUserData = nullptr,
-        };
+        VkDebugUtilsMessengerCreateInfoEXT createInfo =
+            {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
+                .pfnUserCallback = validationCallback,
+                .pUserData = nullptr,
+            };
 
         auto CreateDebugMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -80,7 +87,7 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
                 mPhysicalDevice = devices[i];
             }
         }
-        if(mPhysicalDevice == VK_NULL_HANDLE)
+        if (mPhysicalDevice == VK_NULL_HANDLE)
             ERROR("Failed to find suitable device");
     }
 
@@ -90,7 +97,7 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
 
     {
         uint32_t count;
-    	vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &count, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &count, nullptr);
         VkQueueFamilyProperties properties[8];
         vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &count, properties);
 
@@ -126,8 +133,7 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
         VkDeviceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-
-        std::vector<const char*> extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+        std::vector<const char *> extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
         createInfo.enabledExtensionCount = extensions.size();
         createInfo.ppEnabledExtensionNames = extensions.data();
@@ -189,7 +195,6 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
         vkGetDeviceQueue(mDevice, mQueueIndices.transfer, 0, &mQueues.transfer);
     }
 
-
     {
         VkCommandPoolCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -197,30 +202,30 @@ void GraphicsContext::Create(const Window& window, bool setAsCurrentContext)
         vkCreateCommandPool(mDevice, &createInfo, nullptr, &mCommandPool);
     }
 
-    if(setAsCurrentContext)
+    if (setAsCurrentContext)
         SetAsCurrentContext();
 }
 
-void GraphicsContext::Destroy() 
+void GraphicsContext::Destroy()
 {
     CHROME_TRACE_FUNCTION();
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroyDevice(mDevice, nullptr);
-	vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
-	vkDestroyInstance(mInstance, nullptr);
+    vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
+    vkDestroyInstance(mInstance, nullptr);
 
-    if(sCurrentContext == this)
+    if (sCurrentContext == this)
     {
         sCurrentContext = nullptr;
     }
 }
 
-void GraphicsContext::SetAsCurrentContext() 
+void GraphicsContext::SetAsCurrentContext()
 {
     sCurrentContext = this;
 }
 
-GraphicsContext& GraphicsContext::GetCurrentContext() 
+GraphicsContext &GraphicsContext::GetCurrentContext()
 {
     return *sCurrentContext;
 }
@@ -254,13 +259,12 @@ VkCommandPool GraphicsContext::GetCommandPool()
     return mCommandPool;
 }
 
-VkDebugUtilsMessengerEXT GraphicsContext::GetMessenger() 
+VkDebugUtilsMessengerEXT GraphicsContext::GetMessenger()
 {
-    return mMessenger;    
+    return mMessenger;
 }
 
-GraphicsContext* GraphicsContext::sCurrentContext = nullptr;
-
+GraphicsContext *GraphicsContext::sCurrentContext = nullptr;
 
 VkInstance getInstance()
 {
@@ -291,7 +295,7 @@ VkCommandPool getCommandPool()
     return GraphicsContext::GetCurrentContext().GetCommandPool();
 }
 
-VkDebugUtilsMessengerEXT getMessenger() 
+VkDebugUtilsMessengerEXT getMessenger()
 {
     return GraphicsContext::GetCurrentContext().GetMessenger();
 }

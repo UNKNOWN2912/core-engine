@@ -14,3 +14,9 @@
 [submodule "Engine/Vendor/assimp"]
 	path = Engine/Vendor/assimp
 	url = https://github.com/assimp/assimp.git
+[submodule "Engine/Vendor/json"]
+	path = Engine/Vendor/json
+	url = https://github.com/nlohmann/json.git
+[submodule "Engine/Vendor/uuid_v4"]
+	path = Engine/Vendor/uuid_v4
+	url = https://github.com/crashoz/uuid_v4.git

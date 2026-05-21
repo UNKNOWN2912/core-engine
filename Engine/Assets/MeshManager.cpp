@@ -1,20 +1,28 @@
 #include "MeshManager.hpp"
 
-std::shared_ptr<StaticMesh> MeshManager::AddMesh(std::string_view identifier, std::shared_ptr<StaticMesh> mesh)
+MeshID MeshManager::AddMesh(std::shared_ptr<StaticMesh> mesh)
 {
-    mMeshMap[identifier.data()] = mesh;
-    return mesh;
+    MeshID id = GenerateID();
+    mMeshMap[id] = mesh;
+    return id;
 }
-void MeshManager::DestroyMesh(std::string_view identifier)
+MeshID MeshManager::GenerateID()
 {
-    mMeshMap[identifier.data()]->Destroy();
-    mMeshMap[identifier.data()].reset();
+    return (MeshID)mLastMeshId++;
 }
-std::shared_ptr<StaticMesh> MeshManager::GetMesh(std::string_view identifier)
+void MeshManager::DestroyMesh(MeshID id)
 {
-    return mMeshMap[identifier.data()];
+    mMeshMap[id]->Destroy();
+    mMeshMap[id].reset();
 }
-bool MeshManager::HasMesh(std::string_view identifier)
+std::shared_ptr<StaticMesh> MeshManager::GetMesh(MeshID id)
 {
-    return GetMesh(identifier) == nullptr;
+    return mMeshMap[id];
 }
+bool MeshManager::HasMesh(MeshID id)
+{
+    return mMeshMap.contains(id);
+}
+
+uint64_t MeshManager::mLastMeshId = 0;
+std::unordered_map<MeshID, std::shared_ptr<StaticMesh>> MeshManager::mMeshMap;

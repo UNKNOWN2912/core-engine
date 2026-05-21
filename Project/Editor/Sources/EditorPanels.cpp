@@ -3,22 +3,23 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
+#include <algorithm>
 
 GameViewPanel::GameViewPanel(RenderTarget *renderTarget, Camera *camera, CameraController *controller)
-    : mTarget(renderTarget), mCamera(camera), mController(controller) 
+    : mTarget(renderTarget), mCamera(camera), mController(controller)
 {
     SetTitle("Game View");
     SetIcon('R');
 }
 
-void GameViewPanel::OnAttach() 
+void GameViewPanel::OnAttach()
 {
     mTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(
-    Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), mTarget->GetImage().view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), mTarget->GetImage().view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
-void GameViewPanel::OnUpdate() 
+void GameViewPanel::OnUpdate()
 {
-    if (mTarget->GetImage().size != mSize) 
+    if (mTarget->GetImage().size != mSize)
     {
         vkDeviceWaitIdle(getDevice());
         mTarget->Resize(mSize);
@@ -37,7 +38,7 @@ void GameViewPanel::OnUpdate()
         mCamera->SetAspectRatio(float(mSize.x) / float(mSize.y));
     }
 }
-void GameViewPanel::OnRenderUi() 
+void GameViewPanel::OnRenderUi()
 {
     ImGui::Begin(GetTitle().c_str(), &mEnabled, ImGuiWindowFlags_NoCollapse);
 
@@ -46,7 +47,7 @@ void GameViewPanel::OnRenderUi()
     ImGui::Image(mTexture, ImVec2(mSize.x, mSize.y), ImVec2(0, 1), ImVec2(1, 0));
     mController->EnableKeyboardControl(ImGui::IsItemHovered());
     mController->EnableMouseControl(ImGui::IsItemHovered() &&
-    ImGui::IsMouseDown(ImGuiMouseButton_Left));
+                                    ImGui::IsMouseDown(ImGuiMouseButton_Left));
 
     if (ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
         Application::GetInstance()->HideCursor();
@@ -62,7 +63,7 @@ PerformancePanel::PerformancePanel()
     SetIcon('s');
 }
 
-void PerformancePanel::OnRenderUi() 
+void PerformancePanel::OnRenderUi()
 {
     ImGui::Begin(GetTitle().c_str(), &mEnabled);
 
@@ -79,12 +80,12 @@ void PerformancePanel::OnRenderUi()
 
     for (int i = 0; i < count; i++)
     {
-        if(i == count - 1)
-            frameData.values[count-1] = Application::GetInstance()->GetDeltaTime();
+        if (i == count - 1)
+            frameData.values[count - 1] = Application::GetInstance()->GetDeltaTime();
         else
-            frameData.values[i] = frameData.values[i+1];
-        
-        if(frameData.max < frameData.values[i])
+            frameData.values[i] = frameData.values[i + 1];
+
+        if (frameData.max < frameData.values[i])
             frameData.max = frameData.values[i];
         frameData.average += frameData.values[i];
     }
@@ -113,22 +114,22 @@ void PerformancePanel::OnRenderUi()
 
     frameData.average /= float(count);
     static int zoom = 0;
-    
-    if(ImGuiHelper::IconButton('W'))
+
+    if (ImGuiHelper::IconButton('W'))
     {
         memset(frameData.values, 0, sizeof(frameData.values));
     }
     ImGui::SameLine();
     ImGui::SliderInt("Zoom", &zoom, 0, count - 1);
     ImGui::Text("Sample count: %u", count);
-    if(frameData.values[0] == 0)
+    if (frameData.values[0] == 0)
     {
         ImGui::Text("Frame average: --.--");
         ImGui::Text("Fps average: --.--");
         ImGui::Text("%%1 Fps: --.--");
         ImGui::Text("%%0.1 Fps: --.--");
     }
-    else 
+    else
     {
         ImGui::Text("Frame average: %.4f", frameData.average);
         ImGui::Text("Fps average: %.2f", 1.f / frameData.average);
@@ -138,7 +139,7 @@ void PerformancePanel::OnRenderUi()
 
     ImGui::Text("Fps: %d", Application::GetInstance()->GetFps());
     ImGui::PlotLines("Frame time", frameData.values + zoom, count - zoom, 0, NULL, 0, frameData.max, {ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y * 0.5f});
-    ImGui::End();    
+    ImGui::End();
 }
 
 ImageViewerPanel::ImageViewerPanel()
@@ -147,50 +148,54 @@ ImageViewerPanel::ImageViewerPanel()
     SetIcon('6');
 }
 
-void ImageViewerPanel::OnAttach() 
+void ImageViewerPanel::OnAttach()
 {
 }
 
-void ImageViewerPanel::OnUpdate() 
+void ImageViewerPanel::OnUpdate()
 {
-    if(mImageMap.contains(mSelection))
+    if (mImageMap.contains(mSelection))
     {
-        if(mTexture == 0)
-            mTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), mImageMap[mSelection]->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        if (mTexture == 0)
+        {
+            Image *image = mImageMap[mSelection];
+            VkImageView view = image->view;
+            mTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
         else
         {
-            VkDescriptorImageInfo imageInfo = 
-            {
-                .sampler = Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), 
-                .imageView = mImageMap[mSelection]->view,
-                .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-            };
-            
-            VkWriteDescriptorSet writeDescriptor = 
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = (VkDescriptorSet)mTexture,
-                .dstBinding = 0,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo = &imageInfo,
-            };
-            
+            VkDescriptorImageInfo imageInfo =
+                {
+                    .sampler = Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(),
+                    .imageView = mImageMap[mSelection]->view,
+                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                };
+
+            VkWriteDescriptorSet writeDescriptor =
+                {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = (VkDescriptorSet)mTexture,
+                    .dstBinding = 0,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &imageInfo,
+                };
+
             vkUpdateDescriptorSets(getDevice(), 1, &writeDescriptor, 0, nullptr);
         }
     }
 }
 
-void ImageViewerPanel::OnRenderUi() 
+void ImageViewerPanel::OnRenderUi()
 {
     ImGui::Begin(GetTitle().c_str(), &mEnabled);
 
-    if(ImGui::BeginCombo("Images", mSelection.c_str()))
+    if (ImGui::BeginCombo("Images", mSelection.c_str()))
     {
-        for(const auto& [name, image] : mImageMap)
+        for (const auto &[name, image] : mImageMap)
         {
-            if(ImGui::Selectable(name.c_str(), name == mSelection))
+            if (ImGui::Selectable(name.c_str(), name == mSelection))
             {
                 mSelection = name;
                 ImGui::EndCombo();
@@ -201,16 +206,16 @@ void ImageViewerPanel::OnRenderUi()
         ImGui::EndCombo();
     }
 
-    if(mTexture != 0)
+    if (mTexture != 0)
     {
         auto nsize = mImageMap[mSelection]->size;
         ImVec2 size = {float(nsize.x), float(nsize.y)};
-        ImGui::Image((ImTextureID)mTexture, size, {0,1}, {1,0});
+        ImGui::Image((ImTextureID)mTexture, size, {0, 1}, {1, 0});
     }
     ImGui::End();
 }
 
-void ImageViewerPanel::AddImage(std::string identifier, Image* image) 
+void ImageViewerPanel::AddImage(std::string identifier, Image *image)
 {
     mImageMap[identifier] = image;
 }
@@ -221,11 +226,15 @@ EntityPanel::EntityPanel()
     SetIcon('Q');
 }
 
-void EntityPanel::OnRenderUi() 
+void EntityPanel::OnRenderUi()
 {
     ImGui::Begin(GetTitle().c_str(), &mEnabled, ImGuiWindowFlags_NoCollapse);
 
-    if(mScene == nullptr) { ImGui::End(); return; }
+    if (mScene == nullptr)
+    {
+        ImGui::End();
+        return;
+    }
 
     bool focus = false;
     static bool createEntityBox = false;
@@ -236,22 +245,22 @@ void EntityPanel::OnRenderUi()
 
     search = ImGuiHelper::toLower(search);
 
-    if(ImGui::IsWindowHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Right))
     {
         ImGui::OpenPopup("Right click menu");
     }
 
     static bool cfocus = false;
 
-    if(ImGui::IsWindowHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
     {
         cfocus = true;
         createEntityBox = true;
     }
 
-    if(ImGui::BeginPopup("Right click menu"))
+    if (ImGui::BeginPopup("Right click menu"))
     {
-        if(ImGui::Button("Create entity"))
+        if (ImGui::Button("Create entity"))
         {
             cfocus = true;
             createEntityBox = true;
@@ -261,59 +270,58 @@ void EntityPanel::OnRenderUi()
         ImGui::EndPopup();
     }
 
+    auto &entities = mScene->GetEntities<EntityMetadata>();
 
-    auto entities = mScene->GetEntities<EntityMetadata>();
-
-    for (auto& [entity, metadata] : entities) 
+    for (auto &[entity, metadata] : entities)
     {
         ImGui::PushID((uint32_t)entity.GetId());
-        if(search.size() != 0)
+        if (search.size() != 0)
         {
             std::string name = ImGuiHelper::toLower(metadata.name);
-            if(!name.contains(search))
+            if (!name.contains(search))
             {
                 ImGui::PopID();
                 continue;
             }
         }
         bool selected = false;
-        if(mSelectedEntity.IsValid())
+        if (mSelectedEntity.IsValid())
         {
-            if(mSelectedEntity == entity)
+            if (mSelectedEntity == entity)
                 selected = true;
         }
         ImGuiHelper::IconCharacterSameLine('Q');
-        if(ImGui::Selectable(metadata.name.c_str(), selected))
+        if (ImGui::Selectable(metadata.name.c_str(), selected))
         {
             mSelectedEntity = entity;
         }
-        
+
         ImGui::PopID();
     }
 
-    if(createEntityBox)
+    if (createEntityBox)
     {
         static std::string name;
 
         ImGuiHelper::IconCharacterSameLine('r');
-        if(ImGui::InputText("##name", &name, ImGuiInputTextFlags_EnterReturnsTrue))
+        if (ImGui::InputText("##name", &name, ImGuiInputTextFlags_EnterReturnsTrue))
         {
             mScene->CreateEntity(name);
             createEntityBox = false;
         }
-        
-        if(!ImGui::IsItemActive() && cfocus == false)
+
+        if (!ImGui::IsItemActive() && cfocus == false)
         {
             createEntityBox = false;
         }
 
-        if(cfocus)
+        if (cfocus)
         {
             ImGui::ActivateItemByID(ImGui::GetItemID());
             cfocus = false;
         }
 
-        if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape))
         {
             createEntityBox = false;
         }
@@ -328,50 +336,48 @@ PropertyPanel::PropertyPanel()
     SetIcon('q');
 }
 
-void PropertyPanel::SetEntity(Entity entity) 
+void PropertyPanel::SetEntity(Entity entity)
 {
-    mEntity = entity;    
+    mEntity = entity;
 }
 
-void PropertyPanel::OnRenderUi() 
+void PropertyPanel::OnRenderUi()
 {
     ImGui::Begin(GetTitle().c_str(), &mEnabled, ImGuiWindowFlags_NoCollapse);
 
-    if(!mEntity.IsValid())
+    if (!mEntity.IsValid())
     {
         ImGui::End();
         return;
     }
 
-    if(ImGui::Button("Add Component"))
+    if (ImGui::Button("Add Component"))
     {
         ImGui::OpenPopup("Components");
         ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, {0.5, 0.5});
     }
 
-    if(ImGui::BeginPopup("Components"))
+    if (ImGui::BeginPopup("Components"))
     {
-        if((ImGui::Button("Transform")))
+        if ((ImGui::Button("Transform")))
         {
             mEntity.AddComponent<Transform>();
         }
         ImGui::EndPopup();
     }
 
-
     ImGui::SeparatorText("Entity");
     ImGui::Text("Id: %d", mEntity.GetId());
 
-    std::string& name = mEntity.GetComponent<EntityMetadata>().name;
+    std::string &name = mEntity.GetComponent<EntityMetadata>().name;
     ImGui::InputText("Name", &name);
-    if(name.size() == 0)
+    if (name.size() == 0)
         name = "Untitled";
 
-
-    if(mEntity.HasComponent<Transform>())
+    if (mEntity.HasComponent<Transform>())
     {
         ImGui::SeparatorText("Transform");
-        Transform& transform = mEntity.GetComponent<Transform>();
+        Transform &transform = mEntity.GetComponent<Transform>();
 
         bool hideCursor = false;
 
@@ -382,11 +388,9 @@ void PropertyPanel::OnRenderUi()
         ImGuiHelper::DragVec3("Scale", transform.scale, 0.01f);
         hideCursor = (ImGui::IsItemFocused() && ImGui::IsMouseDown(ImGuiMouseButton_Left)) ? true : hideCursor;
 
-        if(hideCursor)
+        if (hideCursor)
             Application::GetInstance()->HideCursor();
     }
 
-
     ImGui::End();
-
 }

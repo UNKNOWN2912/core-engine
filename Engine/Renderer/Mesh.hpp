@@ -2,46 +2,70 @@
 #include "Utility.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
-
 
 struct Vertex
 {
-    glm::vec3 position;
-    glm::vec2 uv;
-    glm::vec3 normal;
+    glm::vec3 position = glm::vec3(0);
+    glm::vec2 uv = glm::vec3(0);
+    glm::vec3 normal = glm::vec3(0);
 
-    Vertex(glm::vec3 position, glm::vec2 uv, glm::vec3 normal): position(position), uv(uv), normal(normal) {}
-    Vertex(){}
+    Vertex(glm::vec3 position, glm::vec2 uv, glm::vec3 normal) : position(position), uv(uv), normal(normal)
+    {
+    }
+    Vertex()
+    {
+    }
 };
-
 
 class StaticMesh
 {
-    public:
-        StaticMesh();
-        StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
-        StaticMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+  public:
+    StaticMesh();
+    StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
+    StaticMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
-        void SetData(const void* vertices, size_t vertexSize, const uint32_t* indices, size_t indexSize);
-        void SetData(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
-        bool IsValid() const { return mIsValid; }
+    void SetData(const void *vertices, size_t vertexSize, const uint32_t *indices, size_t indexSize);
+    void SetData(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+    bool IsValid() const
+    {
+        return mIsValid;
+    }
 
-        void Destroy();
+    void Destroy();
 
-        const Buffer& GetVertexBuffer() const { return mVertexBuffer; }
-        const Buffer& GetIndexBuffer() const { return mIndexBuffer; }
-    private:
-        friend class Renderer;
+    const Buffer &GetVertexBuffer() const
+    {
+        return mVertexBuffer;
+    }
+    const Buffer &GetIndexBuffer() const
+    {
+        return mIndexBuffer;
+    }
 
-        size_t mVertexSize = 0;
-        size_t mIndexSize = 0;
-        
-        Buffer mStagingVertexBuffer;
-        Buffer mStagingIndexBuffer;
-        
-        Buffer mVertexBuffer;
-        Buffer mIndexBuffer;
+    const std::string &GetName() const
+    {
+        return mName;
+    }
+    void SetName(const std::string &name)
+    {
+        mName = name;
+    }
 
-        bool mIsValid = false;
+  private:
+    std::string mName;
+
+    friend class Renderer;
+
+    size_t mVertexSize = 0;
+    size_t mIndexSize = 0;
+
+    Buffer mStagingVertexBuffer;
+    Buffer mStagingIndexBuffer;
+
+    Buffer mVertexBuffer;
+    Buffer mIndexBuffer;
+
+    bool mIsValid = false;
 };

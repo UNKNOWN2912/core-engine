@@ -1,41 +1,53 @@
 #include "TextureManager.hpp"
 
-std::shared_ptr<Texture> TextureManager::LoadTexture(std::string_view filename) 
+TextureID TextureManager::GenerateID()
 {
-    return LoadTexture(filename, filename);
+    return (TextureID)mLastTextureId++;
 }
 
-std::shared_ptr<Texture> TextureManager::LoadTexture(std::string_view filename, std::string_view identifier) 
+TextureID TextureManager::LoadTexture(std::string_view filename)
 {
+    TextureID id = GenerateID();
+
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
     texture->Load(filename);
 
-    mTextureMap[identifier.data()] = texture;
+    mTextureMap[id] = texture;
 
-    return texture;
+    return id;
 }
 
-std::shared_ptr<Texture> TextureManager::CreateTexture(std::string_view identifier, void* data, const glm::uvec2& size, ImageFormat format) 
+TextureID TextureManager::CreateTexture(void *data, const glm::uvec2 &size, ImageFormat format)
 {
+    TextureID id = GenerateID();
+
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
     texture->Create(data, size, format);
 
-    mTextureMap[identifier.data()] = texture;
+    mTextureMap[id] = texture;
 
-    return texture;
+    return id;
 }
 
-void TextureManager::DestroyTexture(std::string_view identifier) 
+void TextureManager::DestroyTexture(TextureID id)
 {
-    mTextureMap[identifier.data()].reset();    
+    mTextureMap[id].reset();
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(std::string_view identifier) 
+std::shared_ptr<Texture> TextureManager::GetTexture(TextureID id)
 {
-    return mTextureMap[identifier.data()];
+    return mTextureMap[id];
 }
 
-bool TextureManager::HasTexture(std::string_view identifier) 
+bool TextureManager::HasTexture(TextureID id)
 {
-    return GetTexture(identifier) == nullptr;
+    return mTextureMap.contains(id);
 }
+
+uint32_t TextureManager::GetCount()
+{
+    return mTextureMap.size();
+}
+
+uint64_t TextureManager::mLastTextureId = 0;
+std::unordered_map<TextureID, std::shared_ptr<Texture>> TextureManager::mTextureMap;

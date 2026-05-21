@@ -5,41 +5,27 @@
 #include "Renderer/Descriptor.hpp"
 #include "Utility.hpp"
 
-void GraphicsPipeline::LoadVertexShader(std::string_view filename)
+void GraphicsPipeline::SetVertexShader(VkShaderModule shader)
 {
-    CHROME_TRACE_FUNCTION();
-    if(mVertexShader != VK_NULL_HANDLE)
-        vkDestroyShaderModule(getDevice(), mVertexShader, nullptr);
-
-    mVertexShader = CreateShaderFromFile(getDevice(), filename.data());
+    mVertexShader = shader;
 }
 
-void GraphicsPipeline::LoadFragmentShader(std::string_view filename)
-{
-    CHROME_TRACE_FUNCTION();
-    if(mFragmentShader != VK_NULL_HANDLE)
-        vkDestroyShaderModule(getDevice(), mFragmentShader, nullptr);
 
-    mFragmentShader = CreateShaderFromFile(getDevice(), filename.data());
+void GraphicsPipeline::SetFragmentShader(VkShaderModule shader)
+{
+    mFragmentShader = shader;
 }
 
-void GraphicsPipeline::LoadGeometryShader(std::string_view filename)
+
+void GraphicsPipeline::SetGeometryShader(VkShaderModule shader)
 {
-    CHROME_TRACE_FUNCTION();
-    if(mGeometryShader != VK_NULL_HANDLE)
-        vkDestroyShaderModule(getDevice(), mGeometryShader, nullptr);
-    
-    mGeometryShader = CreateShaderFromFile(getDevice(), filename.data());
+    mGeometryShader = shader;
 }
 
-void GraphicsPipeline::LoadTessellationShader(std::string_view filename)
-{
-    CHROME_TRACE_FUNCTION();
-    if(mTessellationShader != VK_NULL_HANDLE)
-        vkDestroyShaderModule(getDevice(), mTessellationShader, nullptr);
-    
-    mTessellationShader = CreateShaderFromFile(getDevice(), filename.data());
 
+void GraphicsPipeline::SetTessellationShader(VkShaderModule shader)
+{
+    mTessellationShader = shader;
 }
 
 void GraphicsPipeline::EnableDepthTesting(bool enable)
@@ -262,6 +248,14 @@ VkPipelineLayout GraphicsPipeline::GetPipelineLayout() const
     CHROME_TRACE_FUNCTION();
     return mPipelineLayout;
 }
+
+
+VkPipeline GraphicsPipeline::GetHandle() const
+{
+    return mHandle;
+}
+
+
 
 void GraphicsPipeline::SetPushConstant(ShaderStage stage, size_t size) 
 {

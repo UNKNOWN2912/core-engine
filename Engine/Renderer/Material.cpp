@@ -1,39 +1,33 @@
 #include "Material.hpp"
 #include <Core/Application.hpp>
 
-void Material::LoadAlbedo(std::string_view filename) 
+void Material::SetAlbedo(TextureID id)
 {
-    mAlbedo = std::make_shared<Texture>();
-    mAlbedo->Load(filename);    
+    if (TextureManager::HasTexture(id))
+    {
+        mAlbedo = id;
+    }
 }
 
-void Material::CreateAlbedo(void* data, const glm::uvec2& size) 
+void Material::SetShaders(VertexShaderID vertexShaderId, FragmentShaderID fragmentShaderId)
 {
-    mAlbedo = std::make_shared<Texture>();
-    mAlbedo->Create(data, size, ImageFormat::RGBA8);    
+    mPipeline.SetVertexShader(ShaderManager::GetVertexShader(vertexShaderId));
+    mPipeline.SetFragmentShader(ShaderManager::GetFragmentShader(fragmentShaderId));
 }
 
-void Material::LoadShaders(std::string_view vertexShaderFilename, std::string_view fragmentShaderFilename) 
-{
-    mPipeline.LoadVertexShader(vertexShaderFilename);
-    mPipeline.LoadFragmentShader(fragmentShaderFilename);
-}
-
-void Material::Create() 
+void Material::Create()
 {
     mAlbedoSampler.SetFilter(Filter::Linear, Filter::Linear);
     mAlbedoSampler.Create();
 
     mImageDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
     mImageDescriptor.Create();
-    if(mAlbedo != nullptr)
-        mImageDescriptor.UpdateImage(mAlbedo->GetImage(), ImageLayout::ShaderRead, mAlbedoSampler, 0);
+    if (mAlbedo != TextureManager::GetInvalidID())
+        mImageDescriptor.UpdateImage(TextureManager::GetTexture(mAlbedo)->GetImage(), ImageLayout::ShaderRead, mAlbedoSampler, 0);
 
     mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
     mUniformDescriptor.Create();
     mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetDeferredUniformBuffer().GetBuffer(), 0);
-
-
 
     mPipeline.SetCullMode(mCullMode);
     mPipeline.SetPrimitive(mPrimitiveType);
@@ -44,8 +38,7 @@ void Material::Create()
     mPipeline.AddColorBlendAttachment(false);
     mPipeline.AddColorBlendAttachment(false);
 
-
-    if(mAttributeCount == 0)
+    if (mAttributeCount == 0)
         SetDefaultAttribute();
 
     mPipeline.AddDescriptors(mImageDescriptor, mUniformDescriptor);
@@ -53,7 +46,7 @@ void Material::Create()
     mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
 }
 
-void Material::Destroy() 
+void Material::Destroy()
 {
     vkDeviceWaitIdle(getDevice());
     mAlbedoSampler.Destroy();
@@ -66,68 +59,84 @@ void Material::Destroy()
 
 void Material::SetLineWidth(float lineWidth)
 {
-    mLineWidth = lineWidth; 
+    mLineWidth = lineWidth;
 }
 void Material::EnableDepthTestEnable(bool depthTestEnable)
 {
-    mDepthTestEnable = depthTestEnable; 
+    mDepthTestEnable = depthTestEnable;
 }
 void Material::EnableDepthWriteEnable(bool depthWriteEnable)
 {
-    mDepthWriteEnable = depthWriteEnable; 
+    mDepthWriteEnable = depthWriteEnable;
 }
 void Material::EnableInstancing(bool enableInstancing)
 {
-    mEnableInstancing = enableInstancing; 
+    mEnableInstancing = enableInstancing;
 }
 void Material::EnableWireframe(bool wireframe)
 {
-    mWireframeEnable = wireframe; 
+    mWireframeEnable = wireframe;
 }
 void Material::SetCullMode(CullMode cullMode)
 {
-    mCullMode = cullMode; 
+    mCullMode = cullMode;
 }
 void Material::SetPrimitiveType(PrimitiveType primitiveType)
 {
-    mPrimitiveType = primitiveType; 
+    mPrimitiveType = primitiveType;
 }
 void Material::SetFrontFace(FrontFace frontFace)
 {
-    mFrontFace = frontFace; 
+    mFrontFace = frontFace;
 }
 void Material::SetSampleCount(SampleCount sampleCount)
 {
-    mSampleCount = sampleCount; 
+    mSampleCount = sampleCount;
 }
 
 ImageFormat GetAttributeFormat(AttributeType attributeType)
 {
-    ImageFormat formats[] = 
-    {
-        ImageFormat::R32U,      ImageFormat::R32U,      ImageFormat::R32,
-        ImageFormat::RG32U,     ImageFormat::RG32U,     ImageFormat::RG32,
-        ImageFormat::RGB32U,    ImageFormat::RGB32U,    ImageFormat::RGB32,
-        ImageFormat::RGBA32U,   ImageFormat::RGBA32U,   ImageFormat::RGBA32,
-    };
+    ImageFormat formats[] =
+        {
+            ImageFormat::R32U,
+            ImageFormat::R32U,
+            ImageFormat::R32,
+            ImageFormat::RG32U,
+            ImageFormat::RG32U,
+            ImageFormat::RG32,
+            ImageFormat::RGB32U,
+            ImageFormat::RGB32U,
+            ImageFormat::RGB32,
+            ImageFormat::RGBA32U,
+            ImageFormat::RGBA32U,
+            ImageFormat::RGBA32,
+        };
 
     return formats[(int)attributeType];
 }
 
 size_t GetAttributeSize(AttributeType attributeType)
 {
-    size_t sizes[] = 
-    {
-        sizeof(int) * 1, sizeof(uint32_t) * 1, sizeof(float) * 1,
-        sizeof(int) * 2, sizeof(uint32_t) * 2, sizeof(float) * 2,
-        sizeof(int) * 3, sizeof(uint32_t) * 3, sizeof(float) * 3,
-        sizeof(int) * 4, sizeof(uint32_t) * 4, sizeof(float) * 4,
-    };
+    size_t sizes[] =
+        {
+            sizeof(int) * 1,
+            sizeof(uint32_t) * 1,
+            sizeof(float) * 1,
+            sizeof(int) * 2,
+            sizeof(uint32_t) * 2,
+            sizeof(float) * 2,
+            sizeof(int) * 3,
+            sizeof(uint32_t) * 3,
+            sizeof(float) * 3,
+            sizeof(int) * 4,
+            sizeof(uint32_t) * 4,
+            sizeof(float) * 4,
+        };
 
     return sizes[(int)attributeType];
 }
 
-void Material::AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes) 
+void Material::AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes)
 {
     size_t offset = 0;
     uint32_t location = mLastAttributeLocation;
@@ -147,20 +156,19 @@ void Material::AddLayout(uint32_t binding, InputRate inputRate, std::initializer
     mAttributeCount++;
 }
 
-void Material::SetInstanceData(void* data, size_t size) 
+void Material::SetInstanceData(void *data, size_t size)
 {
-    mInstanceBuffer.SetData(data, size);    
+    mInstanceBuffer.SetData(data, size);
 }
 
-void Material::SetInstanceBuffer(const InstanceBuffer& instanceBuffer) 
+void Material::SetInstanceBuffer(const InstanceBuffer &instanceBuffer)
 {
     mInstanceBuffer = instanceBuffer;
 }
 
-
-void Material::SetDefaultAttribute() 
+void Material::SetDefaultAttribute()
 {
-    AddLayout(0, InputRate::Vertex, {AttributeType::Vec3, AttributeType::Vec2, AttributeType::Vec3});    
-    if(mEnableInstancing)
-        AddLayout(1, InputRate::Instance, {AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4});    
+    AddLayout(0, InputRate::Vertex, {AttributeType::Vec3, AttributeType::Vec2, AttributeType::Vec3});
+    if (mEnableInstancing)
+        AddLayout(1, InputRate::Instance, {AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4, AttributeType::Vec4});
 }

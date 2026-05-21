@@ -1,28 +1,28 @@
 #include "EditorLayer.hpp"
 #include "Core/Application.hpp"
+#include "EditorPanels.hpp"
 #include "GameLayer.hpp"
 #include "ImGuiHelper.hpp"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 #include <string>
-#include "EditorPanels.hpp"
 
-void EditorLayer::OnAttach() 
+void EditorLayer::OnAttach()
 {
     SetRenderTarget(&GetLayer<GameLayer>().mTarget);
     mEditorCameraController.SetCamera(mEditorCamera, Application::GetInstance()->GetWindowRef());
     InitializeImGui();
 
     ImGuiStyle &style = ImGui::GetStyle();
-    for (int i = 0; i < ImGuiCol_COUNT; i++) 
+    for (int i = 0; i < ImGuiCol_COUNT; i++)
     {
         ImVec4 &col = style.Colors[i];
         col.x = col.x <= 0.04045f ? col.x / 12.92f
-                                : pow((col.x + 0.055f) / 1.055f, 2.4f);
+                                  : pow((col.x + 0.055f) / 1.055f, 2.4f);
         col.y = col.y <= 0.04045f ? col.y / 12.92f
-                                : pow((col.y + 0.055f) / 1.055f, 2.4f);
+                                  : pow((col.y + 0.055f) / 1.055f, 2.4f);
         col.z = col.z <= 0.04045f ? col.z / 12.92f
-                                : pow((col.z + 0.055f) / 1.055f, 2.4f);
+                                  : pow((col.z + 0.055f) / 1.055f, 2.4f);
     }
 
     mScene = &GetLayer<GameLayer>().scene;
@@ -32,12 +32,17 @@ void EditorLayer::OnAttach()
     mPanelManager.AddPanel<PropertyPanel>();
     mPanelManager.AddPanel<PerformancePanel>();
     mPanelManager.AddPanel<ImageViewerPanel>();
-    
+
     mPanelManager.GetPanel<EntityPanel>()->SetScene(mScene);
     mPanelManager.GetPanel<ImageViewerPanel>()->AddImage("Albedo", &GetRenderer().mDeferred.attachment.albedo);
     mPanelManager.GetPanel<ImageViewerPanel>()->AddImage("Position", &GetRenderer().mDeferred.attachment.position);
     mPanelManager.GetPanel<ImageViewerPanel>()->AddImage("Normal", &GetRenderer().mDeferred.attachment.normal);
     mPanelManager.GetPanel<ImageViewerPanel>()->AddImage("Depth", &GetRenderer().mDeferred.attachment.depth);
+
+    for (const auto &[id, texture] : TextureManager::GetMap())
+    {
+        mPanelManager.GetPanel<ImageViewerPanel>()->AddImage(TextureManager::GetTexture(id)->GetName(), &texture->GetImageRef());
+    }
 }
 
 void EditorLayer::UpdateCamera()
@@ -46,7 +51,7 @@ void EditorLayer::UpdateCamera()
     mEditorCamera.Calculate();
 }
 
-void EditorLayer::OnUpdate() 
+void EditorLayer::OnUpdate()
 {
     mPanelManager.InvokeOnUpdate();
     mPanelManager.GetPanel<PropertyPanel>()->SetEntity(mPanelManager.GetPanel<EntityPanel>()->GetSelectedEntity());
@@ -55,22 +60,21 @@ void EditorLayer::OnUpdate()
     RenderImGui();
 }
 
-void EditorLayer::OnDetach() 
+void EditorLayer::OnDetach()
 {
     TerminateImGui();
 }
 
-
-void EditorLayer::RenderUI() 
+void EditorLayer::RenderUI()
 {
     mPanelManager.InvokeOnRenderUi();
     MainMenuBar();
 }
 
-void IconWindowToggle(std::string_view label, char iconCharacter, bool& opened)
+void IconWindowToggle(std::string_view label, char iconCharacter, bool &opened)
 {
     ImGuiHelper::IconCharacterSameLine(iconCharacter);
-    if(ImGui::MenuItem(label.data()))
+    if (ImGui::MenuItem(label.data()))
     {
         opened = !opened;
     }
@@ -78,29 +82,27 @@ void IconWindowToggle(std::string_view label, char iconCharacter, bool& opened)
 
 void EditorLayer::FileMenu()
 {
-    if(!ImGui::BeginMenu("File"))
-        return; 
+    if (!ImGui::BeginMenu("File"))
+        return;
 
-
-    
     ImGui::EndMenu();
 }
 
 void EditorLayer::EditMenu()
 {
-    if(!ImGui::BeginMenu("Edit"))
+    if (!ImGui::BeginMenu("Edit"))
         return;
 
     ImGuiHelper::IconCharacter('W');
     ImGui::SameLine();
-    if(ImGui::MenuItem("Reload icon font"))
+    if (ImGui::MenuItem("Reload icon font"))
     {
         ImGui::GetIO().Fonts->RemoveFont(ImGuiHelper::iconFont);
         ImGuiHelper::iconFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("./Fonts/icon.ttf");
     }
     ImGuiHelper::IconCharacter('W');
     ImGui::SameLine();
-    if(ImGui::MenuItem("Reload material"))
+    if (ImGui::MenuItem("Reload material"))
     {
         GetLayer<GameLayer>().ReloadMaterial();
         GetRenderer().mLighting.pipeline.Destroy();
@@ -113,14 +115,13 @@ void EditorLayer::EditMenu()
 
 void EditorLayer::ViewMenu()
 {
-    if(!ImGui::BeginMenu("View"))
+    if (!ImGui::BeginMenu("View"))
         return;
 
-    for(auto [id, panel] : mPanelManager.GetPanelMap())
+    for (auto [id, panel] : mPanelManager.GetPanelMap())
     {
-        if(ImGuiHelper::IconMenuItem(panel->GetTitle(), panel->GetIcon()))
+        if (ImGuiHelper::IconMenuItem(panel->GetTitle(), panel->GetIcon()))
         {
-            
         }
     }
 
@@ -130,7 +131,7 @@ void EditorLayer::ViewMenu()
 void EditorLayer::WindowMenu()
 {
 
-    if(!ImGui::BeginMenu("Window"))
+    if (!ImGui::BeginMenu("Window"))
         return;
 
     // ImGuiHelper::IconCharacterSameLine('A');
@@ -138,22 +139,20 @@ void EditorLayer::WindowMenu()
         Application::GetInstance()->Close();
 
     ImGuiHelper::IconCharacterSameLine(GetWindow().isFullscreen() ? '?' : '>');
-    if(ImGui::MenuItem("Toggle Fullscreen"))
+    if (ImGui::MenuItem("Toggle Fullscreen"))
         GetWindow().SetFullscreen(!GetWindow().isFullscreen());
 
-    
-    if(GetWindow().IsMaximized())
+    if (GetWindow().IsMaximized())
     {
         ImGuiHelper::IconCharacterSameLine('m');
-        if(ImGui::MenuItem("Minimize"))
+        if (ImGui::MenuItem("Minimize"))
             GetWindow().Restore();
     }
     else
     {
         ImGuiHelper::IconCharacterSameLine('n');
-        if(ImGui::MenuItem("Maximize"))
+        if (ImGui::MenuItem("Maximize"))
             GetWindow().Maximize();
-
     }
 
     ImGui::EndMenu();
@@ -161,48 +160,50 @@ void EditorLayer::WindowMenu()
 
 void EditorLayer::MainMenuBar()
 {
-    if(!ImGui::BeginMainMenuBar()) return;
+    if (!ImGui::BeginMainMenuBar())
+        return;
 
     FileMenu();
     EditMenu();
     ViewMenu();
     WindowMenu();
-    
-    
+
     ImGui::EndMainMenuBar();
 }
 
-void EditorLayer::SetRenderTarget(RenderTarget *renderTarget) 
+void EditorLayer::SetRenderTarget(RenderTarget *renderTarget)
 {
     mRenderTarget = renderTarget;
 }
-const Camera &EditorLayer::GetEditorCamera() const { return mEditorCamera; }
+const Camera &EditorLayer::GetEditorCamera() const
+{
+    return mEditorCamera;
+}
 
-bool EditorLayer::OnEvent(uint32_t code, void *data) 
+bool EditorLayer::OnEvent(uint32_t code, void *data)
 {
     WindowEvent windowEvent = (WindowEvent)code;
 
-    if(windowEvent == WindowEvent::WindowResize)
+    if (windowEvent == WindowEvent::WindowResize)
     {
         for (int i = 0; i < mImGuiFrameBuffer.size(); i++)
         {
             vkDeviceWaitIdle(getDevice());
             mImGuiFrameBuffer[i].Destroy();
-            mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(), 
-            {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
+            mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(),
+                                        {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
         }
     }
     return false;
 }
 
-
-void EditorLayer::CustomStyle() 
+void EditorLayer::CustomStyle()
 {
-    ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Adwaita/AdwaitaSans-Regular.ttf", 18);
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("./Fonts/inter.ttf", 18);
     ImGuiHelper::iconFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("./Fonts/icon.ttf", 16);
 }
 
-void EditorLayer::InitializeImGui() 
+void EditorLayer::InitializeImGui()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -212,21 +213,20 @@ void EditorLayer::InitializeImGui()
 
     CustomStyle();
 
-    VkDescriptorPoolSize poolSize = 
-    {
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
-    };
+    VkDescriptorPoolSize poolSize =
+        {
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
+        };
 
-
-    VkDescriptorPoolCreateInfo createInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
-        .poolSizeCount = 1,
-        .pPoolSizes = &poolSize,
-    };
+    VkDescriptorPoolCreateInfo createInfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+            .maxSets = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
+            .poolSizeCount = 1,
+            .pPoolSizes = &poolSize,
+        };
 
     VkDescriptorPool descriptorPool;
     vkCreateDescriptorPool(getDevice(), &createInfo, nullptr, &descriptorPool);
@@ -235,26 +235,26 @@ void EditorLayer::InitializeImGui()
     mImGuiRenderPass.AddSubpass({0}, {}, UINT32_MAX, PipelineBindPoint::Graphic);
     mImGuiRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
     mImGuiRenderPass.CreateRenderPass();
-    
-    ImGui_ImplVulkan_InitInfo initInfo = 
-    {
-        .Instance = getInstance(),
-        .PhysicalDevice = getPhysicalDevice(),
-        .Device = getDevice(),
-        .QueueFamily = getQueueIndices().graphics,
-        .Queue = getQueues().graphics,
-        .DescriptorPool = descriptorPool,
-        .MinImageCount = GetRenderer().GetSwapchain().GetImageCount(),
-        .ImageCount = GetRenderer().GetSwapchain().GetImageCount(),
-        .PipelineInfoMain = 
-        {
-            .RenderPass = mImGuiRenderPass.GetHandle(),
-            .Subpass = 0,
-            .SwapChainImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        },
-    };
 
-    ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)Application::GetInstance()->GetWindowRef().GetNativeWindow(), true);
+    ImGui_ImplVulkan_InitInfo initInfo =
+        {
+            .Instance = getInstance(),
+            .PhysicalDevice = getPhysicalDevice(),
+            .Device = getDevice(),
+            .QueueFamily = getQueueIndices().graphics,
+            .Queue = getQueues().graphics,
+            .DescriptorPool = descriptorPool,
+            .MinImageCount = GetRenderer().GetSwapchain().GetImageCount(),
+            .ImageCount = GetRenderer().GetSwapchain().GetImageCount(),
+            .PipelineInfoMain =
+                {
+                    .RenderPass = mImGuiRenderPass.GetHandle(),
+                    .Subpass = 0,
+                    .SwapChainImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                },
+        };
+
+    ImGui_ImplGlfw_InitForVulkan((GLFWwindow *)Application::GetInstance()->GetWindowRef().GetNativeWindow(), true);
     ImGui_ImplVulkan_Init(&initInfo);
 
     mImGuiFrameBuffer.reserve(GetRenderer().GetSwapchain().GetImageCount());
@@ -266,10 +266,9 @@ void EditorLayer::InitializeImGui()
     mImGuiCommandBuffer.Create();
     mImageAcquiredSemaphore.Create();
     mRenderingFinished.Create();
-
 }
 
-void EditorLayer::TerminateImGui() 
+void EditorLayer::TerminateImGui()
 {
     vkDeviceWaitIdle(getDevice());
     ImGui_ImplVulkan_Shutdown();
@@ -277,9 +276,9 @@ void EditorLayer::TerminateImGui()
     ImGui::DestroyContext();
 }
 
-void EditorLayer::RenderImGui() 
+void EditorLayer::RenderImGui()
 {
-    ImGui_ImplVulkan_NewFrame();    
+    ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
@@ -293,7 +292,7 @@ void EditorLayer::RenderImGui()
 
     mImGuiCommandBuffer.BeginRecording();
 
-    mImGuiRenderPass.CmdBeginRenderPass(mImGuiCommandBuffer, mImGuiFrameBuffer[imageIndex], Application::GetInstance()->GetRendererRef().GetSwapchain().GetSize(), {{0,0,0,1}});
+    mImGuiRenderPass.CmdBeginRenderPass(mImGuiCommandBuffer, mImGuiFrameBuffer[imageIndex], Application::GetInstance()->GetRendererRef().GetSwapchain().GetSize(), {{0, 0, 0, 1}});
 
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), mImGuiCommandBuffer.GetHandle());
 
@@ -306,27 +305,26 @@ void EditorLayer::RenderImGui()
     VkSemaphore waitSemaphores[] = {mRenderingFinished.GetHandle()};
     VkSwapchainKHR swapchains[] = {GetRenderer().GetSwapchain().GetHandle()};
 
-    VkPresentInfoKHR presentInfo = 
-    {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = waitSemaphores,
-        .swapchainCount = 1,
-        .pSwapchains = swapchains,
-        .pImageIndices = &imageIndex,
-    };
+    VkPresentInfoKHR presentInfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = waitSemaphores,
+            .swapchainCount = 1,
+            .pSwapchains = swapchains,
+            .pImageIndices = &imageIndex,
+        };
 
-    vkQueuePresentKHR(getQueues().present, &presentInfo);    
+    vkQueuePresentKHR(getQueues().present, &presentInfo);
 
-    if(Application::GetInstance()->GetRendererRef().ResizeSwapchain(Application::GetInstance()->GetWindowRef().GetSize()))
+    if (Application::GetInstance()->GetRendererRef().ResizeSwapchain(Application::GetInstance()->GetWindowRef().GetSize()))
     {
         vkDeviceWaitIdle(getDevice());
         for (int i = 0; i < mImGuiFrameBuffer.size(); i++)
         {
             mImGuiFrameBuffer[i].Destroy();
-            mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(), 
-            {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
+            mImGuiFrameBuffer[i].Create(GetRenderer().GetSwapchain().GetSize(),
+                                        {GetRenderer().GetSwapchain().GetImages()[i]}, mImGuiRenderPass);
         }
     }
-    
 }

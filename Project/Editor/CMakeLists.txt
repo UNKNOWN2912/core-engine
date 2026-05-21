@@ -11,3 +11,7 @@ file(GLOB sources
 add_executable(Editor ${sources}) 
 target_link_libraries(Editor Engine)
 target_link_libraries(Editor assimp)
+
+set_target_properties(Editor PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)

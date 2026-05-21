@@ -1,29 +1,39 @@
 #include "MaterialManager.hpp"
 
-std::shared_ptr<Material> MaterialManager::LoadMaterial(std::string_view filename) 
+MaterialID MaterialManager::LoadMaterial(std::string_view filename)
 {
-    
+    MaterialID id = GenerateID();
+    mMaterialMap[id] = std::make_shared<Material>();
+    return id;
 }
 
-std::shared_ptr<Material> MaterialManager::AddMaterial(std::string_view identifier, std::shared_ptr<Material> material) 
+MaterialID MaterialManager::AddMaterial(std::shared_ptr<Material> material)
 {
-    mMaterialMap[identifier.data()] = material;    
-    return material;
+    MaterialID id = GenerateID();
+    mMaterialMap[id] = material;
+    return id;
 }
 
-void MaterialManager::DestroyMaterial(std::string_view identifier) 
+MaterialID MaterialManager::GenerateID()
 {
-    mMaterialMap[identifier.data()]->Destroy();
-    mMaterialMap[identifier.data()].reset();
+    return (MaterialID)mLastMaterialId++;
 }
 
-std::shared_ptr<Material> MaterialManager::GetMaterial(std::string_view identifier) 
+void MaterialManager::DestroyMaterial(MaterialID materialId)
 {
-    return mMaterialMap[identifier.data()];    
+    mMaterialMap[materialId]->Destroy();
+    mMaterialMap[materialId].reset();
 }
 
-bool MaterialManager::HasMaterial(std::string_view identifier) 
+std::shared_ptr<Material> MaterialManager::GetMaterial(MaterialID materialId)
 {
-    return GetMaterial(identifier) == nullptr;    
+    return mMaterialMap[materialId];
 }
 
+bool MaterialManager::HasMaterial(MaterialID materialId)
+{
+    return GetMaterial(materialId) == nullptr;
+}
+
+uint64_t MaterialManager::mLastMaterialId = 0;
+std::unordered_map<MaterialID, std::shared_ptr<Material>> MaterialManager::mMaterialMap;

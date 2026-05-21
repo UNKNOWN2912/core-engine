@@ -5,24 +5,30 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+enum class VertexShaderID : uint64_t;
+enum class FragmentShaderID : uint64_t;
+
 class ShaderManager
 {
-    public:
-        VkShaderModule LoadVertexShader(std::string_view filename);
-        VkShaderModule LoadFragmentShader(std::string_view filename);
+  public:
+    static VertexShaderID LoadVertexShader(std::string_view filename);
+    static FragmentShaderID LoadFragmentShader(std::string_view filename);
 
-        VkShaderModule LoadVertexShader(std::string_view filename, std::string_view identifier);
-        VkShaderModule LoadFragmentShader(std::string_view filename, std::string_view identifier);
+    static VertexShaderID CreateVertexShader(const std::vector<uint32_t> &code);
+    static FragmentShaderID CreateFragmentShader(const std::vector<uint32_t> &code);
 
-        VkShaderModule CreateVertexShader(std::string_view identifier, const std::vector<uint32_t>& code);
-        VkShaderModule CreateFragmentShader(std::string_view identifier, const std::vector<uint32_t>& code);
+    static VkShaderModule GetVertexShader(VertexShaderID id);
+    static VkShaderModule GetFragmentShader(FragmentShaderID id);
 
-        VkShaderModule GetVertexShader(std::string_view identifier);
-        VkShaderModule GetFragmentShader(std::string_view identifier);
+    static bool HasVertexShader(VertexShaderID id);
+    static bool HasFragmentShader(FragmentShaderID id);
 
-        bool HasVertexShader(std::string_view identifier);
-        bool HasFragmentShader(std::string_view identifier);
-    private:
-        std::unordered_map<std::string, VkShaderModule> mVertexShaderMap;
-        std::unordered_map<std::string, VkShaderModule> mFragmentShaderMap;
+    static VertexShaderID GenerateVertexShaderID();
+    static FragmentShaderID GenerateFragmentShaderID();
+
+  private:
+    static uint64_t mLastVertexShaderId;
+    static uint64_t mLastFragmentShaderId;
+    static std::unordered_map<VertexShaderID, VkShaderModule> mVertexShaderMap;
+    static std::unordered_map<FragmentShaderID, VkShaderModule> mFragmentShaderMap;
 };

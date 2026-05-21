@@ -9,10 +9,10 @@
 class GraphicsPipeline
 {
     public:
-        void LoadVertexShader(std::string_view filename);
-        void LoadFragmentShader(std::string_view filename);
-        void LoadGeometryShader(std::string_view filename);
-        void LoadTessellationShader(std::string_view filename);
+        void SetVertexShader(VkShaderModule shader);
+        void SetFragmentShader(VkShaderModule shader);
+        void SetGeometryShader(VkShaderModule shader);
+        void SetTessellationShader(VkShaderModule shader);
         
         void EnableDepthTesting(bool enable);
         void EnableDepthWrite(bool enable);
@@ -29,26 +29,24 @@ class GraphicsPipeline
         void SetFrontFace(FrontFace frontFace);
         void SetViewport(const VkViewport& viewport);
         
-        
         void Create(const RenderPass& renderPass, uint32_t subpassIndex);
         void Destroy();  
         
         VkPipelineLayout GetPipelineLayout() const;
-        VkPipeline GetHandle() const { return mHandle; }
+        VkPipeline GetHandle() const;
 
-        template<typename ...Descriptors>
-        void AddDescriptors(const Descriptor& descriptor, const Descriptors& ...descriptors)
+        template <typename... Descriptors>
+        void AddDescriptors(const Descriptor &descriptor, const Descriptors &...descriptors)
         {
-            static_assert((std::is_same_v<const Descriptors&, const Descriptor&> && ...), "Argument type must be descriptors");
+            static_assert((std::is_same_v<const Descriptors &, const Descriptor &> && ...), "Argument type must be descriptors");
             mSetLayouts.push_back(descriptor.GetDescriptorSetLayout());
             AddDescriptors(descriptors...);
         }
 
-        void AddDescriptors(const Descriptor& descriptor)
+        void AddDescriptors(const Descriptor &descriptor)
         {
             mSetLayouts.push_back(descriptor.GetDescriptorSetLayout());
         }
-
 
         void SetPushConstant(ShaderStage stage, size_t size);
 
@@ -81,3 +79,4 @@ class GraphicsPipeline
         bool mBlendEnable = false;
         bool mWireframeEnable = false;
 };
+

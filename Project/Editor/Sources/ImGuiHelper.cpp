@@ -34,6 +34,9 @@ namespace ImGuiHelper
 
     std::string toLower(const std::string& string)
     {
+        if (string == "")
+            return {};
+
         std::string result;
         result.resize(string.size());
 
@@ -58,8 +61,8 @@ namespace ImGuiHelper
 
         if(!fileDialogDataMap.contains(label))
         {
-            fileDialogDataMap[label].currentPath = std::filesystem::current_path();
-            fileDialogDataMap[label].editingPath = std::filesystem::current_path();
+            fileDialogDataMap[label].currentPath = std::filesystem::current_path().string();
+            fileDialogDataMap[label].editingPath = std::filesystem::current_path().string();
         }
 
         FileDialogData& data = fileDialogDataMap[label]; 
@@ -69,7 +72,7 @@ namespace ImGuiHelper
             if(!entry.is_directory())
                 continue;
 
-            std::string searchFormatted = toLower(entry.path());
+            std::string searchFormatted = toLower(entry.path().string());
             std::string searchingFormatted = toLower(data.searchItem);
             searchFormatted.erase(searchFormatted.begin(), searchFormatted.begin() + searchFormatted.find_last_of('/') + 1);
 
@@ -85,7 +88,7 @@ namespace ImGuiHelper
             if(entry.is_directory())
                 continue;
             
-            std::string searchFormatted = toLower(entry.path());
+            std::string searchFormatted = toLower(entry.path().string());
             std::string searchingFormatted = toLower(data.searchItem);
         
             if(data.searchItem.size() != 0)
@@ -152,7 +155,7 @@ namespace ImGuiHelper
 
         for (int i = 0; i < directories.size(); i++)
         {
-            std::string viewString = directories[i].path();
+            std::string viewString = directories[i].path().string();
             viewString.erase(viewString.begin(), viewString.begin() + viewString.find_last_of('/') + 1);
 
             ImGui::PushFont(iconFont);
@@ -162,7 +165,7 @@ namespace ImGuiHelper
             }
             else
             {
-                std::string extension = directories[i].path();
+                std::string extension = directories[i].path().string();
                 extension.erase(extension.begin(), extension.begin() + extension.find_last_of('.') + 1);
 
                 if(extension == "png" || extension == "jpg" || extension == "jpeg")
@@ -189,12 +192,12 @@ namespace ImGuiHelper
                     if(directories[i].is_directory())
                     {
                         data.history.emplace_back(data.currentPath);
-                        data.editingPath = directories[i].path();
+                        data.editingPath = directories[i].path().string();
                         data.currentPath = data.editingPath;
                     }
                     else
                     {
-                        filename = directories[i].path();
+                        filename = directories[i].path().string();
                         fileDialogDataMap.erase(label);
                         ImGui::End();
                         opened = false;
@@ -239,12 +242,12 @@ namespace ImGuiHelper
         {
             if(directories[data.selected].is_directory())
             {
-                data.currentPath = directories[data.selected].path();
-                data.editingPath = directories[data.selected].path();
+                data.currentPath = directories[data.selected].path().string();
+                data.editingPath = directories[data.selected].path().string();
             }
             else
             {
-                filename = directories[data.selected].path();
+                filename = directories[data.selected].path().string();
                 fileDialogDataMap.erase(label);
                 opened = false;
                 return true;

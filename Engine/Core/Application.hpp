@@ -1,4 +1,8 @@
 #pragma once
+#include "Assets/MaterialManager.hpp"
+#include "Assets/MeshManager.hpp"
+#include "Assets/ShaderManager.hpp"
+#include "Assets/TextureManager.hpp"
 #include "Core/LayerStack.hpp"
 #include "Core/Window.hpp"
 #include "Input/Keyboard.hpp"

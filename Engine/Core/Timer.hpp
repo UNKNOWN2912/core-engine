@@ -25,8 +25,8 @@ class Timer
             }
         }
     private:
-        std::chrono::time_point<std::chrono::system_clock> mStart;
-        std::chrono::time_point<std::chrono::system_clock> mEnd;
+        decltype(std::chrono::high_resolution_clock::now()) mStart;
+        decltype(std::chrono::high_resolution_clock::now()) mEnd; 
         std::chrono::duration<float> mDuration;
 };
 
@@ -37,5 +37,5 @@ class ScopedTimer
         ~ScopedTimer();
     private:
         std::string mLabel;
-        Timer mTimer;
+      Timer mTimer;
 };

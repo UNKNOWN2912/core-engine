@@ -1,4 +1,6 @@
 #pragma once
+#include "Assets/ShaderManager.hpp"
+#include "Assets/TextureManager.hpp"
 #include "Renderer/Descriptor.hpp"
 #include "Renderer/GraphicsPipeline.hpp"
 #include "Renderer/InstanceBuffer.hpp"
@@ -9,87 +11,132 @@
 
 enum class AttributeType
 {
-    Int, UInt, Float,
-    IVec2, UVec2, Vec2,
-    IVec3, UVec3, Vec3,
-    IVec4, UVec4, Vec4,
+    Int,
+    UInt,
+    Float,
+    IVec2,
+    UVec2,
+    Vec2,
+    IVec3,
+    UVec3,
+    Vec3,
+    IVec4,
+    UVec4,
+    Vec4,
 };
 
 class Material
 {
-    public:
-        void LoadAlbedo(std::string_view filename);
-        void CreateAlbedo(void* data, const glm::uvec2& size);
+  public:
+    void SetAlbedo(TextureID id);
+    void SetShaders(VertexShaderID vertexShaderId, FragmentShaderID fragmentShaderId);
 
-        void LoadShaders(std::string_view vertexShaderFilename,
-                        std::string_view fragmentShaderFilename);
+    void Create();
+    void Destroy();
 
-        void Create();
-        void Destroy();
+    void SetLineWidth(float lineWidth);
+    void SetCullMode(CullMode cullMode);
+    void SetPrimitiveType(PrimitiveType primitiveType);
+    void SetFrontFace(FrontFace frontFace);
+    void SetSampleCount(SampleCount sampleCount);
+    void SetDefaultAttribute();
 
-        void SetLineWidth(float lineWidth);
-        void SetCullMode(CullMode cullMode);
-        void SetPrimitiveType(PrimitiveType primitiveType);
-        void SetFrontFace(FrontFace frontFace);
-        void SetSampleCount(SampleCount sampleCount);
-        void SetDefaultAttribute();
+    void SetInstanceCount(uint32_t instanceCount)
+    {
+        mInstanceCount = instanceCount;
+    }
 
-        void SetInstanceCount(uint32_t instanceCount) { mInstanceCount = instanceCount; }
-        
-        void EnableWireframe(bool wireframe);
-        void EnableDepthTestEnable(bool depthTestEnable);
-        void EnableDepthWriteEnable(bool depthWriteEnable);
-        void EnableInstancing(bool enableInstancing);
+    void EnableWireframe(bool wireframe);
+    void EnableDepthTestEnable(bool depthTestEnable);
+    void EnableDepthWriteEnable(bool depthWriteEnable);
+    void EnableInstancing(bool enableInstancing);
 
-        void AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes);
+    void AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes);
 
-        const GraphicsPipeline& GetPipeline() const { return mPipeline; }
-        const Descriptor& GetImageDescriptor() const { return mImageDescriptor; }
-        const Descriptor& GetUniformDescriptor() const { return mUniformDescriptor; }
+    const GraphicsPipeline &GetPipeline() const
+    {
+        return mPipeline;
+    }
+    const Descriptor &GetImageDescriptor() const
+    {
+        return mImageDescriptor;
+    }
+    const Descriptor &GetUniformDescriptor() const
+    {
+        return mUniformDescriptor;
+    }
 
-        GraphicsPipeline& GetPipelineRef() { return mPipeline; }
-        Descriptor& GetImageDescriptorRef() { return mImageDescriptor; }
-        Descriptor& GetUniformDescriptorRef() { return mUniformDescriptor; }
+    GraphicsPipeline &GetPipelineRef()
+    {
+        return mPipeline;
+    }
+    Descriptor &GetImageDescriptorRef()
+    {
+        return mImageDescriptor;
+    }
+    Descriptor &GetUniformDescriptorRef()
+    {
+        return mUniformDescriptor;
+    }
 
+    uint32_t GetInstanceCount() const
+    {
+        return mInstanceCount;
+    }
 
-        uint32_t GetInstanceCount() const { return mInstanceCount; }
+    void SetInstanceData(void *data, size_t size);
+    void SetInstanceBuffer(const InstanceBuffer &instanceBuffer);
 
-        void SetInstanceData(void* data, size_t size);
-        void SetInstanceBuffer(const InstanceBuffer& instanceBuffer);
+    bool IsInstancingEnabled() const
+    {
+        return mEnableInstancing;
+    }
 
-        bool IsInstancingEnabled() const { return mEnableInstancing; }
+    const InstanceBuffer &GetInstanceBuffer() const
+    {
+        return mInstanceBuffer;
+    }
+    InstanceBuffer &GetInstanceBufferRef()
+    {
+        return mInstanceBuffer;
+    }
 
-        const InstanceBuffer& GetInstanceBuffer() const { return mInstanceBuffer; }
-        InstanceBuffer& GetInstanceBufferRef() { return mInstanceBuffer; }
+    const std::string &GetName() const
+    {
+        return mName;
+    }
 
-        void SetAlbedoTexture(std::shared_ptr<Texture> texture) { mAlbedo = texture; }
-        const std::shared_ptr<Texture> GetAlbedo() const { return mAlbedo; }
-        std::shared_ptr<Texture> GetAlbedo() { return mAlbedo; }
+    void SetName(std::string_view name)
+    {
+        mName = name;
+    }
 
-    private:
-        float mLineWidth = 1.f;
-        bool mDepthTestEnable = true;
-        bool mDepthWriteEnable = true;
-        bool mEnableInstancing = false;
-        bool mWireframeEnable = false;
+  private:
+    std::string mName;
+    float mLineWidth = 1.f;
+    bool mDepthTestEnable = true;
+    bool mDepthWriteEnable = true;
+    bool mEnableInstancing = false;
+    bool mWireframeEnable = false;
 
-        CullMode mCullMode = CullMode::Back;
-        PrimitiveType mPrimitiveType = PrimitiveType::Triangle;
-        FrontFace mFrontFace = FrontFace::Clockwise;
-        SampleCount mSampleCount = SampleCount::One; 
+    CullMode mCullMode = CullMode::Back;
+    PrimitiveType mPrimitiveType = PrimitiveType::Triangle;
+    FrontFace mFrontFace = FrontFace::Clockwise;
+    SampleCount mSampleCount = SampleCount::One;
 
-        GraphicsPipeline mPipeline;
+    GraphicsPipeline mPipeline;
 
-        Descriptor mImageDescriptor;
-        Descriptor mUniformDescriptor;
+    Descriptor mImageDescriptor;
+    Descriptor mUniformDescriptor;
 
-        std::shared_ptr<Texture> mAlbedo;
-        Sampler mAlbedoSampler;
+    Sampler mAlbedoSampler;
 
-        InstanceBuffer mInstanceBuffer;
-        uint32_t mInstanceCount = 0;
+    TextureID mAlbedo = TextureManager::GetInvalidID();
 
-        uint32_t mAttributeCount = 0;
+    InstanceBuffer mInstanceBuffer;
+    uint32_t mInstanceCount = 0;
 
-        uint32_t mLastAttributeLocation = 0;
+    uint32_t mAttributeCount = 0;
+
+    uint32_t mLastAttributeLocation = 0;
 };

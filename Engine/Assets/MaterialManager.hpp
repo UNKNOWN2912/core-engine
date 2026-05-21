@@ -1,16 +1,22 @@
 #pragma once
 #include "Renderer/Material.hpp"
 
+enum class MaterialID : uint64_t;
+
 class MaterialManager
 {
-    public:
-        std::shared_ptr<Material> LoadMaterial(std::string_view filename);
-        std::shared_ptr<Material> AddMaterial(std::string_view identifier, std::shared_ptr<Material> material);
+  public:
+    static MaterialID LoadMaterial(std::string_view filename);
+    static MaterialID AddMaterial(std::shared_ptr<Material> material);
 
-        void DestroyMaterial(std::string_view identifier);
+    static MaterialID GenerateID();
 
-        std::shared_ptr<Material> GetMaterial(std::string_view identifier);
-        bool HasMaterial(std::string_view identifier);
-    private:
-        std::unordered_map<std::string, std::shared_ptr<Material>> mMaterialMap;
+    static void DestroyMaterial(MaterialID materialId);
+
+    static std::shared_ptr<Material> GetMaterial(MaterialID materialId);
+    static bool HasMaterial(MaterialID materialId);
+
+  private:
+    static uint64_t mLastMaterialId;
+    static std::unordered_map<MaterialID, std::shared_ptr<Material>> mMaterialMap;
 };

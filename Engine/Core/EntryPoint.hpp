@@ -3,11 +3,9 @@
 
 #pragma once
 #include "Macro.hpp"
-#include <iostream>
 
 extern float GlobalMemoryUsage;
 extern uint32_t GlobalAllocationCount;
 extern uint32_t GlobalDeallocationCount;
 
-
-int main(int argc, char** argv);
+int main(int argc, char **argv);

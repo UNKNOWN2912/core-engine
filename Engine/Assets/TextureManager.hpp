@@ -1,22 +1,36 @@
 #pragma once
+#include "Renderer/Texture.hpp"
 #include <memory>
 #include <unordered_map>
-#include <string>
-#include "Renderer/Texture.hpp"
+
+enum class TextureID : uint64_t;
 
 class TextureManager
 {
-    public:
-        std::shared_ptr<Texture> LoadTexture(std::string_view filename);
-        std::shared_ptr<Texture> LoadTexture(std::string_view filename, std::string_view identifier);
-        std::shared_ptr<Texture> CreateTexture(std::string_view identifier, void* data, const glm::uvec2& size, ImageFormat format);
+  public:
+    static TextureID LoadTexture(std::string_view filename);
+    static TextureID CreateTexture(void *data, const glm::uvec2 &size, ImageFormat format);
 
-        void DestroyTexture(std::string_view identifier);
+    static TextureID GenerateID();
 
-        std::shared_ptr<Texture> GetTexture(std::string_view identifier);
-        bool HasTexture(std::string_view identifer);
+    static void DestroyTexture(TextureID textureId);
 
+    static std::shared_ptr<Texture> GetTexture(TextureID textureId);
+    static bool HasTexture(TextureID textureId);
 
-    private:
-        std::unordered_map<std::string, std::shared_ptr<Texture>> mTextureMap;
+    static uint32_t GetCount();
+
+    static const std::unordered_map<TextureID, std::shared_ptr<Texture>> &GetMap()
+    {
+        return mTextureMap;
+    }
+
+    static constexpr TextureID GetInvalidID()
+    {
+        return (TextureID)UINT64_MAX;
+    }
+
+  private:
+    static uint64_t mLastTextureId;
+    static std::unordered_map<TextureID, std::shared_ptr<Texture>> mTextureMap;
 };

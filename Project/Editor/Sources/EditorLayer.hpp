@@ -1,50 +1,50 @@
 #pragma once
 #include "CameraController.hpp"
 #include "Core/LayerStack.hpp"
-#include "EntityComponentSystem.hpp"
+#include "EntityComponentSystem/EntityComponentSystem.hpp"
 #include "Panel.hpp"
-
 
 class EditorLayer : public Layer
 {
-    public: 
+  public:
+    void OnAttach() override;
+    void OnUpdate() override;
+    void OnDetach() override;
+    bool OnEvent(uint32_t code, void *data) override;
 
-        void OnAttach() override;
-        void OnUpdate() override;
-        void OnDetach() override;
-        bool OnEvent(uint32_t code, void *data) override;
+    void InitializeImGui();
+    void TerminateImGui();
+    void RenderImGui();
 
-        void InitializeImGui();
-        void TerminateImGui();
-        void RenderImGui();
+    void RenderUI();
+    void SetRenderTarget(RenderTarget *renderTarget);
+    void UpdateCamera();
+    void MainMenuBar();
 
-        void RenderUI();
-        void SetRenderTarget(RenderTarget *renderTarget);
-        void UpdateCamera();
-        void MainMenuBar();
+    void test();
 
-        PanelManager mPanelManager;
+    PanelManager mPanelManager;
 
-        const Camera &GetEditorCamera() const;
+    const Camera &GetEditorCamera() const;
 
-        Scene* mScene;
-        RenderPass mImGuiRenderPass;
-        std::vector<FrameBuffer> mImGuiFrameBuffer;
-        CommandBuffer mImGuiCommandBuffer;
-        Semaphore mImageAcquiredSemaphore;
-        Semaphore mRenderingFinished;
-        
-        RenderTarget* mRenderTarget;
-        Camera mEditorCamera;
-        CameraController mEditorCameraController;
+    Scene *mScene;
+    RenderPass mImGuiRenderPass;
+    std::vector<FrameBuffer> mImGuiFrameBuffer;
+    CommandBuffer mImGuiCommandBuffer;
+    Semaphore mImageAcquiredSemaphore;
+    Semaphore mRenderingFinished;
 
-        void CustomStyle();
+    RenderTarget *mRenderTarget;
+    Camera mEditorCamera;
+    CameraController mEditorCameraController;
 
-        void EditMenu();
+    void CustomStyle();
 
-        void FileMenu();
+    void EditMenu();
 
-        void ViewMenu();
+    void FileMenu();
 
-        void WindowMenu();
+    void ViewMenu();
+
+    void WindowMenu();
 };

@@ -2,48 +2,60 @@
 #include "Renderer/GraphicsContext.hpp"
 #include "Renderer/Utility.hpp"
 
-VkShaderModule ShaderManager::LoadVertexShader(std::string_view filename)
+VertexShaderID ShaderManager::LoadVertexShader(std::string_view filename)
 {
-    return LoadVertexShader(filename, filename);
+    VertexShaderID id = GenerateVertexShaderID();
+    mVertexShaderMap[id] = CreateShaderFromFile(getDevice(), filename.data());
+    return id;
 }
-VkShaderModule ShaderManager::LoadFragmentShader(std::string_view filename)
+FragmentShaderID ShaderManager::LoadFragmentShader(std::string_view filename)
 {
-    return LoadFragmentShader(filename, filename);
+    FragmentShaderID id = GenerateFragmentShaderID();
+    mFragmentShaderMap[id] = CreateShaderFromFile(getDevice(), filename.data());
+    return id;
 }
-VkShaderModule ShaderManager::LoadVertexShader(std::string_view filename, std::string_view identifier)
+VertexShaderID ShaderManager::CreateVertexShader(const std::vector<uint32_t> &code)
 {
-    mVertexShaderMap[identifier.data()] = CreateShaderFromFile(getDevice(), filename.data());
-    return mVertexShaderMap[identifier.data()];
-}
-VkShaderModule ShaderManager::LoadFragmentShader(std::string_view filename, std::string_view identifier)
-{
-    mFragmentShaderMap[identifier.data()] = CreateShaderFromFile(getDevice(), filename.data());
-    return mFragmentShaderMap[identifier.data()];
-}
-VkShaderModule ShaderManager::CreateVertexShader(std::string_view identifier, const std::vector<uint32_t>& code)
-{
-    mVertexShaderMap[identifier.data()] = CreateShaderModuleFromMemory(getDevice(), code);
-    return mVertexShaderMap[identifier.data()];
-}
-VkShaderModule ShaderManager::CreateFragmentShader(std::string_view identifier, const std::vector<uint32_t>& code)
-{
-    mFragmentShaderMap[identifier.data()] = CreateShaderModuleFromMemory(getDevice(), code);
-    return mFragmentShaderMap[identifier.data()];
+    VertexShaderID id = GenerateVertexShaderID();
+    mVertexShaderMap[id] = CreateShaderModuleFromMemory(getDevice(), code);
+    return id;
 }
 
-VkShaderModule ShaderManager::GetVertexShader(std::string_view identifier)
+FragmentShaderID ShaderManager::CreateFragmentShader(const std::vector<uint32_t> &code)
 {
-    return mVertexShaderMap[identifier.data()];
+    FragmentShaderID id = GenerateFragmentShaderID();
+    mFragmentShaderMap[id] = CreateShaderModuleFromMemory(getDevice(), code);
+    return id;
 }
-VkShaderModule ShaderManager::GetFragmentShader(std::string_view identifier)
+
+VkShaderModule ShaderManager::GetVertexShader(VertexShaderID id)
 {
-    return mFragmentShaderMap[identifier.data()];
+    return mVertexShaderMap[id];
 }
-bool ShaderManager::HasVertexShader(std::string_view identifier)
+VkShaderModule ShaderManager::GetFragmentShader(FragmentShaderID id)
 {
-    return GetVertexShader(identifier) == nullptr;
+    return mFragmentShaderMap[id];
 }
-bool ShaderManager::HasFragmentShader(std::string_view identifier)
+bool ShaderManager::HasVertexShader(VertexShaderID id)
 {
-    return GetFragmentShader(identifier) == nullptr;
+    return mVertexShaderMap.contains(id);
 }
+bool ShaderManager::HasFragmentShader(FragmentShaderID id)
+{
+    return mFragmentShaderMap.contains(id);
+}
+
+VertexShaderID ShaderManager::GenerateVertexShaderID()
+{
+    return (VertexShaderID)mLastVertexShaderId++;
+}
+
+FragmentShaderID ShaderManager::GenerateFragmentShaderID()
+{
+    return (FragmentShaderID)mLastFragmentShaderId++;
+}
+
+uint64_t ShaderManager::mLastVertexShaderId = 0;
+uint64_t ShaderManager::mLastFragmentShaderId = 0;
+std::unordered_map<VertexShaderID, VkShaderModule> ShaderManager::mVertexShaderMap;
+std::unordered_map<FragmentShaderID, VkShaderModule> ShaderManager::mFragmentShaderMap;
