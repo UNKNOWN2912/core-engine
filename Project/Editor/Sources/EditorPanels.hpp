@@ -40,7 +40,7 @@ class ImageViewerPanel : public Panel
     void AddImage(std::string identifier, Image *image);
 
   private:
-    std::string mSelection = "";
+    std::string mSelection;
     std::unordered_map<std::string, Image *> mImageMap;
     ImTextureID mTexture = 0;
 };

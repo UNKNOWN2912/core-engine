@@ -1,219 +1,205 @@
-#include "Input/Mouse.hpp"
 #include "Application.hpp"
+#include "Input/Mouse.hpp"
 #include <cassert>
 
 void Application::InitializeApplication()
 {
-	CHROME_TRACE_FUNCTION();
+    CHROME_TRACE_FUNCTION();
 
-	mApplicationTimer.Start();
+    mApplicationTimer.Start();
 
-	mWindow.CreateWindow(glm::uvec2(800, 600), "Untitled");
-	mWindow.AddListener(BindMember(Application::WindowEventCallback));
+    const glm::uvec2 windowSize = {800, 600};
 
-	mRenderer.Initialize(mWindow);
+    mWindow = Window(windowSize, "Untitled");
+    mWindow.AddListener(BindMember(Application::WindowEventCallback));
+
+    Renderer::Initialize(mWindow);
 }
 
 void Application::TerminateApplication()
 {
-	CHROME_TRACE_FUNCTION();
+    CHROME_TRACE_FUNCTION();
+    Renderer::Terminate();
 }
 
 void Application::RunApplication()
 {
-	CHROME_TRACE_FUNCTION();
-	InitializeApplication();
-	OnStart();
-	MainLoop();
-	OnEnd();
+    CHROME_TRACE_FUNCTION();
+    InitializeApplication();
+    OnStart();
+    MainLoop();
+    OnEnd();
     TerminateApplication();
 }
 
 void Application::Close()
 {
-	CHROME_TRACE_FUNCTION();
-	mRunning = false;
+    CHROME_TRACE_FUNCTION();
+    mRunning = false;
 }
-
 
 bool Application::IsRunning()
 {
-	CHROME_TRACE_FUNCTION();
-	return mRunning;
+    CHROME_TRACE_FUNCTION();
+    return mRunning;
 }
 
-bool Application::WindowEventCallback(uint32_t code, void* data)
+bool Application::WindowEventCallback(uint32_t code, void *data)
 {
-	CHROME_TRACE_FUNCTION();
-	WindowEvent event = (WindowEvent)code;
+    CHROME_TRACE_FUNCTION();
+    WindowEvent event = (WindowEvent)code;
 
-	switch (event)
-	{
-		case WindowEvent::WindowClose:
-			{
-				OnWindowClose();
-				break;
-			}
-		case WindowEvent::WindowResize:
-			{
-				glm::uvec2 size = *(glm::uvec2*)data;
-				OnWindowResize(size);
-				break;
-			}
-		case WindowEvent::WindowMove:
-			{
-				glm::uvec2 position = *(glm::uvec2*)data;
-				OnWindowMove(position);
-				break;
-			}
-		case WindowEvent::WindowMousePress:
-			{
-				MouseButton button = *(MouseButton*)data;
-				OnMouseButtonPress(button);
-				break;
-			}
-		case WindowEvent::WindowMouseRelease:
-			{
-				MouseButton button = *(MouseButton*)data;
-				OnMouseButtonRelease(button);
-				break;
-			}
-		case WindowEvent::WindowMinimize:
-			{
-				OnWindowMinimize();
-				break;
-			}
-		case WindowEvent::WindowMaximize:
-			{
-				OnWindowMaximize();
-				break;
-			}
-		case WindowEvent::WindowMouseMove:
-			{
-				glm::vec2 position = *(glm::vec2*)data;
-				glm::vec2 offset = position - previousMousePos;
-				previousMousePos = position; 
-				OnMouseMove(position, offset);
-				break;
-			}
-		case WindowEvent::WindowScroll:
-			{
-				glm::vec2 scroll = *(glm::vec2*)data;
-				OnScroll(scroll);
-				break;
-			}
-		case WindowEvent::WindowKeyPress:
-			{
-				Key key = *(Key*)data;
-				OnKeyPress(key);
-				break;
-			}
-		case WindowEvent::WindowKeyRepeat:
-			{
-				Key key = *(Key*)data;
-				OnKeyRepeat(key);
-				break;
-			}
-		case WindowEvent::WindowKeyRelease:
-			{
-				Key key = *(Key*)data;
-				OnKeyRelease(key);
-				break;
-			}
-		case WindowEvent::WindowCharacterType:
-			{
-				char ch = *(char*)data;
-				OnCharacterType(ch);
-				break;
-			}
-	}
+    switch (event)
+    {
+    case WindowEvent::WindowClose: {
+        OnWindowClose();
+        break;
+    }
+    case WindowEvent::WindowResize: {
+        glm::uvec2 size = *(glm::uvec2 *)data;
+        OnWindowResize(size);
+        break;
+    }
+    case WindowEvent::WindowMove: {
+        glm::uvec2 position = *(glm::uvec2 *)data;
+        OnWindowMove(position);
+        break;
+    }
+    case WindowEvent::WindowMousePress: {
+        MouseButton button = *(MouseButton *)data;
+        OnMouseButtonPress(button);
+        break;
+    }
+    case WindowEvent::WindowMouseRelease: {
+        MouseButton button = *(MouseButton *)data;
+        OnMouseButtonRelease(button);
+        break;
+    }
+    case WindowEvent::WindowMinimize: {
+        OnWindowMinimize();
+        break;
+    }
+    case WindowEvent::WindowMaximize: {
+        OnWindowMaximize();
+        break;
+    }
+    case WindowEvent::WindowMouseMove: {
+        glm::vec2 position = *(glm::vec2 *)data;
+        glm::vec2 offset = position - previousMousePos;
+        previousMousePos = position;
+        OnMouseMove(position, offset);
+        break;
+    }
+    case WindowEvent::WindowScroll: {
+        glm::vec2 scroll = *(glm::vec2 *)data;
+        OnScroll(scroll);
+        break;
+    }
+    case WindowEvent::WindowKeyPress: {
+        Key key = *(Key *)data;
+        OnKeyPress(key);
+        break;
+    }
+    case WindowEvent::WindowKeyRepeat: {
+        Key key = *(Key *)data;
+        OnKeyRepeat(key);
+        break;
+    }
+    case WindowEvent::WindowKeyRelease: {
+        Key key = *(Key *)data;
+        OnKeyRelease(key);
+        break;
+    }
+    case WindowEvent::WindowCharacterType: {
+        char ch = *(char *)data;
+        OnCharacterType(ch);
+        break;
+    }
+    }
 
-	mLayerStack.InvokeEvents(code, data);
-		
-	return false;
+    mLayerStack.InvokeEvents(code, data);
+
+    return false;
 }
-
 
 Application::Application()
 {
-	CHROME_TRACE_FUNCTION();
-	assert(instance == nullptr);
+    CHROME_TRACE_FUNCTION();
+    assert(instance == nullptr);
 
-	instance = this;
+    instance = this;
 }
 
 Application::~Application()
 {
-	CHROME_TRACE_FUNCTION();
+    CHROME_TRACE_FUNCTION();
 }
 
-float Application::GetDeltaTime() 
+float Application::GetDeltaTime()
 {
-	return mDeltaTime;
+    return mDeltaTime;
 }
 
-float Application::GetElapsedTime() 
+float Application::GetElapsedTime()
 {
-	return mApplicationTimer.GetElapsedTime();
+    return mApplicationTimer.GetElapsedTime();
 }
-
 
 void Application::MainLoop()
 {
-	CHROME_TRACE_FUNCTION();
+    CHROME_TRACE_FUNCTION();
 
-	Timer fpsTimer(true);
-	uint32_t fps = 0;
-	while (mRunning)
-	{
-		if(mHideCursor)
-			mWindow.HideCursor();
-		else
-			mWindow.ShowCursor();
-		
-		fps++;
-		if(fpsTimer.GetElapsedTime() > 1.f)
-		{
-			mFps = fps;
-			fps = 0;
-			fpsTimer.Start();
-		}
-		mFrameCounter++;
-		mDeltaTimer.Start();
-		mWindow.ProcessEvent();
-		OnUpdate();
-		mLayerStack.InvokeUpdates();
-		mDeltaTimer.Stop();
-		mDeltaTime = mDeltaTimer.GetDuration();
-	}
+    Timer fpsTimer(true);
+    uint32_t fps = 0;
+    while (mRunning)
+    {
+        if (mHideCursor)
+            mWindow.HideCursor();
+        else
+            mWindow.ShowCursor();
 
+        fps++;
+        if (fpsTimer.GetElapsedTime() > 1.f)
+        {
+            mFps = fps;
+            fps = 0;
+            fpsTimer.Start();
+        }
+        mFrameCounter++;
+        mDeltaTimer.Start();
+        mWindow.ProcessEvent();
+        OnUpdate();
+        mLayerStack.InvokeUpdates();
+        mDeltaTimer.Stop();
+        mDeltaTime = mDeltaTimer.GetDuration();
+    }
 }
 
 void Application::HideCursor()
 {
-	CHROME_TRACE_FUNCTION();
-	mHideCursor = true;
+    CHROME_TRACE_FUNCTION();
+    mHideCursor = true;
 }
 
-void Application::ShowCursor() 
+void Application::ShowCursor()
 {
-	mHideCursor = false;	
+    mHideCursor = false;
 }
 
 void Application::ToggleCursor()
 {
-	CHROME_TRACE_FUNCTION();
+    CHROME_TRACE_FUNCTION();
 
-	if(mWindow.isCursorHidden())
-		mWindow.ShowCursor();
-	else
-	 	mWindow.HideCursor();
+    if (mWindow.isCursorHidden())
+        mWindow.ShowCursor();
+    else
+        mWindow.HideCursor();
 }
 
 bool Application::IsCursorHidden()
 {
-	CHROME_TRACE_FUNCTION();
-	return mWindow.isCursorHidden();
+    CHROME_TRACE_FUNCTION();
+    return mWindow.isCursorHidden();
 }
 
-Application* Application::instance = nullptr;
+Application *Application::instance = nullptr;

@@ -9,7 +9,7 @@ uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProp
     CHROME_TRACE_FUNCTION();
 
     VkPhysicalDeviceMemoryProperties properties;
-    vkGetPhysicalDeviceMemoryProperties(getPhysicalDevice(), &properties);
+    vkGetPhysicalDeviceMemoryProperties(GraphicsContext::GetPhysicalDevice(), &properties);
 
     for (uint32_t i = 0; i < properties.memoryTypeCount; i++)
     {
@@ -38,10 +38,10 @@ Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryPropert
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         };
 
-    vkCreateBuffer(getDevice(), &createInfo, nullptr, &buffer.handle);
+    vkCreateBuffer(GraphicsContext::GetDevice(), &createInfo, nullptr, &buffer.handle);
 
     VkMemoryRequirements requirements;
-    vkGetBufferMemoryRequirements(getDevice(), buffer.handle, &requirements);
+    vkGetBufferMemoryRequirements(GraphicsContext::GetDevice(), buffer.handle, &requirements);
 
     VkMemoryAllocateInfo allocateInfo =
         {
@@ -50,15 +50,15 @@ Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryPropert
             .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperties)),
         };
 
-    vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &buffer.memory);
+    vkAllocateMemory(GraphicsContext::GetDevice(), &allocateInfo, nullptr, &buffer.memory);
 
     buffer.size = size;
 
-    vkBindBufferMemory(getDevice(), buffer.handle, buffer.memory, 0);
+    vkBindBufferMemory(GraphicsContext::GetDevice(), buffer.handle, buffer.memory, 0);
 
     if ((GetVulkanMemoryProperty(memoryProperties) & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
-        vkMapMemory(getDevice(), buffer.memory, 0, requirements.size, 0, &buffer.map);
+        vkMapMemory(GraphicsContext::GetDevice(), buffer.memory, 0, requirements.size, 0, &buffer.map);
     }
 
     return buffer;
@@ -69,8 +69,8 @@ void DestroyBuffer(Buffer &buffer)
     CHROME_TRACE_FUNCTION();
     if (buffer.handle == VK_NULL_HANDLE)
         return;
-    vkDestroyBuffer(getDevice(), buffer.handle, nullptr);
-    vkFreeMemory(getDevice(), buffer.memory, nullptr);
+    vkDestroyBuffer(GraphicsContext::GetDevice(), buffer.handle, nullptr);
+    vkFreeMemory(GraphicsContext::GetDevice(), buffer.memory, nullptr);
     buffer = {};
 }
 
@@ -84,7 +84,7 @@ VkCommandPool CreateCommandPool()
         };
 
     VkCommandPool commandPool;
-    vkCreateCommandPool(getDevice(), &createInfo, nullptr, &commandPool);
+    vkCreateCommandPool(GraphicsContext::GetDevice(), &createInfo, nullptr, &commandPool);
     return commandPool;
 }
 
@@ -105,20 +105,20 @@ void TransferBufferData(const Buffer &srcBuffer, Buffer &dstBuffer)
     vkCmdCopyBuffer(commandBuffer, srcBuffer.handle, dstBuffer.handle, 1, &region);
 
     EndCommandBuffer(commandBuffer);
-    ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
+    ExecuteCommandBuffer(commandBuffer, GraphicsContext::GetQueues().transfer);
 
-    vkQueueWaitIdle(getQueues().transfer);
+    vkQueueWaitIdle(GraphicsContext::GetQueues().transfer);
 
-    vkFreeCommandBuffers(getDevice(), commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(GraphicsContext::GetDevice(), commandPool, 1, &commandBuffer);
 
-    vkDestroyCommandPool(getDevice(), commandPool, nullptr);
+    vkDestroyCommandPool(GraphicsContext::GetDevice(), commandPool, nullptr);
 }
 
 void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image &image)
 {
     CHROME_TRACE_FUNCTION();
 
-    VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer(GraphicsContext::GetCommandPool());
     BeginCommandBuffer(commandBuffer, true);
 
     VkImageMemoryBarrier barrier =
@@ -142,13 +142,13 @@ void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAs
     vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     EndCommandBuffer(commandBuffer);
-    ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
+    ExecuteCommandBuffer(commandBuffer, GraphicsContext::GetQueues().transfer);
 }
 
 void TransferImageData(const Buffer &srcBuffer, Image &dstImage, ImageAspect aspectMask)
 {
     CHROME_TRACE_FUNCTION();
-    VkCommandBuffer commandBuffer = AllocateCommandBuffer(getCommandPool());
+    VkCommandBuffer commandBuffer = AllocateCommandBuffer(GraphicsContext::GetCommandPool());
     BeginCommandBuffer(commandBuffer, true);
 
     VkBufferImageCopy region =
@@ -170,11 +170,11 @@ void TransferImageData(const Buffer &srcBuffer, Image &dstImage, ImageAspect asp
     vkCmdCopyBufferToImage(commandBuffer, srcBuffer.handle, dstImage.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
     EndCommandBuffer(commandBuffer);
-    ExecuteCommandBuffer(commandBuffer, getQueues().transfer);
+    ExecuteCommandBuffer(commandBuffer, GraphicsContext::GetQueues().transfer);
 
-    vkQueueWaitIdle(getQueues().transfer);
+    vkQueueWaitIdle(GraphicsContext::GetQueues().transfer);
 
-    vkFreeCommandBuffers(getDevice(), getCommandPool(), 1, &commandBuffer);
+    vkFreeCommandBuffers(GraphicsContext::GetDevice(), GraphicsContext::GetCommandPool(), 1, &commandBuffer);
 }
 
 VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool)
@@ -189,7 +189,7 @@ VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool)
         };
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(getDevice(), &allocateInfo, &commandBuffer);
+    vkAllocateCommandBuffers(GraphicsContext::GetDevice(), &allocateInfo, &commandBuffer);
     return commandBuffer;
 }
 
@@ -272,7 +272,7 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescript
         };
 
     VkDescriptorSetLayout setLayout;
-    vkCreateDescriptorSetLayout(getDevice(), &createInfo, nullptr, &setLayout);
+    vkCreateDescriptorSetLayout(GraphicsContext::GetDevice(), &createInfo, nullptr, &setLayout);
     return setLayout;
 }
 
@@ -288,7 +288,7 @@ VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize
         };
 
     VkDescriptorPool descriptorPool;
-    vkCreateDescriptorPool(getDevice(), &createInfo, nullptr, &descriptorPool);
+    vkCreateDescriptorPool(GraphicsContext::GetDevice(), &createInfo, nullptr, &descriptorPool);
     return descriptorPool;
 }
 
@@ -305,7 +305,7 @@ VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescrip
         };
 
     VkDescriptorSet set;
-    vkAllocateDescriptorSets(getDevice(), &allocateInfo, &set);
+    vkAllocateDescriptorSets(GraphicsContext::GetDevice(), &allocateInfo, &set);
     return set;
 }
 
@@ -323,7 +323,7 @@ VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayou
         };
 
     VkPipelineLayout pipelineLayout;
-    vkCreatePipelineLayout(getDevice(), &createInfo, nullptr, &pipelineLayout);
+    vkCreatePipelineLayout(GraphicsContext::GetDevice(), &createInfo, nullptr, &pipelineLayout);
     return pipelineLayout;
 }
 
@@ -353,10 +353,10 @@ Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, 
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         };
 
-    vkCreateImage(getDevice(), &createInfo, nullptr, &image.handle);
+    vkCreateImage(GraphicsContext::GetDevice(), &createInfo, nullptr, &image.handle);
 
     VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(getDevice(), image.handle, &requirements);
+    vkGetImageMemoryRequirements(GraphicsContext::GetDevice(), image.handle, &requirements);
 
     VkMemoryAllocateInfo allocateInfo =
         {
@@ -365,8 +365,8 @@ Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, 
             .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperty)),
         };
 
-    VK_CHECK(vkAllocateMemory(getDevice(), &allocateInfo, nullptr, &image.memory));
-    vkBindImageMemory(getDevice(), image.handle, image.memory, 0);
+    VK_CHECK(vkAllocateMemory(GraphicsContext::GetDevice(), &allocateInfo, nullptr, &image.memory));
+    vkBindImageMemory(GraphicsContext::GetDevice(), image.handle, image.memory, 0);
 
     image.memorySize = requirements.size;
 
@@ -389,15 +389,15 @@ Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, 
 
     image.size = {size.x, size.y};
 
-    vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &image.view);
+    vkCreateImageView(GraphicsContext::GetDevice(), &imageViewCreateInfo, nullptr, &image.view);
 
     return image;
 }
 void DestroyImage(Image &image)
 {
-    vkDestroyImageView(getDevice(), image.view, nullptr);
-    vkDestroyImage(getDevice(), image.handle, nullptr);
-    vkFreeMemory(getDevice(), image.memory, nullptr);
+    vkDestroyImageView(GraphicsContext::GetDevice(), image.view, nullptr);
+    vkDestroyImage(GraphicsContext::GetDevice(), image.handle, nullptr);
+    vkFreeMemory(GraphicsContext::GetDevice(), image.memory, nullptr);
 
     image = {};
 }
@@ -422,6 +422,6 @@ VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspec
         };
 
     VkImageView view;
-    vkCreateImageView(getDevice(), &imageViewCreateInfo, nullptr, &view);
+    vkCreateImageView(GraphicsContext::GetDevice(), &imageViewCreateInfo, nullptr, &view);
     return view;
 }

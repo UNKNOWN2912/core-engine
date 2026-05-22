@@ -1,9 +1,8 @@
 ﻿#include "Core/Timer.hpp"
 #include <Core/Application.hpp>
 #include <Core/EntryPoint.hpp>
-
-
-using namespace std;
+#include <print>
+#include <utility>
 
 float GlobalMemoryUsage = 0;
 uint32_t GlobalAllocationCount = 0;

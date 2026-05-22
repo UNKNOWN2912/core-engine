@@ -21,7 +21,7 @@ struct Vertex
 
 class StaticMesh
 {
-  public:
+public:
     StaticMesh();
     StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
     StaticMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
@@ -53,7 +53,7 @@ class StaticMesh
         mName = name;
     }
 
-  private:
+private:
     std::string mName;
 
     friend class Renderer;

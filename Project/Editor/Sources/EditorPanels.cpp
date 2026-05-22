@@ -15,17 +15,17 @@ GameViewPanel::GameViewPanel(RenderTarget *renderTarget, Camera *camera, CameraC
 void GameViewPanel::OnAttach()
 {
     mTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(
-        Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), mTarget->GetImage().view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        Renderer::GetDefaultSampler().GetHandle(), mTarget->GetImage().view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 void GameViewPanel::OnUpdate()
 {
     if (mTarget->GetImage().size != mSize)
     {
-        vkDeviceWaitIdle(getDevice());
+        vkDeviceWaitIdle(GraphicsContext::GetDevice());
         mTarget->Resize(mSize);
 
         VkDescriptorImageInfo desc_image[1] = {};
-        desc_image[0].sampler = Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle();
+        desc_image[0].sampler = Renderer::GetDefaultSampler().GetHandle();
         desc_image[0].imageView = mTarget->GetImage().view;
         desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         VkWriteDescriptorSet write_desc[1] = {};
@@ -34,7 +34,7 @@ void GameViewPanel::OnUpdate()
         write_desc[0].descriptorCount = 1;
         write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write_desc[0].pImageInfo = desc_image;
-        vkUpdateDescriptorSets(getDevice(), 1, write_desc, 0, nullptr);
+        vkUpdateDescriptorSets(GraphicsContext::GetDevice(), 1, write_desc, 0, nullptr);
         mCamera->SetAspectRatio(float(mSize.x) / float(mSize.y));
     }
 }
@@ -160,13 +160,13 @@ void ImageViewerPanel::OnUpdate()
         {
             Image *image = mImageMap[mSelection];
             VkImageView view = image->view;
-            mTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(), view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            mTexture = (ImTextureID)ImGui_ImplVulkan_AddTexture(Renderer::GetDefaultSampler().GetHandle(), view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         else
         {
             VkDescriptorImageInfo imageInfo =
                 {
-                    .sampler = Application::GetInstance()->GetRendererRef().GetDefaultSampler().GetHandle(),
+                    .sampler = Renderer::GetDefaultSampler().GetHandle(),
                     .imageView = mImageMap[mSelection]->view,
                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
                 };
@@ -182,7 +182,7 @@ void ImageViewerPanel::OnUpdate()
                     .pImageInfo = &imageInfo,
                 };
 
-            vkUpdateDescriptorSets(getDevice(), 1, &writeDescriptor, 0, nullptr);
+            vkUpdateDescriptorSets(GraphicsContext::GetDevice(), 1, &writeDescriptor, 0, nullptr);
         }
     }
 }

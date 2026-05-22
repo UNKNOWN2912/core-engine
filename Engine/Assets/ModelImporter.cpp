@@ -68,7 +68,7 @@ MaterialID GetMaterialFromAssimpMaterial(const aiMaterial *aimaterial, const std
     VertexShaderID vertexShader;
     FragmentShaderID fragmentShader;
 
-    Application::GetInstance()->GetRendererRef().GetBasicShader(vertexShader, fragmentShader);
+    Renderer::GetBasicShader(vertexShader, fragmentShader);
 
     std::shared_ptr<Material> material = std::make_shared<Material>();
     material->SetShaders(vertexShader, fragmentShader);

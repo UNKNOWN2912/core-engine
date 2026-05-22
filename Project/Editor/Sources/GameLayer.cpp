@@ -17,14 +17,14 @@ struct std::formatter<Transform> : std::formatter<std::string>
 void GameLayer::OnAttach()
 {
     GetWindow().Maximize();
-    mTarget.Create(GetWindow().GetSize());
+    mTarget = RenderTarget(Renderer::GetSwapchainSize());
     mTarget.TransitionLayout(ImageLayout::General);
     mCameraController.SetCamera(mCamera, GetWindow());
 
     VertexShaderID vertexShaderID = ShaderManager::LoadVertexShader("Shaders/shader.vert.spv");
     FragmentShaderID fragmentShaderID = ShaderManager::LoadFragmentShader("Shaders/shader.frag.spv");
 
-    GetRenderer().SetBasicShader(vertexShaderID, fragmentShaderID);
+    Renderer::SetBasicShader(vertexShaderID, fragmentShaderID);
 
     Entity entity = scene.CreateEntity("Entity");
     scene.AddComponent<Transform>(entity);
@@ -102,17 +102,17 @@ void GameLayer::OnUpdate()
     mCameraController.EnableControl(true);
     UpdateCamera();
 
-    GetRenderer().BeginFrame(mTarget, mCamera);
-    GetRenderer().Submit(mesh, skyboxMaterial);
+    Renderer::BeginFrame(mTarget, mCamera);
+    Renderer::Submit(mesh, skyboxMaterial);
 
     for (auto &[entity, component] : scene.GetEntities<MeshRendererComponent>())
     {
         std::shared_ptr<StaticMesh> mesh = MeshManager::GetMesh(component.mesh);
         std::shared_ptr<Material> material = MaterialManager::GetMaterial(component.material);
-        GetRenderer().Submit(*mesh, *material, entity.GetComponent<Transform>());
+        Renderer::Submit(*mesh, *material, entity.GetComponent<Transform>());
     }
 
-    GetRenderer().EndFrame();
+    Renderer::EndFrame();
 }
 
 void GameLayer::OnDetach()
@@ -145,7 +145,7 @@ void GameLayer::CreateMaterial()
 
 void GameLayer::ReloadMaterial()
 {
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
 
     DestroyMaterial();
     CreateMaterial();

@@ -27,7 +27,7 @@ void Material::Create()
 
     mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
     mUniformDescriptor.Create();
-    mUniformDescriptor.UpdateBuffer(Application::GetInstance()->GetRendererRef().GetDeferredUniformBuffer().GetBuffer(), 0);
+    mUniformDescriptor.UpdateBuffer(Renderer::GetDeferredUniformBuffer().GetBuffer(), 0);
 
     mPipeline.SetCullMode(mCullMode);
     mPipeline.SetPrimitive(mPrimitiveType);
@@ -43,12 +43,12 @@ void Material::Create()
 
     mPipeline.AddDescriptors(mImageDescriptor, mUniformDescriptor);
     mPipeline.SetPushConstant(ShaderStage::Vertex, sizeof(glm::mat4));
-    mPipeline.Create(Application::GetInstance()->GetRendererRef().GetDeferredRenderPass(), 0);
+    mPipeline.Create(Renderer::GetDeferredRenderPass(), 0);
 }
 
 void Material::Destroy()
 {
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
     mAlbedoSampler.Destroy();
     mImageDescriptor.Destroy();
     mUniformDescriptor.Destroy();

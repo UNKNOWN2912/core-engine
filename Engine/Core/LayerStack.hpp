@@ -11,7 +11,7 @@ class Application;
 
 class Layer
 {
-  public:
+public:
     virtual void OnAttach()
     {
     }
@@ -47,11 +47,10 @@ class Layer
 
     using DerivedType = Layer;
 
-  protected:
+protected:
     Window &GetWindow();
-    Renderer &GetRenderer();
 
-  private:
+private:
     friend class LayerStack;
 
     void SetLayerData(LayerStack *layerStack, size_t id)
@@ -67,7 +66,7 @@ class Layer
 
 class LayerStack
 {
-  public:
+public:
     template <typename T, typename... Args>
         requires std::derived_from<T, Layer>
     void Attach(Args... args)
@@ -180,7 +179,7 @@ class LayerStack
         mLayers.clear();
     }
 
-  private:
+private:
     std::vector<std::unique_ptr<Layer>> mLayers;
 };
 

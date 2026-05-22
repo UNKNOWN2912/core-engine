@@ -8,13 +8,36 @@
 
 class EventDispatcher
 {
-    public:
-        void AddListener(std::function<bool(uint32_t code, void* data)> listener) { mListeners.push_back(listener); }
-        void RemoveListener(std::function<bool(uint32_t code, void* data)> listener);
-        void Dispatch(int code, void *data);
+public:
+    EventDispatcher() = default;
+    EventDispatcher(EventDispatcher &&eventDispatcher)
+    {
+        for (int i = 0; i < eventDispatcher.mListeners.size(); i++)
+        {
+            mListeners.emplace_back(std::move(eventDispatcher.mListeners[i]));
+        }
 
-        ~EventDispatcher();
+        eventDispatcher.mListeners.clear();
+    }
+    EventDispatcher &operator=(EventDispatcher &&eventDispatcher) noexcept
+    {
+        for (int i = 0; i < eventDispatcher.mListeners.size(); i++)
+        {
+            mListeners.emplace_back(std::move(eventDispatcher.mListeners[i]));
+        }
 
-      private:
-        std::vector<std::function<bool(uint32_t code, void* data)>> mListeners;
+        eventDispatcher.mListeners.clear();
+        return *this;
+    }
+    void AddListener(const std::function<bool(uint32_t code, void *data)> &listener)
+    {
+        mListeners.push_back(listener);
+    }
+    void RemoveListener(std::function<bool(uint32_t code, void *data)> listener);
+    void Dispatch(int code, void *data);
+
+    ~EventDispatcher();
+
+private:
+    std::vector<std::function<bool(uint32_t code, void *data)>> mListeners;
 };

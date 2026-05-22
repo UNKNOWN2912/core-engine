@@ -38,77 +38,76 @@ struct FrameInfo
 
 enum class RendererEvent
 {
+    None,
     DeferredAttachmentResize,
 };
 
 class Renderer
 {
-  public:
-    void Initialize(const Window &window);
-    void Terminate();
+public:
+    static void Initialize(const Window &window);
+    static void Terminate();
 
-    void Submit(StaticMesh &mesh, Material &material);
-    void Submit(StaticMesh &mesh, Material &material, const Transform &transform);
-    void Submit(const RenderCommand &renderCommand);
+    static void Submit(StaticMesh &mesh, Material &material);
+    static void Submit(StaticMesh &mesh, Material &material, const Transform &transform);
+    static void Submit(const RenderCommand &renderCommand);
 
-    void BeginFrame(RenderTarget &renderTarget, const Camera &camera = {});
-    void EndFrame();
+    static void BeginFrame(RenderTarget &renderTarget, const Camera &camera = {});
+    static void EndFrame();
 
-    bool ResizeSwapchain(const glm::uvec2 &size);
-    void DisplayToWindow(const RenderTarget &target);
+    static bool ResizeSwapchain(const glm::uvec2 &size);
+    static void DisplayToWindow(const RenderTarget &target);
 
-    const RenderPass &GetDeferredRenderPass() const;
-
-    const UniformBuffer &GetDeferredUniformBuffer() const
+    static const glm::uvec2 &GetSwapchainSize()
+    {
+        return mSwapchain.GetSize();
+    }
+    static const RenderPass &GetDeferredRenderPass();
+    static const UniformBuffer &GetDeferredUniformBuffer()
     {
         return mDeferred.uniformBuffer;
     }
 
-    const Swapchain &GetSwapchain() const
+    static const Swapchain &GetSwapchain()
     {
         return mSwapchain;
     }
-    const DeferredAttachment &GetDeferredAttachments() const
+    static const DeferredAttachment &GetDeferredAttachments()
     {
         return mDeferred.attachment;
     }
-    const Sampler &GetDefaultSampler() const
+    static const Sampler &GetDefaultSampler()
     {
         return mDefaultSampler;
     }
 
-    void AddListener(std::function<bool(uint32_t, void *)> listener);
+    static void AddListener(const std::function<bool(uint32_t, void *)> &listener);
 
-    void QueueSwapchainResize(const glm::uvec2 &size);
+    static void QueueSwapchainResize(const glm::uvec2 &size);
 
-    ~Renderer()
-    {
-        Terminate();
-    }
+    static void DeferredPass();
+    static void LightingPass();
+    static void ResizeAttachments(const glm::uvec2 &size);
 
-    void DeferredPass();
-    void LightingPass();
-    void ResizeAttachments(const glm::uvec2 &size);
-
-    void GetBasicShader(VertexShaderID &outputVertexShader, FragmentShaderID &outputFragmentShader)
+    static void GetBasicShader(VertexShaderID &outputVertexShader, FragmentShaderID &outputFragmentShader)
     {
         outputVertexShader = mBasicVertexShader;
         outputFragmentShader = mBasicFragmentShader;
     }
 
-    void SetBasicShader(VertexShaderID vertexShader, FragmentShaderID fragmentShader)
+    static void SetBasicShader(VertexShaderID vertexShader, FragmentShaderID fragmentShader)
     {
         mBasicVertexShader = vertexShader;
         mBasicFragmentShader = fragmentShader;
     }
 
-  private:
-    VertexShaderID mBasicVertexShader;
-    FragmentShaderID mBasicFragmentShader;
+private:
+    static VertexShaderID mBasicVertexShader;
+    static FragmentShaderID mBasicFragmentShader;
 
     friend class EditorLayer;
 
-    struct Deferred
+    static struct Deferred
     {
         FrameBuffer frameBuffer;
         RenderPass renderPass;
@@ -125,9 +124,9 @@ class Renderer
         UniformBuffer uniformBuffer;
     } mDeferred;
 
-    void CreateDeferredPassObjects();
+    static void CreateDeferredPassObjects();
 
-    struct Lighting
+    static struct Lighting
     {
         Descriptor descriptor;
         ComputePipeline pipeline;
@@ -144,27 +143,27 @@ class Renderer
 
     } mLighting;
 
-    void CreateLightingPassObjects();
+    static void CreateLightingPassObjects();
 
-    glm::uvec2 mSwapchainSize;
+    static glm::uvec2 mSwapchainSize;
 
-    EventDispatcher mDispatcher;
-    GraphicsContext mContext;
-    Swapchain mSwapchain;
+    static EventDispatcher mDispatcher;
+    static GraphicsContext mContext;
+    static Swapchain mSwapchain;
 
-    std::vector<RenderCommand> mRenderCommands;
-    RenderTarget mCurrentRenderTarget;
+    static std::vector<RenderCommand> mRenderCommands;
+    static RenderTarget mCurrentRenderTarget;
 
-    CommandBuffer mRenderCommandBuffer;
-    CommandBuffer mTransferToSwapchainCommandBuffer;
+    static CommandBuffer mRenderCommandBuffer;
+    static CommandBuffer mTransferToSwapchainCommandBuffer;
 
-    Semaphore mImageAcquiredSemaphore;
-    Semaphore mTransferSemaphore;
-    Semaphore mRenderingSemaphore;
+    static Semaphore mImageAcquiredSemaphore;
+    static Semaphore mTransferSemaphore;
+    static Semaphore mRenderingSemaphore;
 
-    Sampler mDefaultSampler;
+    static Sampler mDefaultSampler;
 
-    FrameInfo mFrameInfo;
+    static FrameInfo mFrameInfo;
 
     friend class Editor;
 };

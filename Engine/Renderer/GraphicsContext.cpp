@@ -11,7 +11,7 @@ VkBool32 validationCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeveri
     return VK_FALSE;
 };
 
-void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
+void GraphicsContext::Initialize(const Window &window)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -21,11 +21,11 @@ void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 
-        uint32_t glfwExtensionCount;
+        uint32_t glfwExtensionCount = 0;
         const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
         std::vector<const char *> extensions;
-
+        extensions.reserve(glfwExtensionCount);
         for (uint32_t i = 0; i < glfwExtensionCount; i++)
         {
             extensions.push_back(glfwExtensions[i]);
@@ -65,17 +65,17 @@ void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
                 .pUserData = nullptr,
             };
 
-        auto CreateDebugMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkCreateDebugUtilsMessengerEXT");
+        auto createDebugMessenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkCreateDebugUtilsMessengerEXT");
 
-        VkDebugUtilsMessengerEXT messenger;
-        CreateDebugMessenger(mInstance, &createInfo, nullptr, &messenger);
+        VkDebugUtilsMessengerEXT messenger = {};
+        createDebugMessenger(mInstance, &createInfo, nullptr, &messenger);
     }
 
     {
-        uint32_t count;
+        uint32_t count = 0;
         vkEnumeratePhysicalDevices(mInstance, &count, nullptr);
         VkPhysicalDevice devices[8];
-        vkEnumeratePhysicalDevices(mInstance, &count, devices);
+        vkEnumeratePhysicalDevices(mInstance, &count, (VkPhysicalDevice *)devices);
 
         for (uint32_t i = 0; i < count; i++)
         {
@@ -88,7 +88,9 @@ void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
             }
         }
         if (mPhysicalDevice == VK_NULL_HANDLE)
+        {
             ERROR("Failed to find suitable device");
+        }
     }
 
     {
@@ -96,31 +98,31 @@ void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
     }
 
     {
-        uint32_t count;
+        uint32_t count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &count, nullptr);
         VkQueueFamilyProperties properties[8];
-        vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &count, properties);
+        vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &count, (VkQueueFamilyProperties *)properties);
 
         QueueIndices queueIndices;
 
         for (uint32_t i = 0; i < count; i++)
         {
-            if (properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && queueIndices.graphics == UINT32_MAX)
+            if (((properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0u) && (queueIndices.graphics == UINT32_MAX))
             {
                 queueIndices.graphics = i;
             }
-            if (properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT && queueIndices.transfer == UINT32_MAX)
+            if (((properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0u) && (queueIndices.transfer == UINT32_MAX))
             {
                 queueIndices.transfer = i;
             }
-            if (properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT && queueIndices.compute == UINT32_MAX)
+            if (((properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0u) && (queueIndices.compute == UINT32_MAX))
             {
                 queueIndices.compute = i;
             }
 
-            VkBool32 supported = false;
+            VkBool32 supported = VK_FALSE;
             vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, i, mSurface, &supported);
-            if (supported && queueIndices.present == UINT32_MAX)
+            if ((supported != 0u) && (queueIndices.present == UINT32_MAX))
             {
                 queueIndices.present = i;
             }
@@ -201,33 +203,23 @@ void GraphicsContext::Create(const Window &window, bool setAsCurrentContext)
         createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         vkCreateCommandPool(mDevice, &createInfo, nullptr, &mCommandPool);
     }
-
-    if (setAsCurrentContext)
-        SetAsCurrentContext();
 }
 
-void GraphicsContext::Destroy()
+void GraphicsContext::Terminate()
 {
     CHROME_TRACE_FUNCTION();
+    auto destroyDebugMessenger = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkDestroyDebugUtilsMessengerEXT");
+    destroyDebugMessenger(mInstance, mMessenger, nullptr);
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
-    vkDestroyDevice(mDevice, nullptr);
     vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
+    vkDestroyDevice(mDevice, nullptr);
     vkDestroyInstance(mInstance, nullptr);
 
-    if (sCurrentContext == this)
-    {
-        sCurrentContext = nullptr;
-    }
-}
-
-void GraphicsContext::SetAsCurrentContext()
-{
-    sCurrentContext = this;
-}
-
-GraphicsContext &GraphicsContext::GetCurrentContext()
-{
-    return *sCurrentContext;
+    mDevice = VK_NULL_HANDLE;
+    mInstance = VK_NULL_HANDLE;
+    mSurface = VK_NULL_HANDLE;
+    mCommandPool = VK_NULL_HANDLE;
+    mMessenger = VK_NULL_HANDLE;
 }
 
 VkInstance GraphicsContext::GetInstance()
@@ -264,38 +256,11 @@ VkDebugUtilsMessengerEXT GraphicsContext::GetMessenger()
     return mMessenger;
 }
 
-GraphicsContext *GraphicsContext::sCurrentContext = nullptr;
-
-VkInstance getInstance()
-{
-    return GraphicsContext::GetCurrentContext().GetInstance();
-}
-VkPhysicalDevice getPhysicalDevice()
-{
-    return GraphicsContext::GetCurrentContext().GetPhysicalDevice();
-}
-VkDevice getDevice()
-{
-    return GraphicsContext::GetCurrentContext().GetDevice();
-}
-VkSurfaceKHR getSurface()
-{
-    return GraphicsContext::GetCurrentContext().GetSurface();
-}
-QueueIndices getQueueIndices()
-{
-    return GraphicsContext::GetCurrentContext().GetQueueIndices();
-}
-Queues getQueues()
-{
-    return GraphicsContext::GetCurrentContext().GetQueues();
-}
-VkCommandPool getCommandPool()
-{
-    return GraphicsContext::GetCurrentContext().GetCommandPool();
-}
-
-VkDebugUtilsMessengerEXT getMessenger()
-{
-    return GraphicsContext::GetCurrentContext().GetMessenger();
-}
+VkInstance GraphicsContext::mInstance = VK_NULL_HANDLE;
+VkPhysicalDevice GraphicsContext::mPhysicalDevice = VK_NULL_HANDLE;
+VkDevice GraphicsContext::mDevice = VK_NULL_HANDLE;
+VkSurfaceKHR GraphicsContext::mSurface = VK_NULL_HANDLE;
+VkCommandPool GraphicsContext::mCommandPool = VK_NULL_HANDLE;
+VkDebugUtilsMessengerEXT GraphicsContext::mMessenger = VK_NULL_HANDLE;
+QueueIndices GraphicsContext::mQueueIndices;
+Queues GraphicsContext::mQueues;

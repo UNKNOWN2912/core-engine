@@ -5,26 +5,26 @@
 VertexShaderID ShaderManager::LoadVertexShader(std::string_view filename)
 {
     VertexShaderID id = GenerateVertexShaderID();
-    mVertexShaderMap[id] = CreateShaderFromFile(getDevice(), filename.data());
+    mVertexShaderMap[id] = CreateShaderFromFile(GraphicsContext::GetDevice(), filename.data());
     return id;
 }
 FragmentShaderID ShaderManager::LoadFragmentShader(std::string_view filename)
 {
     FragmentShaderID id = GenerateFragmentShaderID();
-    mFragmentShaderMap[id] = CreateShaderFromFile(getDevice(), filename.data());
+    mFragmentShaderMap[id] = CreateShaderFromFile(GraphicsContext::GetDevice(), filename.data());
     return id;
 }
 VertexShaderID ShaderManager::CreateVertexShader(const std::vector<uint32_t> &code)
 {
     VertexShaderID id = GenerateVertexShaderID();
-    mVertexShaderMap[id] = CreateShaderModuleFromMemory(getDevice(), code);
+    mVertexShaderMap[id] = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), code);
     return id;
 }
 
 FragmentShaderID ShaderManager::CreateFragmentShader(const std::vector<uint32_t> &code)
 {
     FragmentShaderID id = GenerateFragmentShaderID();
-    mFragmentShaderMap[id] = CreateShaderModuleFromMemory(getDevice(), code);
+    mFragmentShaderMap[id] = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), code);
     return id;
 }
 

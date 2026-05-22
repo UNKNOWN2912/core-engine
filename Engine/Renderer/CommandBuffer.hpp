@@ -5,19 +5,23 @@
 
 class CommandBuffer
 {
-    public:
-        void Create(VkCommandPool commandPool = getCommandPool());
-        void Destroy();
-        
-        void BeginRecording(bool oneTimeSubmit = false);
-        void EndRecording();
+public:
+    void Create(VkCommandPool commandPool = GraphicsContext::GetCommandPool());
+    void Destroy();
 
-        void QueueSubmit(VkQueue queue, const Semaphore& waitSemaphore = {}, const Semaphore& signalSemaphore = {}, PipelineStage waitStage = PipelineStage::TopOfPipe);
+    void BeginRecording(bool oneTimeSubmit = false);
+    void EndRecording();
 
-        VkCommandBuffer GetHandle() const { return mHandle; }
+    void QueueSubmit(VkQueue queue, const Semaphore &waitSemaphore = {}, const Semaphore &signalSemaphore = {}, PipelineStage waitStage = PipelineStage::TopOfPipe);
 
-        ~CommandBuffer();
-    private:
-        VkCommandBuffer mHandle = VK_NULL_HANDLE;
-        VkCommandPool mCommandPool = VK_NULL_HANDLE;
+    VkCommandBuffer GetHandle() const
+    {
+        return mHandle;
+    }
+
+    ~CommandBuffer();
+
+private:
+    VkCommandBuffer mHandle = VK_NULL_HANDLE;
+    VkCommandPool mCommandPool = VK_NULL_HANDLE;
 };

@@ -4,7 +4,7 @@
 
 void Renderer::Initialize(const Window &window)
 {
-    mContext.Create(window, true);
+    GraphicsContext::Initialize(window);
 
     mDefaultSampler.SetFilter(Filter::Nearest, Filter::Nearest);
     mDefaultSampler.Create();
@@ -13,8 +13,6 @@ void Renderer::Initialize(const Window &window)
 
     CreateDeferredPassObjects();
     CreateLightingPassObjects();
-
-    // Render pass
 
     mRenderCommandBuffer.Create();
     mTransferToSwapchainCommandBuffer.Create();
@@ -25,8 +23,11 @@ void Renderer::Initialize(const Window &window)
 
 void Renderer::Terminate()
 {
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
     mDeferred.uniformBuffer.Destroy();
+    mDeferred.descriptor.Destroy();
+
+    GraphicsContext::Terminate();
 }
 
 void Renderer::Submit(StaticMesh &mesh, Material &material)
@@ -56,7 +57,7 @@ void Renderer::Submit(StaticMesh &mesh, Material &material, const Transform &tra
     }
 
     glm::mat4 matrix = transform.GetMatrix();
-    memcpy(renderCommand.pushContantData, &matrix, sizeof(matrix));
+    memcpy((void *)renderCommand.pushContantData, &matrix, sizeof(matrix));
     renderCommand.pushContantSize = sizeof(matrix);
 
     Submit(renderCommand);
@@ -71,7 +72,7 @@ void Renderer::Submit(const RenderCommand &renderCommand)
 
 void Renderer::BeginFrame(RenderTarget &renderTarget, const Camera &camera)
 {
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
 
     mFrameInfo.isRecording = true;
     mCurrentRenderTarget = renderTarget;
@@ -97,30 +98,28 @@ void Renderer::DeferredPass()
 {
     mDeferred.renderPass.CmdBeginRenderPass(mRenderCommandBuffer, mDeferred.frameBuffer, mDeferred.attachment.size, {{0, 0, 0, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 1}});
 
-    for (int i = 0; i < mRenderCommands.size(); i++)
+    for (const RenderCommand &renderCommand : mRenderCommands)
     {
-        const RenderCommand &renderCommand = mRenderCommands[i];
-
         uint32_t vertexBufferCount = (renderCommand.instanceCount == 0) ? 1 : 2;
-        VkBuffer vertexBuffer[2] = {renderCommand.vertexBuffer->handle};
+        std::array<VkBuffer, 2> vertexBuffer = {renderCommand.vertexBuffer->handle};
         if (vertexBufferCount == 2)
         {
             vertexBuffer[1] = renderCommand.instanceBuffer->mBuffer.handle;
         }
-        VkDeviceSize offsets[] = {0, 0};
+        std::array<VkDeviceSize, 2> offsets = {0, 0};
 
-        vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, vertexBufferCount, vertexBuffer, offsets);
+        vkCmdBindVertexBuffers(mRenderCommandBuffer.GetHandle(), 0, vertexBufferCount, vertexBuffer.data(), offsets.data());
         vkCmdBindIndexBuffer(mRenderCommandBuffer.GetHandle(), renderCommand.indexBuffer->handle, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindPipeline(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline->GetHandle());
 
-        VkDescriptorSet descriptorSets[16];
+        std::array<VkDescriptorSet, 16> descriptorSets = {};
         for (int j = 0; j < renderCommand.descriptorCount; j++)
         {
             descriptorSets[j] = renderCommand.descriptors[j]->GetDescriptorSet();
         }
 
-        vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline->GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets, 0, nullptr);
+        vkCmdBindDescriptorSets(mRenderCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline->GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets.data(), 0, nullptr);
 
         VkViewport viewport =
             {
@@ -138,12 +137,16 @@ void Renderer::DeferredPass()
         vkCmdSetViewport(mRenderCommandBuffer.GetHandle(), 0, 1, &viewport);
         vkCmdSetScissor(mRenderCommandBuffer.GetHandle(), 0, 1, &scissor);
 
-        vkCmdPushConstants(mRenderCommandBuffer.GetHandle(), renderCommand.pipeline->GetPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, renderCommand.pushContantSize, renderCommand.pushContantData);
+        vkCmdPushConstants(mRenderCommandBuffer.GetHandle(), renderCommand.pipeline->GetPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, renderCommand.pushContantSize, (void *)renderCommand.pushContantData);
 
         if (renderCommand.instanceCount == 0)
+        {
             vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
+        }
         else
+        {
             vkCmdDrawIndexed(mRenderCommandBuffer.GetHandle(), renderCommand.indexCount, renderCommand.instanceCount, 0, 0, 0);
+        }
     }
 
     mDeferred.renderPass.CmdEndRenderPass(mRenderCommandBuffer);
@@ -154,7 +157,7 @@ void Renderer::LightingPass()
     CmdBindPipeline(mRenderCommandBuffer, mLighting.pipeline);
     CmdBindDescriptors(mRenderCommandBuffer, mLighting.pipeline, {mLighting.descriptor, mDeferred.descriptor, mLighting.uniformDescriptor});
 
-    glm::ivec3 groupCount;
+    glm::uvec3 groupCount;
     groupCount.x = (mSwapchain.GetSize().x / 16) + 1;
     groupCount.y = (mSwapchain.GetSize().y / 16) + 1;
     groupCount.z = 1;
@@ -165,7 +168,7 @@ void Renderer::EndFrame()
 {
     assert(mFrameInfo.isRecording == true);
 
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
 
     mRenderCommandBuffer.BeginRecording();
 
@@ -173,7 +176,7 @@ void Renderer::EndFrame()
     LightingPass();
 
     mRenderCommandBuffer.EndRecording();
-    mRenderCommandBuffer.QueueSubmit(getQueues().graphics, {}, mRenderingSemaphore, PipelineStage::ColorAttachmentOutput);
+    mRenderCommandBuffer.QueueSubmit(GraphicsContext::GetQueues().graphics, {}, mRenderingSemaphore, PipelineStage::ColorAttachmentOutput);
 
     mRenderCommands.clear();
     mFrameInfo.isRecording = false;
@@ -182,9 +185,11 @@ void Renderer::EndFrame()
 bool Renderer::ResizeSwapchain(const glm::uvec2 &size)
 {
     if (mSwapchain.GetSize() == size)
+    {
         return false;
+    }
 
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
 
     mSwapchain.Destroy();
     mSwapchain.CreateSwapchain(size, PresentMode::Fifo);
@@ -205,9 +210,9 @@ bool Renderer::ResizeSwapchain(const glm::uvec2 &size)
 
 void Renderer::DisplayToWindow(const RenderTarget &target)
 {
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
     uint32_t imageIndex = mSwapchain.GetNextImageIndex(mImageAcquiredSemaphore, {});
-    VkSwapchainKHR swapchain[] = {mSwapchain.GetHandle()};
+    std::array<VkSwapchainKHR, 8> swapchain = {mSwapchain.GetHandle()};
 
     mTransferToSwapchainCommandBuffer.BeginRecording();
 
@@ -236,28 +241,28 @@ void Renderer::DisplayToWindow(const RenderTarget &target)
 
     mTransferToSwapchainCommandBuffer.EndRecording();
 
-    mTransferToSwapchainCommandBuffer.QueueSubmit(getQueues().transfer, mImageAcquiredSemaphore, mTransferSemaphore);
+    mTransferToSwapchainCommandBuffer.QueueSubmit(GraphicsContext::GetQueues().transfer, mImageAcquiredSemaphore, mTransferSemaphore);
 
-    VkSemaphore waitSemaphoreHandles[] = {mTransferSemaphore.GetHandle()};
+    std::array<VkSemaphore, 2> waitSemaphoreHandles = {mTransferSemaphore.GetHandle()};
     VkPresentInfoKHR presentInfo =
         {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = waitSemaphoreHandles,
+            .pWaitSemaphores = waitSemaphoreHandles.data(),
             .swapchainCount = 1,
-            .pSwapchains = swapchain,
+            .pSwapchains = swapchain.data(),
             .pImageIndices = &imageIndex,
         };
 
-    vkQueuePresentKHR(getQueues().present, &presentInfo);
+    vkQueuePresentKHR(GraphicsContext::GetQueues().present, &presentInfo);
 }
 
-const RenderPass &Renderer::GetDeferredRenderPass() const
+const RenderPass &Renderer::GetDeferredRenderPass()
 {
     return mDeferred.renderPass;
 }
 
-void Renderer::AddListener(std::function<bool(uint32_t, void *)> listener)
+void Renderer::AddListener(const std::function<bool(uint32_t, void *)> &listener)
 {
     mDispatcher.AddListener(listener);
 }
@@ -270,9 +275,11 @@ void Renderer::QueueSwapchainResize(const glm::uvec2 &size)
 void Renderer::ResizeAttachments(const glm::uvec2 &size)
 {
     if (size == mDeferred.attachment.albedo.size)
+    {
         return;
+    }
 
-    vkDeviceWaitIdle(getDevice());
+    vkDeviceWaitIdle(GraphicsContext::GetDevice());
     mDeferred.attachment.ResizeAttachment(size);
     mDeferred.frameBuffer.Destroy();
     mDispatcher.Dispatch((uint32_t)RendererEvent::DeferredAttachmentResize, &mDeferred.attachment);
@@ -285,7 +292,7 @@ void Renderer::ResizeAttachments(const glm::uvec2 &size)
             mDeferred.attachment.depth,
         };
 
-    mDeferred.frameBuffer.Create(size, attachments, mDeferred.renderPass);
+    mDeferred.frameBuffer = FrameBuffer(size, attachments, mDeferred.renderPass);
 
     mDeferred.descriptor.UpdateImage(mDeferred.attachment.albedo, ImageLayout::ShaderRead, mDefaultSampler, 0);
     mDeferred.descriptor.UpdateImage(mDeferred.attachment.position, ImageLayout::ShaderRead, mDefaultSampler, 1);
@@ -324,9 +331,9 @@ void Renderer::CreateDeferredPassObjects()
             mDeferred.attachment.depth,
         };
 
-    mDeferred.frameBuffer.Create(mSwapchain.GetSize(), attachments, mDeferred.renderPass);
+    mDeferred.frameBuffer = FrameBuffer(mSwapchain.GetSize(), attachments, mDeferred.renderPass);
 
-    mDeferred.uniformBuffer.Create(sizeof(mDeferred.uniformData));
+    mDeferred.uniformBuffer = UniformBuffer(sizeof(mDeferred.uniformData));
     mDeferred.uniformBuffer.SetData(&mDeferred.uniformData);
 }
 
@@ -339,7 +346,7 @@ void Renderer::CreateLightingPassObjects()
     mLighting.descriptor.Create();
     mLighting.descriptor.UpdateImage(mLighting.image, ImageLayout::General, mDefaultSampler, 0);
 
-    mLighting.uniformBuffer.Create(sizeof(mLighting.uniformData));
+    mLighting.uniformBuffer = UniformBuffer(sizeof(mLighting.uniformData));
 
     mLighting.uniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Compute);
     mLighting.uniformDescriptor.Create();
@@ -348,3 +355,21 @@ void Renderer::CreateLightingPassObjects()
     mLighting.pipeline.LoadShader("Shaders/swapchain.comp.spv");
     mLighting.pipeline.Create({&mLighting.descriptor, &mDeferred.descriptor, &mLighting.uniformDescriptor});
 }
+
+glm::uvec2 Renderer::mSwapchainSize = {};
+EventDispatcher Renderer::mDispatcher = {};
+GraphicsContext Renderer::mContext = {};
+Swapchain Renderer::mSwapchain = {};
+std::vector<RenderCommand> Renderer::mRenderCommands = {};
+RenderTarget Renderer::mCurrentRenderTarget = {};
+CommandBuffer Renderer::mRenderCommandBuffer = {};
+CommandBuffer Renderer::mTransferToSwapchainCommandBuffer = {};
+Semaphore Renderer::mImageAcquiredSemaphore = {};
+Semaphore Renderer::mTransferSemaphore = {};
+Semaphore Renderer::mRenderingSemaphore = {};
+Sampler Renderer::mDefaultSampler = {};
+FrameInfo Renderer::mFrameInfo = {};
+Renderer::Lighting Renderer::mLighting = {};
+Renderer::Deferred Renderer::mDeferred = {};
+VertexShaderID Renderer::mBasicVertexShader = (VertexShaderID)UINT64_MAX;
+FragmentShaderID Renderer::mBasicFragmentShader = (FragmentShaderID)UINT64_MAX;

@@ -3,16 +3,32 @@
 
 class RenderTarget
 {
-    public:
-        void Create(const glm::uvec2& size);
-        void Resize(const glm::uvec2& size);
-        void Destroy();
+  public:
+    RenderTarget() = default;
+    RenderTarget(const RenderTarget &) = default;
+    RenderTarget(RenderTarget &&) = delete;
+    RenderTarget &operator=(const RenderTarget &) = default;
+    RenderTarget &operator=(RenderTarget &&renderTarget) noexcept
+    {
+        mImage = renderTarget.mImage;
+        mLayout = renderTarget.mLayout;
 
-        const Image& GetImage() const;
+        renderTarget.mImage = Image();
+        renderTarget.mLayout = ImageLayout::None;
 
-        void TransitionLayout(ImageLayout newLayout);
+        return *this;
+    }
+    RenderTarget(const glm::uvec2 &size);
+    ~RenderTarget();
 
-    private:
-        ImageLayout mLayout = ImageLayout::None;
-        Image mImage;
+    void Resize(const glm::uvec2 &size);
+    void Destroy();
+
+    [[nodiscard]] const Image &GetImage() const;
+
+    void TransitionLayout(ImageLayout newLayout);
+
+  private:
+    ImageLayout mLayout = ImageLayout::None;
+    Image mImage;
 };

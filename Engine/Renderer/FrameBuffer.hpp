@@ -6,16 +6,32 @@ class RenderPass;
 
 class FrameBuffer
 {
-    public:
-        void Create(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass);
-        void Destroy();
+public:
+    void Destroy();
 
-        VkFramebuffer GetHandle() const;
+    [[nodiscard]] VkFramebuffer GetHandle() const;
 
-        FrameBuffer() {}
-        FrameBuffer(const glm::uvec2& size, std::initializer_list<Image> attachments, const RenderPass& renderPass);
-        ~FrameBuffer();
-      private:
-        VkFramebuffer mHandle = VK_NULL_HANDLE;
-        glm::uvec2 size;
+    FrameBuffer() = default;
+    FrameBuffer(const FrameBuffer &framebuffer) = default;
+    FrameBuffer(FrameBuffer &&framebuffer) noexcept : mHandle(framebuffer.mHandle), mSize(framebuffer.mSize)
+    {
+        framebuffer.mHandle = VK_NULL_HANDLE;
+        framebuffer.mSize = {0, 0};
+    }
+    FrameBuffer &operator=(const FrameBuffer &) = default;
+    FrameBuffer &operator=(FrameBuffer &&framebuffer) noexcept
+    {
+        mHandle = framebuffer.mHandle;
+        mSize = framebuffer.mSize;
+        framebuffer.mHandle = VK_NULL_HANDLE;
+        framebuffer.mSize = {0, 0};
+
+        return *this;
+    }
+    FrameBuffer(const glm::uvec2 &size, std::initializer_list<Image> attachments, const RenderPass &renderPass);
+    ~FrameBuffer();
+
+private:
+    VkFramebuffer mHandle = VK_NULL_HANDLE;
+    glm::uvec2 mSize = {};
 };

@@ -4,51 +4,36 @@
 
 struct QueueIndices
 {
-    uint32_t graphics = UINT32_MAX, transfer = UINT32_MAX, compute = UINT32_MAX, present = UINT32_MAX; 
+    uint32_t graphics = UINT32_MAX, transfer = UINT32_MAX, compute = UINT32_MAX, present = UINT32_MAX;
 };
 
 struct Queues
 {
-    VkQueue graphics, transfer, compute, present; 
+    VkQueue graphics, transfer, compute, present;
 };
-
-
 
 class GraphicsContext
 {
-    public:
-        void Create(const Window& window, bool setAsCurrentContext);
-        void Destroy();
+public:
+    static void Initialize(const Window &window);
+    static void Terminate();
 
-        void SetAsCurrentContext();
+    static VkInstance GetInstance();
+    static VkPhysicalDevice GetPhysicalDevice();
+    static VkDevice GetDevice();
+    static VkSurfaceKHR GetSurface();
+    static QueueIndices GetQueueIndices();
+    static Queues GetQueues();
+    static VkCommandPool GetCommandPool();
+    static VkDebugUtilsMessengerEXT GetMessenger();
 
-        static GraphicsContext& GetCurrentContext();
-
-        VkInstance GetInstance();
-        VkPhysicalDevice GetPhysicalDevice();
-        VkDevice GetDevice();
-        VkSurfaceKHR GetSurface();
-        QueueIndices GetQueueIndices();
-        Queues GetQueues();
-        VkCommandPool GetCommandPool();
-        VkDebugUtilsMessengerEXT GetMessenger();
-    private:
-        static GraphicsContext* sCurrentContext;
-        VkInstance mInstance;
-        VkPhysicalDevice mPhysicalDevice;
-        VkDevice mDevice;
-        VkSurfaceKHR mSurface;
-        QueueIndices mQueueIndices;
-        Queues mQueues;
-        VkCommandPool mCommandPool;
-        VkDebugUtilsMessengerEXT mMessenger;
+private:
+    static VkInstance mInstance;
+    static VkPhysicalDevice mPhysicalDevice;
+    static VkDevice mDevice;
+    static VkSurfaceKHR mSurface;
+    static QueueIndices mQueueIndices;
+    static Queues mQueues;
+    static VkCommandPool mCommandPool;
+    static VkDebugUtilsMessengerEXT mMessenger;
 };
-
-VkInstance getInstance();
-VkPhysicalDevice getPhysicalDevice();
-VkDevice getDevice();
-VkSurfaceKHR getSurface();
-QueueIndices getQueueIndices();
-Queues getQueues();
-VkCommandPool getCommandPool();
-VkDebugUtilsMessengerEXT getMessenger();

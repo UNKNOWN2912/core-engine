@@ -7,77 +7,110 @@
 
 enum class WindowEvent
 {
-	WindowClose,
-	WindowResize,
-	WindowMove,
-	WindowMinimize,
-	WindowMaximize,
+    WindowClose,
+    WindowResize,
+    WindowMove,
+    WindowMinimize,
+    WindowMaximize,
 
-	WindowMouseMove,
-	WindowMousePress,
-	WindowMouseRelease,
-	WindowScroll,
+    WindowMouseMove,
+    WindowMousePress,
+    WindowMouseRelease,
+    WindowScroll,
 
-	WindowKeyPress,
-	WindowKeyRelease,
-	WindowKeyRepeat,
+    WindowKeyPress,
+    WindowKeyRelease,
+    WindowKeyRepeat,
 
-	WindowCharacterType
+    WindowCharacterType
 };
 
 struct WindowData
 {
-	GLFWwindow* window = nullptr;
-	EventDispatcher dispatcher;
-	bool isMaximized = false;
-	struct PreFullscreenData 
-	{
-		int width = 0;
-		int height = 0;
-		int x = 0;
-		int y = 0;
-	} preFullscreenData;
+    WindowData() = default;
+    WindowData(const WindowData &data) = delete;
+
+    WindowData(WindowData &&data) noexcept : window(data.window), dispatcher(std::move(data.dispatcher)), isMaximized(data.isMaximized), preFullscreenData(data.preFullscreenData)
+    {
+        data.window = nullptr;
+    }
+    WindowData &operator=(WindowData &&data) noexcept
+    {
+        window = data.window;
+        dispatcher = std::move(data.dispatcher);
+        isMaximized = data.isMaximized;
+        preFullscreenData = data.preFullscreenData;
+
+        data.window = nullptr;
+        return *this;
+    }
+    GLFWwindow *window = nullptr;
+    EventDispatcher dispatcher;
+    bool isMaximized = false;
+    struct PreFullscreenData
+    {
+        int width = 0;
+        int height = 0;
+        int x = 0;
+        int y = 0;
+    } preFullscreenData;
 };
 
 class Window
 {
 public:
-	void CreateWindow(const glm::uvec2& size, std::string_view title);
-	void DestroyWindow();
+    Window(const glm::uvec2 &size, std::string_view title);
+    Window() = default;
+    Window(const Window &) = default;
+    Window(Window &&window) noexcept
+    {
+        mWindowData.window = window.mWindowData.window;
+        mWindowData.dispatcher = std::move(window.mWindowData.dispatcher);
+        mWindowData.isMaximized = window.mWindowData.isMaximized;
+        mWindowData.preFullscreenData = window.mWindowData.preFullscreenData;
 
-	glm::uvec2 GetSize() const;
-	glm::uvec2 GetPosition() const;
-	glm::uvec2 GetFrameBufferSize() const;
-	std::string GetTitle() const;
+        window.mWindowData = {};
+        glfwSetWindowUserPointer(mWindowData.window, &mWindowData);
+    }
+    Window &operator=(const Window &) = default;
+    Window &operator=(Window &&window) noexcept
+    {
+        mWindowData.window = window.mWindowData.window;
+        mWindowData.dispatcher = std::move(window.mWindowData.dispatcher);
+        mWindowData.isMaximized = window.mWindowData.isMaximized;
+        mWindowData.preFullscreenData = window.mWindowData.preFullscreenData;
 
-	void SetSize(const glm::uvec2& size);
-	void SetPosition(const glm::uvec2& position);
-	void SetTitle(const std::string& title);
-	void AddListener(std::function<bool(uint32_t code, void* data)> listener);
-	void ProcessEvent();
-	GLFWwindow* GetNativeWindow() const;
+        window.mWindowData = {};
+        glfwSetWindowUserPointer(mWindowData.window, &mWindowData);
+        return *this;
+    }
+    ~Window();
 
-	bool isFullscreen();
-	void SetFullscreen(bool fullscreen);
+    glm::uvec2 GetSize() const;
+    glm::uvec2 GetPosition() const;
+    glm::uvec2 GetFrameBufferSize() const;
+    std::string GetTitle() const;
 
-	void HideCursor();
-	void ShowCursor();
-	bool isCursorHidden();
+    void DestroyWindow();
 
-	void Maximize();
-	void Restore();
-	bool IsMaximized();
+    void SetSize(const glm::uvec2 &size);
+    void SetPosition(const glm::uvec2 &position);
+    void SetTitle(const std::string &title);
+    void AddListener(const std::function<bool(uint32_t code, void *data)> &listener);
+    void ProcessEvent();
+    GLFWwindow *GetNativeWindow() const;
 
-	Window() 
-	{
+    bool IsFullscreen() const;
+    void SetFullscreen(bool fullscreen);
 
-	}
+    void HideCursor();
+    void ShowCursor();
+    bool isCursorHidden() const;
 
-	~Window();
+    void Maximize();
+    void Restore();
+    bool IsMaximized() const;
+
 private:
-	WindowData mWindowData;
+    WindowData mWindowData;
 };
-
-
-
-
