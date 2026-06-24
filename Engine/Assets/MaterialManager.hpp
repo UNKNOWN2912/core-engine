@@ -5,7 +5,7 @@ enum class MaterialID : uint64_t;
 
 class MaterialManager
 {
-  public:
+public:
     static MaterialID LoadMaterial(std::string_view filename);
     static MaterialID AddMaterial(std::shared_ptr<Material> material);
 
@@ -16,7 +16,11 @@ class MaterialManager
     static std::shared_ptr<Material> GetMaterial(MaterialID materialId);
     static bool HasMaterial(MaterialID materialId);
 
-  private:
+    static void Clear();
+
+    static const std::unordered_map<MaterialID, std::shared_ptr<Material>> &GetMap();
+
+private:
     static uint64_t mLastMaterialId;
     static std::unordered_map<MaterialID, std::shared_ptr<Material>> mMaterialMap;
 };

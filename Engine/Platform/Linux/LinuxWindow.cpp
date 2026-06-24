@@ -1,6 +1,7 @@
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
 #define GLFW_INCLUDE_VULKAN
+#include "Renderer/GraphicsContext.hpp"
 #include <Core/Macro.hpp>
 #include <Core/Window.hpp>
 #include <GLFW/glfw3.h>
@@ -500,9 +501,7 @@ Window::Window(const glm::uvec2 &size, std::string_view title)
     CHROME_TRACE_FUNCTION();
 
     glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
-
     glfwInit();
-
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     mWindowData.window = glfwCreateWindow((int)size.x, (int)size.y, title.data(), nullptr, nullptr);
@@ -537,6 +536,29 @@ void Window::HideCursor()
     }
 }
 
+Window::Window(Window &&window) noexcept
+{
+    mWindowData.window = window.mWindowData.window;
+    mWindowData.dispatcher = std::move(window.mWindowData.dispatcher);
+    mWindowData.isMaximized = window.mWindowData.isMaximized;
+    mWindowData.restoreData = window.mWindowData.restoreData;
+
+    window.mWindowData = {};
+    glfwSetWindowUserPointer(mWindowData.window, &mWindowData);
+}
+Window &Window::operator=(Window &&window) noexcept
+{
+    DestroyWindow();
+
+    mWindowData.window = window.mWindowData.window;
+    mWindowData.dispatcher = std::move(window.mWindowData.dispatcher);
+    mWindowData.isMaximized = window.mWindowData.isMaximized;
+    mWindowData.restoreData = window.mWindowData.restoreData;
+
+    window.mWindowData = {};
+    glfwSetWindowUserPointer(mWindowData.window, &mWindowData);
+    return *this;
+}
 Window::~Window()
 {
     DestroyWindow();
@@ -545,6 +567,7 @@ void Window::DestroyWindow()
 {
     CHROME_TRACE_FUNCTION();
     glfwDestroyWindow(mWindowData.window);
+    mWindowData.window = nullptr;
 }
 
 glm::uvec2 Window::GetSize() const
@@ -657,13 +680,20 @@ void Window::SetFullscreen(bool fullscreen)
 
     if (fullscreen)
     {
-        glfwGetWindowSize(mWindowData.window, &mWindowData.preFullscreenData.width, &mWindowData.preFullscreenData.height);
-        glfwGetWindowPos(mWindowData.window, &mWindowData.preFullscreenData.x, &mWindowData.preFullscreenData.y);
+        glfwGetWindowSize(mWindowData.window, &mWindowData.restoreData.width, &mWindowData.restoreData.height);
+        glfwGetWindowPos(mWindowData.window, &mWindowData.restoreData.x, &mWindowData.restoreData.y);
 
         glfwSetWindowMonitor(mWindowData.window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, 0);
     }
     else
     {
-        glfwSetWindowMonitor(mWindowData.window, nullptr, mWindowData.preFullscreenData.x, mWindowData.preFullscreenData.y, mWindowData.preFullscreenData.width, mWindowData.preFullscreenData.height, 0);
+        glfwSetWindowMonitor(mWindowData.window, nullptr, mWindowData.restoreData.x, mWindowData.restoreData.y, mWindowData.restoreData.width, mWindowData.restoreData.height, 0);
     }
+}
+
+VkSurfaceKHR Window::CreateWindowSurface() const
+{
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    glfwCreateWindowSurface(GraphicsContext::GetInstance(), mWindowData.window, nullptr, &surface);
+    return surface;
 }

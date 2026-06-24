@@ -9,34 +9,16 @@
 class EventDispatcher
 {
 public:
-    EventDispatcher() = default;
-    EventDispatcher(EventDispatcher &&eventDispatcher)
-    {
-        for (int i = 0; i < eventDispatcher.mListeners.size(); i++)
-        {
-            mListeners.emplace_back(std::move(eventDispatcher.mListeners[i]));
-        }
-
-        eventDispatcher.mListeners.clear();
-    }
-    EventDispatcher &operator=(EventDispatcher &&eventDispatcher) noexcept
-    {
-        for (int i = 0; i < eventDispatcher.mListeners.size(); i++)
-        {
-            mListeners.emplace_back(std::move(eventDispatcher.mListeners[i]));
-        }
-
-        eventDispatcher.mListeners.clear();
-        return *this;
-    }
-    void AddListener(const std::function<bool(uint32_t code, void *data)> &listener)
-    {
-        mListeners.push_back(listener);
-    }
+    void AddListener(const std::function<bool(uint32_t code, void *data)> &listener);
     void RemoveListener(std::function<bool(uint32_t code, void *data)> listener);
     void Dispatch(int code, void *data);
 
+    EventDispatcher() = default;
+    EventDispatcher(const EventDispatcher &) = delete;
+    EventDispatcher &operator=(const EventDispatcher &) = delete;
     ~EventDispatcher();
+    EventDispatcher(EventDispatcher &&eventDispatcher) noexcept;
+    EventDispatcher &operator=(EventDispatcher &&eventDispatcher) noexcept;
 
 private:
     std::vector<std::function<bool(uint32_t code, void *data)>> mListeners;

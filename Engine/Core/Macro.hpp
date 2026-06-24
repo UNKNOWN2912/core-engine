@@ -1,12 +1,16 @@
 #pragma once
-#include <print>
-#include "Timer.hpp"
 #include "Profiler/ChromeTraceProfiler.hpp"
+#include "Timer.hpp"
 #include <cassert>
+#include <print>
 
-#define LOG_ALLOCATION 1
+#define LOG_ALLOCATION 0
 
-#define CREATE_APPLICATION(applicationClass) Application* Application::Create() { return new applicationClass; }
+#define CREATE_APPLICATION(applicationClass) \
+    Application *Application::Create()       \
+    {                                        \
+        return new applicationClass;         \
+    }
 
 #define ENABLE_LOGGING 1
 #define ENABLE_WARNING 1
@@ -14,37 +18,37 @@
 #define ENABLE_FATAL 1
 
 #if !defined(_MSC_VER) && defined(__clang__)
-	#if ENABLE_LOGGING
-	#define LOG(x, ...) std::println("{}: " x, "log"  __VA_OPT__(,)  __VA_ARGS__)
-	#endif
+#if ENABLE_LOGGING
+#define LOG(x, ...) std::println("{}: " x, "log" __VA_OPT__(, ) __VA_ARGS__)
+#endif
 
-	#if ENABLE_WARNING
-	#define WARN(x, ...) std::println("{}: " x, "warn"  __VA_OPT__(,)  __VA_ARGS__)
-	#endif
+#if ENABLE_WARNING
+#define WARN(x, ...) std::println("{}: " x, "warn" __VA_OPT__(, ) __VA_ARGS__)
+#endif
 
-	#if ENABLE_ERROR
-	#define ERROR(x, ...) std::println("{}: " x, "error"  __VA_OPT__(,)  __VA_ARGS__)
-	#endif
+#if ENABLE_ERROR
+#define ERROR(x, ...) std::println("{}: " x, "error" __VA_OPT__(, ) __VA_ARGS__)
+#endif
 
-	#if ENABLE_FATAL
-	#define FATAL(x, ...) std::println("{}: " x, "fatal"  __VA_OPT__(,)  __VA_ARGS__)
-	#endif
+#if ENABLE_FATAL
+#define FATAL(x, ...) std::println("{}: " x, "fatal" __VA_OPT__(, ) __VA_ARGS__)
+#endif
 #else
-	#if ENABLE_LOGGING
-	#define LOG(x, ...) std::println("{}: " x, "log",  ##__VA_ARGS__)
-	#endif
+#if ENABLE_LOGGING
+#define LOG(x, ...) std::println("{}: " x, "log", ##__VA_ARGS__)
+#endif
 
-	#if ENABLE_WARNING
-	#define WARN(x, ...) std::println("{}: " x, "warn",  ##__VA_ARGS__)
-	#endif
+#if ENABLE_WARNING
+#define WARN(x, ...) std::println("{}: " x, "warn", ##__VA_ARGS__)
+#endif
 
-	#if ENABLE_ERROR
-	#define ERROR(x, ...) std::println("{}: " x, "error",  ##__VA_ARGS__)
-	#endif
+#if ENABLE_ERROR
+#define ERROR(x, ...) std::println("{}: " x, "error", ##__VA_ARGS__)
+#endif
 
-	#if ENABLE_FATAL
-	#define FATAL(x, ...) std::println("{}: " x, "fatal",  ##__VA_ARGS__)
-	#endif
+#if ENABLE_FATAL
+#define FATAL(x, ...) std::println("{}: " x, "fatal", ##__VA_ARGS__)
+#endif
 #endif
 
 #if defined(_MSC_VER)
@@ -55,9 +59,7 @@
 
 #define PROFILE_FUNCTION() ScopedTimer __profilingScopedTimer__(__FNNAME__)
 
-
 #define CHROME_TRACE_ENABLED 0
-
 
 #if CHROME_TRACE_ENABLED
 
@@ -73,5 +75,8 @@ inline ChromeTraceProfiler __global_profiler__("profile.json");
 #define CHROME_DISABLE_TRACING()
 #endif
 
-
-#define VK_CHECK(x) if(x != VK_SUCCESS) { LOG("Failed: {}", #x); }
+#define VK_CHECK(x)            \
+    if (x != VK_SUCCESS)       \
+    {                          \
+        LOG("Failed: {}", #x); \
+    }

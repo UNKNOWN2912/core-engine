@@ -1,15 +1,20 @@
 #pragma once
 #include <cstdint>
+#include <glm/glm.hpp>
 
-#define DefineBitOperators(Enum, Type) inline Enum operator|(Enum lhs, Enum rhs) \
-{ \
-    return Enum((Type)lhs | (Type)rhs); \
-} \
-inline Enum operator&(Enum lhs, Enum rhs) \
-{ \
-    return Enum((Type)lhs & (Type)rhs); \
-} \
-
+#define DefineBitOperators(Enum, Type)          \
+    inline Enum operator|(Enum lhs, Enum rhs)   \
+    {                                           \
+        return Enum((Type)lhs | (Type)rhs);     \
+    }                                           \
+    inline Enum operator&(Enum lhs, Enum rhs)   \
+    {                                           \
+        return Enum((Type)lhs & (Type)rhs);     \
+    }                                           \
+    inline void operator|=(Enum &lhs, Enum rhs) \
+    {                                           \
+        lhs = lhs | rhs;                        \
+    }
 
 enum class ImageFormat
 {
@@ -66,16 +71,37 @@ enum class ImageFormat
     RGBA64U,
 
     D32,
-    D24_S8,
+    D24S8,
 
     BGRA8,
     BGRA8UNORM
 };
 
+enum class ColorSpace
+{
+    None,
+    SRGBNonLinear,
+    DisplayP3NonLinear,
+    ExtendedSRGBLinear,
+    DisplayP3Linear,
+    DciP3Nonlinear,
+    Bt709Linear,
+    Bt709NonLinear,
+    Bt2020Linear,
+    Hdr10St2084,
+    Dolbyvision,
+    Hdr10Hlg,
+    AdobeRGBLinear,
+    AdobeRGBNonlinear,
+    PassThrough,
+    ExtendedSRGBNonlinear,
+    DisplayNative,
+};
+
 enum class ImageLayout
 {
     None = 0,
-    Color,
+    ColorAttachment,
     DepthStencil,
     ShaderRead,
     TransferSource,
@@ -87,7 +113,7 @@ enum class ImageLayout
 enum class ImageUsage : uint64_t
 {
     None = 0,
-    Color = 1 << 1,
+    ColorAttachment = 1 << 1,
     DepthStencil = 1 << 2,
     Sampler = 1 << 3,
     TransferSource = 1 << 4,
@@ -96,7 +122,18 @@ enum class ImageUsage : uint64_t
     InputAttachment = 1 << 7,
 };
 
-DefineBitOperators(ImageUsage, uint64_t);
+inline ImageUsage operator|(ImageUsage lhs, ImageUsage rhs)
+{
+    return ImageUsage((uint64_t)lhs | (uint64_t)rhs);
+}
+inline ImageUsage operator&(ImageUsage lhs, ImageUsage rhs)
+{
+    return ImageUsage((uint64_t)lhs & (uint64_t)rhs);
+}
+inline void operator|=(ImageUsage &lhs, ImageUsage rhs)
+{
+    lhs = lhs | rhs;
+};
 
 enum class BufferUsage : uint64_t
 {
@@ -152,7 +189,7 @@ enum class PipelineStage : uint64_t
     VertexShader = 1 << 4,
     TessellationControlShader = 1 << 5,
     TessellationEvaluationShader = 1 << 6,
-    GeometryShader = 1 << 7, 
+    GeometryShader = 1 << 7,
     FragmentShader = 1 << 8,
     EarlyFragmentTests = 1 << 9,
     LateFragmentTests = 1 << 10,
@@ -175,17 +212,19 @@ enum class ShaderStage
     Geometry,
     Tessellation,
     Compute,
+    All,
 };
 
 enum class SampleCount
 {
+    None = 0,
     One,
     Two,
     Four,
     Eight,
     Sixteen,
     ThirtyTwo,
-    SixtyFour
+    SixtyFour,
 };
 
 enum class MemoryProperty : uint64_t
@@ -198,7 +237,7 @@ enum class MemoryProperty : uint64_t
 
 DefineBitOperators(MemoryProperty, uint64_t)
 
-enum class DeviceType
+    enum class DeviceType
 {
     None = 0,
     Dedicated,
@@ -228,6 +267,7 @@ enum class PresentMode
     Fifo,
     Mailbox,
     Immediate,
+    FifoLatestReady,
 };
 
 enum class CullMode
@@ -240,15 +280,15 @@ enum class CullMode
 enum class FrontFace
 {
     None = 0,
-    Clockwise, 
+    Clockwise,
     CounterClockwise,
 };
 
 enum class PrimitiveType
 {
     None = 0,
-    Triangle, 
-    Line, 
+    Triangle,
+    Line,
     Point,
 };
 
@@ -265,4 +305,24 @@ enum class PipelineBindPoint
     Graphic,
     Compute,
     RayTracing
+};
+
+enum class ViewType
+{
+    None = 0,
+    OneDimensional,
+    TwoDimensional,
+    ThreeDimensional,
+    Cube,
+    OneDimensionalArray,
+    TwoDimensionalArray,
+    CubeArray
+};
+
+enum class ImageType
+{
+    None,
+    OneDimensional,
+    TwoDimensional,
+    ThreeDimensional,
 };

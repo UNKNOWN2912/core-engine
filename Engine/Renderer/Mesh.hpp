@@ -14,17 +14,15 @@ struct Vertex
     Vertex(glm::vec3 position, glm::vec2 uv, glm::vec3 normal) : position(position), uv(uv), normal(normal)
     {
     }
-    Vertex()
-    {
-    }
+    Vertex() = default;
 };
 
-class StaticMesh
+class Mesh
 {
 public:
-    StaticMesh();
-    StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
-    StaticMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+    Mesh();
+    Mesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
+    Mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
     void SetData(const void *vertices, size_t vertexSize, const uint32_t *indices, size_t indexSize);
     void SetData(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
@@ -35,23 +33,11 @@ public:
 
     void Destroy();
 
-    const Buffer &GetVertexBuffer() const
-    {
-        return mVertexBuffer;
-    }
-    const Buffer &GetIndexBuffer() const
-    {
-        return mIndexBuffer;
-    }
+    const Buffer &GetVertexBuffer() const;
+    const Buffer &GetIndexBuffer() const;
 
-    const std::string &GetName() const
-    {
-        return mName;
-    }
-    void SetName(const std::string &name)
-    {
-        mName = name;
-    }
+    const std::string &GetName() const;
+    void SetName(const std::string &name);
 
 private:
     std::string mName;

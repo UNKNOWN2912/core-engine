@@ -2,14 +2,20 @@
 #include "Renderer/Converter.hpp"
 #include "Renderer/Utility.hpp"
 
-void CommandBuffer::Create(VkCommandPool commandPool)
+void CommandBuffer::CreateCommandBuffer(VkCommandPool commandPool)
 {
     mHandle = AllocateCommandBuffer(commandPool);
     mCommandPool = commandPool;
 }
-void CommandBuffer::Destroy()
+void CommandBuffer::DestroyCommandBuffer()
 {
+    if (mHandle == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
     vkFreeCommandBuffers(GraphicsContext::GetDevice(), mCommandPool, 1, &mHandle);
+    mHandle = VK_NULL_HANDLE;
 }
 void CommandBuffer::BeginRecording(bool oneTimeSubmit)
 {
@@ -25,7 +31,7 @@ void CommandBuffer::BeginRecording(bool oneTimeSubmit)
             .flags = usage,
         };
 
-    vkBeginCommandBuffer(mHandle, &beginInfo);
+    VkResult result = vkBeginCommandBuffer(mHandle, &beginInfo);
 }
 void CommandBuffer::EndRecording()
 {
@@ -58,5 +64,5 @@ void CommandBuffer::QueueSubmit(VkQueue queue, const Semaphore &waitSemaphore, c
 
 CommandBuffer::~CommandBuffer()
 {
-    Destroy();
+    DestroyCommandBuffer();
 }

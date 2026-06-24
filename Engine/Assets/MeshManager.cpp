@@ -1,6 +1,6 @@
 #include "MeshManager.hpp"
 
-MeshID MeshManager::AddMesh(std::shared_ptr<StaticMesh> mesh)
+MeshID MeshManager::AddMesh(std::shared_ptr<Mesh> mesh)
 {
     MeshID id = GenerateID();
     mMeshMap[id] = mesh;
@@ -10,12 +10,17 @@ MeshID MeshManager::GenerateID()
 {
     return (MeshID)mLastMeshId++;
 }
+void MeshManager::Clear()
+{
+    mMeshMap.clear();
+}
+
 void MeshManager::DestroyMesh(MeshID id)
 {
     mMeshMap[id]->Destroy();
     mMeshMap[id].reset();
 }
-std::shared_ptr<StaticMesh> MeshManager::GetMesh(MeshID id)
+std::shared_ptr<Mesh> MeshManager::GetMesh(MeshID id)
 {
     return mMeshMap[id];
 }
@@ -25,4 +30,4 @@ bool MeshManager::HasMesh(MeshID id)
 }
 
 uint64_t MeshManager::mLastMeshId = 0;
-std::unordered_map<MeshID, std::shared_ptr<StaticMesh>> MeshManager::mMeshMap;
+std::unordered_map<MeshID, std::shared_ptr<Mesh>> MeshManager::mMeshMap;

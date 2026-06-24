@@ -1,10 +1,9 @@
 #pragma once
 #include "Assets/MaterialManager.hpp"
 #include "Assets/MeshManager.hpp"
-#include "Renderer/Transform.hpp"
 
 struct MeshRendererComponent
 {
-    MeshID mesh;
-    MaterialID material;
+    MeshID mesh = (MeshID)UINT64_MAX;
+    MaterialID material = (MaterialID)UINT64_MAX;
 };

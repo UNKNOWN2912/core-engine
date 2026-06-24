@@ -1,4 +1,5 @@
 #pragma once
+#include "Renderer/ImageView.hpp"
 #include "Renderer/Utility.hpp"
 #include <vulkan/vulkan.h>
 
@@ -7,29 +8,13 @@ class RenderPass;
 class FrameBuffer
 {
 public:
-    void Destroy();
+    void CreateFrameBuffer(const glm::uvec2 &size, std::initializer_list<ImageView> attachments, const RenderPass &renderPass, uint32_t layers = 1);
+    void CreateFrameBuffer(std::initializer_list<ImageDeprecated> attachments, const RenderPass &renderPass, uint32_t layers = 1);
+    void CreateFrameBuffer(std::initializer_list<Image> attachments, const RenderPass &renderPass, uint32_t layers = 1);
 
-    [[nodiscard]] VkFramebuffer GetHandle() const;
+    void DestroyFrameBuffer();
 
-    FrameBuffer() = default;
-    FrameBuffer(const FrameBuffer &framebuffer) = default;
-    FrameBuffer(FrameBuffer &&framebuffer) noexcept : mHandle(framebuffer.mHandle), mSize(framebuffer.mSize)
-    {
-        framebuffer.mHandle = VK_NULL_HANDLE;
-        framebuffer.mSize = {0, 0};
-    }
-    FrameBuffer &operator=(const FrameBuffer &) = default;
-    FrameBuffer &operator=(FrameBuffer &&framebuffer) noexcept
-    {
-        mHandle = framebuffer.mHandle;
-        mSize = framebuffer.mSize;
-        framebuffer.mHandle = VK_NULL_HANDLE;
-        framebuffer.mSize = {0, 0};
-
-        return *this;
-    }
-    FrameBuffer(const glm::uvec2 &size, std::initializer_list<Image> attachments, const RenderPass &renderPass);
-    ~FrameBuffer();
+    VkFramebuffer GetHandle() const;
 
 private:
     VkFramebuffer mHandle = VK_NULL_HANDLE;

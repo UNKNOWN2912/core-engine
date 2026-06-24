@@ -1,5 +1,7 @@
 #include "Texture.hpp"
 #include "Core/Macro.hpp"
+#include "Renderer/CommandBuffer.hpp"
+#include "Renderer/Helper.hpp"
 #include <filesystem>
 #include <memory.h>
 
@@ -136,7 +138,7 @@ uint32_t GetFormatChannelCount(ImageFormat format)
     case ImageFormat::D32:
         return 1;
         break;
-    case ImageFormat::D24_S8:
+    case ImageFormat::D24S8:
         return 2;
         break;
     case ImageFormat::BGRA8:
@@ -155,9 +157,11 @@ void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format)
     CHROME_TRACE_FUNCTION();
 
     if (IsValid())
+    {
         Destroy();
+    }
 
-    mImage = CreateImage(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal);
+    mImage = CreateImage(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One, 1, 1);
     mStagingBuffer = CreateBuffer(mImage.memorySize, BufferUsage::TransferSource, MemoryProperty::HostVisible | MemoryProperty::HostCoherent);
 
     unsigned char *staging = (unsigned char *)mStagingBuffer.map;
@@ -167,11 +171,19 @@ void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format)
         staging[i] = idata[i];
     }
 
-    TransitionImageLayout(ImageLayout::None, ImageLayout::TransferDestination, ImageAspect::Color, mImage);
+    CommandBuffer commandBuffer;
+    commandBuffer.CreateCommandBuffer();
 
-    TransferImageData(mStagingBuffer, mImage, ImageAspect::Color);
+    commandBuffer.BeginRecording(true);
+    CmdTransitionImageLayout(commandBuffer, ImageLayout::None, ImageLayout::TransferDestination, ImageAspect::Color, mImage);
 
-    TransitionImageLayout(ImageLayout::TransferDestination, ImageLayout::ShaderRead, ImageAspect::Color, mImage);
+    CmdTransferImageData(commandBuffer, mStagingBuffer, mImage, ImageAspect::Color);
+
+    CmdTransitionImageLayout(commandBuffer, ImageLayout::TransferDestination, ImageLayout::ShaderRead, ImageAspect::Color, mImage);
+    commandBuffer.EndRecording();
+    commandBuffer.QueueSubmit(GraphicsContext::GetQueues().transfer);
+
+    vkQueueWaitIdle(GraphicsContext::GetQueues().transfer);
 
     mIsValid = true;
 

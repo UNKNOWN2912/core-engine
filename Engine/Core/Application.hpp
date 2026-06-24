@@ -12,7 +12,7 @@
 class Application
 {
 public:
-    virtual void Initialize()
+    virtual void OnInitialize()
     {
     }
     virtual void OnStart()
@@ -83,7 +83,7 @@ public:
 
     bool WindowEventCallback(uint32_t code, void *data);
 
-    Window &GetWindowRef()
+    Window &GetWindow()
     {
         return mWindow;
     }
@@ -157,4 +157,6 @@ private:
     uint32_t mFrameCounter = 0;
 
     bool mHideCursor = false;
+
+    RendererSpecification mRendererSpecification;
 };

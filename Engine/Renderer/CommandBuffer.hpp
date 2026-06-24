@@ -6,8 +6,8 @@
 class CommandBuffer
 {
 public:
-    void Create(VkCommandPool commandPool = GraphicsContext::GetCommandPool());
-    void Destroy();
+    void CreateCommandBuffer(VkCommandPool commandPool = GraphicsContext::GetCommandPool());
+    void DestroyCommandBuffer();
 
     void BeginRecording(bool oneTimeSubmit = false);
     void EndRecording();

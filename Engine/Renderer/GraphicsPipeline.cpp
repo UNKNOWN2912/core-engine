@@ -103,25 +103,30 @@ void GraphicsPipeline::SetViewport(const VkViewport &viewport)
     mViewport = viewport;
 }
 
+void GraphicsPipeline::CmdBindPipeline(const CommandBuffer &commandBuffer) const
+{
+    vkCmdBindPipeline(commandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, mHandle);
+}
+
 void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
 {
     CHROME_TRACE_FUNCTION();
     VkPipelineColorBlendAttachmentState state =
         {
-            .blendEnable = enableBlending,
+            .blendEnable = VK_TRUE,
             .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
             .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
             .colorBlendOp = VK_BLEND_OP_ADD,
             .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
             .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
             .alphaBlendOp = VK_BLEND_OP_ADD,
-            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_A_BIT,
+            .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
         };
 
     mColorBlendStates.push_back(state);
 }
 
-void GraphicsPipeline::Create(const RenderPass &renderPass, uint32_t subpassIndex)
+void GraphicsPipeline::CreatePipeline(const RenderPass &renderPass, uint32_t subpassIndex)
 {
     CHROME_TRACE_FUNCTION();
     if (mVertexShader == VK_NULL_HANDLE || mFragmentShader == VK_NULL_HANDLE)
@@ -140,13 +145,18 @@ void GraphicsPipeline::Create(const RenderPass &renderPass, uint32_t subpassInde
     fragmentShaderStageCreateInfo.module = mFragmentShader;
     fragmentShaderStageCreateInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] = {vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo};
+    VkPipelineShaderStageCreateInfo geometryShaderStageCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
+    geometryShaderStageCreateInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+    geometryShaderStageCreateInfo.module = mGeometryShader;
+    geometryShaderStageCreateInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] = {vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo, geometryShaderStageCreateInfo};
 
     VkViewport viewport = {};
     viewport.width = 800;
     viewport.height = 600;
     viewport.maxDepth = 1.f;
-    viewport.minDepth = 1.f;
+    viewport.minDepth = 0.f;
     VkRect2D scissor = {};
     scissor.extent = {800, 600};
 
@@ -159,6 +169,8 @@ void GraphicsPipeline::Create(const RenderPass &renderPass, uint32_t subpassInde
     VkPipelineColorBlendStateCreateInfo colorBlendState = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
     colorBlendState.attachmentCount = mColorBlendStates.size();
     colorBlendState.pAttachments = mColorBlendStates.data();
+    colorBlendState.logicOpEnable = VK_FALSE;
+    colorBlendState.logicOp = VK_LOGIC_OP_COPY;
 
     VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE};
 
@@ -210,10 +222,16 @@ void GraphicsPipeline::Create(const RenderPass &renderPass, uint32_t subpassInde
 
     vkCreatePipelineLayout(GraphicsContext::GetDevice(), &pipelineLayoutCreateInfo, nullptr, &mPipelineLayout);
 
+    uint32_t stageCount = 2;
+    if (mGeometryShader != VK_NULL_HANDLE)
+    {
+        stageCount = 3;
+    }
+
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
     pipelineCreateInfo.layout = mPipelineLayout;
     pipelineCreateInfo.renderPass = renderPass.GetHandle();
-    pipelineCreateInfo.stageCount = 2;
+    pipelineCreateInfo.stageCount = stageCount;
     pipelineCreateInfo.pStages = shaderStageCreateInfo;
     pipelineCreateInfo.pColorBlendState = &colorBlendState;
     pipelineCreateInfo.pDynamicState = &dynamicState;
@@ -228,10 +246,8 @@ void GraphicsPipeline::Create(const RenderPass &renderPass, uint32_t subpassInde
     vkCreateGraphicsPipelines(GraphicsContext::GetDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mHandle);
 }
 
-void GraphicsPipeline::Destroy()
+void GraphicsPipeline::DestroyPipeline()
 {
-    vkDestroyShaderModule(GraphicsContext::GetDevice(), mVertexShader, nullptr);
-    vkDestroyShaderModule(GraphicsContext::GetDevice(), mFragmentShader, nullptr);
     vkDestroyPipeline(GraphicsContext::GetDevice(), mHandle, nullptr);
 }
 

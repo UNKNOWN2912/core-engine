@@ -33,5 +33,5 @@ Application *Layer::GetApplication()
 
 Window &Layer::GetWindow()
 {
-    return Application::GetInstance()->GetWindowRef();
+    return Application::GetInstance()->GetWindow();
 }

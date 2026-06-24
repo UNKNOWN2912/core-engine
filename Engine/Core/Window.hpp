@@ -27,33 +27,16 @@ enum class WindowEvent
 
 struct WindowData
 {
-    WindowData() = default;
-    WindowData(const WindowData &data) = delete;
-
-    WindowData(WindowData &&data) noexcept : window(data.window), dispatcher(std::move(data.dispatcher)), isMaximized(data.isMaximized), preFullscreenData(data.preFullscreenData)
-    {
-        data.window = nullptr;
-    }
-    WindowData &operator=(WindowData &&data) noexcept
-    {
-        window = data.window;
-        dispatcher = std::move(data.dispatcher);
-        isMaximized = data.isMaximized;
-        preFullscreenData = data.preFullscreenData;
-
-        data.window = nullptr;
-        return *this;
-    }
     GLFWwindow *window = nullptr;
     EventDispatcher dispatcher;
     bool isMaximized = false;
-    struct PreFullscreenData
+    struct RestoreData
     {
         int width = 0;
         int height = 0;
         int x = 0;
         int y = 0;
-    } preFullscreenData;
+    } restoreData;
 };
 
 class Window
@@ -61,29 +44,10 @@ class Window
 public:
     Window(const glm::uvec2 &size, std::string_view title);
     Window() = default;
-    Window(const Window &) = default;
-    Window(Window &&window) noexcept
-    {
-        mWindowData.window = window.mWindowData.window;
-        mWindowData.dispatcher = std::move(window.mWindowData.dispatcher);
-        mWindowData.isMaximized = window.mWindowData.isMaximized;
-        mWindowData.preFullscreenData = window.mWindowData.preFullscreenData;
-
-        window.mWindowData = {};
-        glfwSetWindowUserPointer(mWindowData.window, &mWindowData);
-    }
-    Window &operator=(const Window &) = default;
-    Window &operator=(Window &&window) noexcept
-    {
-        mWindowData.window = window.mWindowData.window;
-        mWindowData.dispatcher = std::move(window.mWindowData.dispatcher);
-        mWindowData.isMaximized = window.mWindowData.isMaximized;
-        mWindowData.preFullscreenData = window.mWindowData.preFullscreenData;
-
-        window.mWindowData = {};
-        glfwSetWindowUserPointer(mWindowData.window, &mWindowData);
-        return *this;
-    }
+    Window(const Window &) = delete;
+    Window &operator=(const Window &) = delete;
+    Window(Window &&window) noexcept;
+    Window &operator=(Window &&window) noexcept;
     ~Window();
 
     glm::uvec2 GetSize() const;
@@ -110,6 +74,8 @@ public:
     void Maximize();
     void Restore();
     bool IsMaximized() const;
+
+    VkSurfaceKHR CreateWindowSurface() const;
 
 private:
     WindowData mWindowData;

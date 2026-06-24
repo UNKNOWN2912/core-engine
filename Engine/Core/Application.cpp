@@ -6,14 +6,13 @@ void Application::InitializeApplication()
 {
     CHROME_TRACE_FUNCTION();
 
+    OnInitialize();
+
     mApplicationTimer.Start();
-
-    const glm::uvec2 windowSize = {800, 600};
-
-    mWindow = Window(windowSize, "Untitled");
+    mWindow = Window({800, 600}, "Untitled");
     mWindow.AddListener(BindMember(Application::WindowEventCallback));
 
-    Renderer::Initialize(mWindow);
+    Renderer::Initialize(mRendererSpecification);
 }
 
 void Application::TerminateApplication()
@@ -151,12 +150,19 @@ void Application::MainLoop()
 
     Timer fpsTimer(true);
     uint32_t fps = 0;
+
     while (mRunning)
     {
+        mWindow.ProcessEvent();
+
         if (mHideCursor)
+        {
             mWindow.HideCursor();
+        }
         else
+        {
             mWindow.ShowCursor();
+        }
 
         fps++;
         if (fpsTimer.GetElapsedTime() > 1.f)
@@ -167,7 +173,6 @@ void Application::MainLoop()
         }
         mFrameCounter++;
         mDeltaTimer.Start();
-        mWindow.ProcessEvent();
         OnUpdate();
         mLayerStack.InvokeUpdates();
         mDeltaTimer.Stop();

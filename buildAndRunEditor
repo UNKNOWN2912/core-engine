@@ -1,7 +1,0 @@
-mkdir -p out
-cd out
-cmake ..
-make -j12
-cd ..
-cd Project/Editor
-./../../out/Project/Editor/Editor

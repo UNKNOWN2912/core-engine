@@ -14,7 +14,7 @@ public:
     UniformBuffer(UniformBuffer &&uniformBuffer) noexcept;
     UniformBuffer &operator=(UniformBuffer &&uniformBuffer) noexcept;
 
-    void Destroy();
+    void DestroyUniformBuffer();
     void SetData(void *data);
     const Buffer &GetBuffer() const;
     size_t GetCapacity();

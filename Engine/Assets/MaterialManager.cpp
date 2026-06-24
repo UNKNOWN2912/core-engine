@@ -21,7 +21,6 @@ MaterialID MaterialManager::GenerateID()
 
 void MaterialManager::DestroyMaterial(MaterialID materialId)
 {
-    mMaterialMap[materialId]->Destroy();
     mMaterialMap[materialId].reset();
 }
 
@@ -33,6 +32,15 @@ std::shared_ptr<Material> MaterialManager::GetMaterial(MaterialID materialId)
 bool MaterialManager::HasMaterial(MaterialID materialId)
 {
     return GetMaterial(materialId) == nullptr;
+}
+void MaterialManager::Clear()
+{
+    mMaterialMap.clear();
+}
+
+const std::unordered_map<MaterialID, std::shared_ptr<Material>> &MaterialManager::GetMap()
+{
+    return MaterialManager::mMaterialMap;
 }
 
 uint64_t MaterialManager::mLastMaterialId = 0;

@@ -17,11 +17,8 @@ Checks: >
   readability-duplicate-include,
   readability-else-after-return,
   readability-function-cognitive-complexity,
-  readability-identifier-length,
   readability-identifier-naming,
-  readability-implicit-bool-conversion,
   readability-inconsistent-declaration-parameter-name,
-  readability-magic-numbers,
   readability-make-member-function-const,
   readability-misleading-indentation,
   readability-misplaced-array-index,
@@ -29,7 +26,6 @@ Checks: >
   readability-non-const-parameter,
   readability-operators-representation,
   readability-qualified-auto,
-  readability-redundant-access-specifiers,
   readability-redundant-control-flow,
   readability-redundant-declaration,
   readability-redundant-function-ptr-dereference,
@@ -45,7 +41,6 @@ Checks: >
   readability-string-compare,
   readability-suspicious-call-argument,
   readability-uniqueptr-delete-release,
-  readability-use-anyofallof,
 
   # ── Performance ────────────────────────────────────────────────────────────
   performance-avoid-endl,
@@ -174,7 +169,6 @@ Checks: >
   cppcoreguidelines-narrowing-conversions,
   cppcoreguidelines-no-malloc,
   cppcoreguidelines-prefer-member-initializer,
-  cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   cppcoreguidelines-pro-type-const-cast,
   cppcoreguidelines-pro-type-member-init,
   cppcoreguidelines-pro-type-reinterpret-cast,
@@ -221,18 +215,6 @@ CheckOptions:
   - key:   readability-function-cognitive-complexity.IgnoreMacros
     value: 'true'
 
-  # Short identifier names are almost always unclear
-  - key:   readability-identifier-length.MinimumVariableNameLength
-    value: '3'
-  - key:   readability-identifier-length.MinimumParameterNameLength
-    value: '3'
-  - key:   readability-identifier-length.MinimumLoopCounterNameLength
-    value: '2'
-  - key:   readability-identifier-length.IgnoredVariableNames
-    value: '^(i|j|k|n|x|y|z|it|ok|id|fd|ec|kv)$'
-  - key:   readability-identifier-length.IgnoredParameterNames
-    value: '^(i|j|k|n|x|y|z|it|ok|id|fd|ec)$'
-
   # Naming conventions: Google-style as a baseline (adjust to your project)
   - key:   readability-identifier-naming.ClassCase
     value: CamelCase
@@ -254,6 +236,8 @@ CheckOptions:
     value: camelBack
   - key:   readability-identifier-naming.PrivateMemberPrefix
     value: 'm'
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: CamelBack
   - key:   readability-identifier-naming.ParameterCase
     value: camelBack
   - key:   readability-identifier-naming.VariableCase
@@ -273,13 +257,6 @@ CheckOptions:
   - key:   readability-identifier-naming.MacroDefinitionCase
     value: UPPER_CASE
 
-  # Magic numbers: allow a small set of obviously clear literals
-  - key:   readability-magic-numbers.IgnoredFloatingPointValues
-    value: '0.0;0.5;1.0;2.0;100.0'
-  - key:   readability-magic-numbers.IgnoredIntegerValues
-    value: '0;1;2;-1;8;16;32;64;100;1000'
-  - key:   readability-magic-numbers.IgnoreBitFieldsWidths
-    value: 'true'
 
   # Implicit bool conversion: alert on things like if (ptr) and if (int_val)
   - key:   readability-implicit-bool-conversion.AllowIntegerConditions

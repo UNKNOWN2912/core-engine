@@ -4,7 +4,6 @@
 
 void ComputePipeline::Create(const std::vector<Descriptor *> &descriptors)
 {
-
     std::vector<VkDescriptorSetLayout> setLayouts;
 
     for (const Descriptor *des : descriptors)

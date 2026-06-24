@@ -2,41 +2,49 @@
 #include "Renderer/Converter.hpp"
 #include "Renderer/GraphicsContext.hpp"
 
+const std::vector<ImageDeprecated> &Swapchain::GetImages() const
+{
+    return mImages;
+}
+const glm::uvec2 &Swapchain::GetSize() const
+{
+    return mSize;
+}
+uint32_t Swapchain::GetImageCount() const
+{
+    return mImages.size();
+}
+
 uint32_t Swapchain::GetNextImageIndex(const Semaphore &semaphore, const Fence &fence) const
 {
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(GraphicsContext::GetDevice(), mHandle, UINT64_MAX, semaphore.GetHandle(), fence.GetHandle(), &imageIndex);
+    uint32_t imageIndex = UINT32_MAX;
+    VkResult result = vkAcquireNextImageKHR(GraphicsContext::GetDevice(), mHandle, UINT64_MAX, semaphore.GetHandle(), fence.GetHandle(), &imageIndex);
     return imageIndex;
 }
 
-void Swapchain::CreateSwapchain(const glm::uvec2 &size, PresentMode presentMode)
+void Swapchain::CreateSwapchain(VkSurfaceKHR surface, ImageFormat format, ColorSpace colorSpace, PresentMode presentMode, ImageUsage usage)
 {
     VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GraphicsContext::GetPhysicalDevice(), GraphicsContext::GetSurface(), &capabilities);
-    mSize = {size.x, size.y};
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GraphicsContext::GetPhysicalDevice(), surface, &capabilities);
+    uint32_t imageCount = glm::min(capabilities.minImageCount + 1, capabilities.maxImageCount);
 
-    if (mSize.x > capabilities.maxImageExtent.width || mSize.y > capabilities.maxImageExtent.height)
-    {
-        mSize = {800, 600};
-    }
+    mSize.x = capabilities.maxImageExtent.width;
+    mSize.y = capabilities.maxImageExtent.height;
 
-    ImageFormat format = ImageFormat::BGRA8;
-    VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-
-    uint32_t imageCount = capabilities.minImageCount + 1 <= capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
+    assert(SurfaceFormatSupported(surface, format, colorSpace));
 
     VkSwapchainCreateInfoKHR createInfo =
         {
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-            .surface = GraphicsContext::GetSurface(),
+            .surface = surface,
             .minImageCount = imageCount,
             .imageFormat = GetVulkanImageFormat(format),
-            .imageColorSpace = colorSpace,
-            .imageExtent = {size.x, size.y},
+            .imageColorSpace = GetVulkanColorSpace(colorSpace),
+            .imageExtent = {mSize.x, mSize.y},
             .imageArrayLayers = 1,
-            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            .imageUsage = GetVulkanImageUsage(usage),
             .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .preTransform = capabilities.currentTransform,
+            .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .presentMode = GetVulkanPresentMode(presentMode),
             .clipped = VK_TRUE,
@@ -49,17 +57,17 @@ void Swapchain::CreateSwapchain(const glm::uvec2 &size, PresentMode presentMode)
 
     vkGetSwapchainImagesKHR(GraphicsContext::GetDevice(), mHandle, &imageCount, nullptr);
     images.resize(imageCount);
+    views.resize(imageCount);
     vkGetSwapchainImagesKHR(GraphicsContext::GetDevice(), mHandle, &imageCount, images.data());
 
-    for (VkImage image : images)
+    for (uint32_t i = 0; i < imageCount; i++)
     {
-        VkImageView view = CreateImageView(image, format, ImageAspect::Color);
-        views.push_back(view);
+        views[i] = CreateImageView(images[i], format, ImageAspect::Color);
     }
 
-    for (int i = 0; i < images.size(); i++)
+    for (size_t i = 0; i < images.size(); i++)
     {
-        Image image;
+        ImageDeprecated image;
         image.handle = images[i];
         image.view = views[i];
         image.size = mSize;
@@ -69,13 +77,38 @@ void Swapchain::CreateSwapchain(const glm::uvec2 &size, PresentMode presentMode)
     mFormat = format;
 }
 
-void Swapchain::Destroy()
+void Swapchain::DestroySwapchain()
 {
-    vkDestroySwapchainKHR(GraphicsContext::GetDevice(), mHandle, nullptr);
-    for (Image &image : mImages)
+    for (ImageDeprecated &image : mImages)
     {
         vkDestroyImageView(GraphicsContext::GetDevice(), image.view, nullptr);
     }
-    mImages.clear();
-    mSize = {};
+    vkDestroySwapchainKHR(GraphicsContext::GetDevice(), mHandle, nullptr);
+    *this = Swapchain();
+}
+ImageFormat Swapchain::GetFormat() const
+{
+    return mFormat;
+}
+VkSwapchainKHR Swapchain::GetHandle() const
+{
+    return mHandle;
+};
+
+bool Swapchain::SurfaceFormatSupported(VkSurfaceKHR surface, ImageFormat format, ColorSpace colorSpace)
+{
+    uint32_t count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(GraphicsContext::GetPhysicalDevice(), surface, &count, nullptr);
+    std::vector<VkSurfaceFormatKHR> formats(count);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(GraphicsContext::GetPhysicalDevice(), surface, &count, formats.data());
+
+    for (auto &[supportedFormat, supportedColorSpace] : formats)
+    {
+        if (format == GetNativeImageFormat(supportedFormat) && colorSpace == GetNativeColorSpace(supportedColorSpace))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }

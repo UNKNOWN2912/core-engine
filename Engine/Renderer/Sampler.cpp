@@ -17,7 +17,7 @@ void Sampler::SetAddressMode(AddressMode u, AddressMode v, AddressMode w)
 void Sampler::SetBorderColor(const glm::vec4 &color)
 {
 }
-void Sampler::Create()
+void Sampler::CreateSampler()
 {
     VkSamplerCreateInfo createInfo =
         {
@@ -34,7 +34,7 @@ void Sampler::Create()
 
     vkCreateSampler(GraphicsContext::GetDevice(), &createInfo, nullptr, &mHandle);
 }
-void Sampler::Destroy()
+void Sampler::DestroySampler()
 {
     vkDestroySampler(GraphicsContext::GetDevice(), mHandle, nullptr);
 }

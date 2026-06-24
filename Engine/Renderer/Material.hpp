@@ -1,13 +1,7 @@
 #pragma once
 #include "Assets/ShaderManager.hpp"
 #include "Assets/TextureManager.hpp"
-#include "Renderer/Descriptor.hpp"
-#include "Renderer/GraphicsPipeline.hpp"
-#include "Renderer/InstanceBuffer.hpp"
-#include "Renderer/Sampler.hpp"
-#include "Renderer/Texture.hpp"
 #include "Renderer/Types.hpp"
-#include <memory>
 
 enum class AttributeType
 {
@@ -25,118 +19,30 @@ enum class AttributeType
     Vec4,
 };
 
-class Material
+struct Material
 {
-  public:
-    void SetAlbedo(TextureID id);
-    void SetShaders(VertexShaderID vertexShaderId, FragmentShaderID fragmentShaderId);
+    VertexShaderID vertexShader = ShaderManager::GetInvalidVertexShaderID();
+    FragmentShaderID fragmentShader = ShaderManager::GetInvalidFragmentShaderID();
+    GeometryShaderID geometryShader = ShaderManager::GetInvalidGeometryShaderID();
 
-    void Create();
-    void Destroy();
+    union {
+        TextureID textures[32] = {(TextureID)UINT64_MAX};
+        struct
+        {
+            TextureID albedo;
+            TextureID specular;
+        };
+    };
 
-    void SetLineWidth(float lineWidth);
-    void SetCullMode(CullMode cullMode);
-    void SetPrimitiveType(PrimitiveType primitiveType);
-    void SetFrontFace(FrontFace frontFace);
-    void SetSampleCount(SampleCount sampleCount);
-    void SetDefaultAttribute();
+    CullMode cullMode = CullMode::Back;
 
-    void SetInstanceCount(uint32_t instanceCount)
-    {
-        mInstanceCount = instanceCount;
-    }
+    bool enableDepthWrite = true;
+    bool enableDepthTest = true;
+    bool enableBlending = true;
 
-    void EnableWireframe(bool wireframe);
-    void EnableDepthTestEnable(bool depthTestEnable);
-    void EnableDepthWriteEnable(bool depthWriteEnable);
-    void EnableInstancing(bool enableInstancing);
+    Filter magFilter = Filter::Linear;
+    Filter minFilter = Filter::Linear;
+    AddressMode addressMode = AddressMode::Repeat;
 
-    void AddLayout(uint32_t binding, InputRate inputRate, std::initializer_list<AttributeType> attributes);
-
-    const GraphicsPipeline &GetPipeline() const
-    {
-        return mPipeline;
-    }
-    const Descriptor &GetImageDescriptor() const
-    {
-        return mImageDescriptor;
-    }
-    const Descriptor &GetUniformDescriptor() const
-    {
-        return mUniformDescriptor;
-    }
-
-    GraphicsPipeline &GetPipelineRef()
-    {
-        return mPipeline;
-    }
-    Descriptor &GetImageDescriptorRef()
-    {
-        return mImageDescriptor;
-    }
-    Descriptor &GetUniformDescriptorRef()
-    {
-        return mUniformDescriptor;
-    }
-
-    uint32_t GetInstanceCount() const
-    {
-        return mInstanceCount;
-    }
-
-    void SetInstanceData(void *data, size_t size);
-    void SetInstanceBuffer(const InstanceBuffer &instanceBuffer);
-
-    bool IsInstancingEnabled() const
-    {
-        return mEnableInstancing;
-    }
-
-    const InstanceBuffer &GetInstanceBuffer() const
-    {
-        return mInstanceBuffer;
-    }
-    InstanceBuffer &GetInstanceBufferRef()
-    {
-        return mInstanceBuffer;
-    }
-
-    const std::string &GetName() const
-    {
-        return mName;
-    }
-
-    void SetName(std::string_view name)
-    {
-        mName = name;
-    }
-
-  private:
-    std::string mName;
-    float mLineWidth = 1.f;
-    bool mDepthTestEnable = true;
-    bool mDepthWriteEnable = true;
-    bool mEnableInstancing = false;
-    bool mWireframeEnable = false;
-
-    CullMode mCullMode = CullMode::Back;
-    PrimitiveType mPrimitiveType = PrimitiveType::Triangle;
-    FrontFace mFrontFace = FrontFace::Clockwise;
-    SampleCount mSampleCount = SampleCount::One;
-
-    GraphicsPipeline mPipeline;
-
-    Descriptor mImageDescriptor;
-    Descriptor mUniformDescriptor;
-
-    Sampler mAlbedoSampler;
-
-    TextureID mAlbedo = TextureManager::GetInvalidID();
-
-    InstanceBuffer mInstanceBuffer;
-    uint32_t mInstanceCount = 0;
-
-    uint32_t mAttributeCount = 0;
-
-    uint32_t mLastAttributeLocation = 0;
+    std::string name = "Untitled";
 };

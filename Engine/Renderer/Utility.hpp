@@ -12,21 +12,25 @@ struct Buffer
     void *map = nullptr;
 };
 
-struct Image
+struct ImageDeprecated
 {
     VkImage handle = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
     VkDeviceSize memorySize = 0;
     glm::uvec2 size = {0, 0};
+    ImageFormat format;
 };
+
+uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties);
 
 Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryProperties);
 void DestroyBuffer(Buffer &buffer);
 void TransferBufferData(const Buffer &srcBuffer, Buffer &dstBuffer);
 
-Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty);
-void DestroyImage(Image &image);
+ImageDeprecated CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t layerCount = 1, uint32_t mipmapCount = 1);
+ImageDeprecated CreateCubeMapImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount);
+void DestroyImage(ImageDeprecated &image);
 
 VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect);
 
@@ -42,5 +46,5 @@ VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize
 VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool);
 VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts, std::initializer_list<VkPushConstantRange> pushConstant);
 
-void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image &image);
-void TransferImageData(const Buffer &srcBuffer, Image &dstImage, ImageAspect aspectMask);
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const ImageDeprecated &image);
+void TransferImageData(const Buffer &srcBuffer, ImageDeprecated &dstImage, ImageAspect aspectMask);

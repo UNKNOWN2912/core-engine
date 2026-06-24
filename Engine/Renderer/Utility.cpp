@@ -114,7 +114,7 @@ void TransferBufferData(const Buffer &srcBuffer, Buffer &dstBuffer)
     vkDestroyCommandPool(GraphicsContext::GetDevice(), commandPool, nullptr);
 }
 
-void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const Image &image)
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const ImageDeprecated &image)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -145,7 +145,7 @@ void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAs
     ExecuteCommandBuffer(commandBuffer, GraphicsContext::GetQueues().transfer);
 }
 
-void TransferImageData(const Buffer &srcBuffer, Image &dstImage, ImageAspect aspectMask)
+void TransferImageData(const Buffer &srcBuffer, ImageDeprecated &dstImage, ImageAspect aspectMask)
 {
     CHROME_TRACE_FUNCTION();
     VkCommandBuffer commandBuffer = AllocateCommandBuffer(GraphicsContext::GetCommandPool());
@@ -322,16 +322,16 @@ VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayou
             .pPushConstantRanges = pushConstant.begin(),
         };
 
-    VkPipelineLayout pipelineLayout;
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     vkCreatePipelineLayout(GraphicsContext::GetDevice(), &createInfo, nullptr, &pipelineLayout);
     return pipelineLayout;
 }
 
-Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty)
+ImageDeprecated CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount)
 {
     CHROME_TRACE_FUNCTION();
 
-    Image image;
+    ImageDeprecated image;
 
     VkImageCreateInfo createInfo =
         {
@@ -344,9 +344,79 @@ Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, 
                     .height = size.y,
                     .depth = 1,
                 },
+            .mipLevels = mipmapCount,
+            .arrayLayers = layerCount,
+            .samples = GetVulkanSampleCount(sampleCount),
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = GetVulkanImageUsage(usage),
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+
+    vkCreateImage(GraphicsContext::GetDevice(), &createInfo, nullptr, &image.handle);
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(GraphicsContext::GetDevice(), image.handle, &requirements);
+
+    VkMemoryAllocateInfo allocateInfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = requirements.size,
+            .memoryTypeIndex = FindMemoryTypeIndex(requirements.memoryTypeBits, GetVulkanMemoryProperty(memoryProperty)),
+        };
+
+    VK_CHECK(vkAllocateMemory(GraphicsContext::GetDevice(), &allocateInfo, nullptr, &image.memory));
+    vkBindImageMemory(GraphicsContext::GetDevice(), image.handle, image.memory, 0);
+
+    image.memorySize = requirements.size;
+
+    VkImageViewType type = (layerCount == 1) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+
+    VkImageViewCreateInfo imageViewCreateInfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = image.handle,
+            .viewType = type,
+            .format = GetVulkanImageFormat(format),
+            .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+            .subresourceRange =
+                {
+                    .aspectMask = GetVulkanImageAspect(aspect),
+                    .baseMipLevel = 0,
+                    .levelCount = mipmapCount,
+                    .baseArrayLayer = 0,
+                    .layerCount = layerCount,
+                },
+        };
+
+    image.size = {size.x, size.y};
+
+    vkCreateImageView(GraphicsContext::GetDevice(), &imageViewCreateInfo, nullptr, &image.view);
+    image.format = format;
+    return image;
+}
+
+ImageDeprecated CreateCubeMapImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount)
+{
+    CHROME_TRACE_FUNCTION();
+
+    ImageDeprecated image;
+
+    VkImageCreateInfo createInfo =
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = GetVulkanImageFormat(format),
+            .extent =
+                {
+                    .width = size.x,
+                    .height = size.y,
+                    .depth = 1,
+                },
             .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .arrayLayers = 6,
+            .samples = GetVulkanSampleCount(sampleCount),
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = GetVulkanImageUsage(usage),
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -374,7 +444,7 @@ Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, 
         {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = image.handle,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
             .format = GetVulkanImageFormat(format),
             .components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
             .subresourceRange =
@@ -383,17 +453,18 @@ Image CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, 
                     .baseMipLevel = 0,
                     .levelCount = 1,
                     .baseArrayLayer = 0,
-                    .layerCount = 1,
+                    .layerCount = 6,
                 },
         };
 
     image.size = {size.x, size.y};
+    image.format = format;
 
     vkCreateImageView(GraphicsContext::GetDevice(), &imageViewCreateInfo, nullptr, &image.view);
 
     return image;
 }
-void DestroyImage(Image &image)
+void DestroyImage(ImageDeprecated &image)
 {
     vkDestroyImageView(GraphicsContext::GetDevice(), image.view, nullptr);
     vkDestroyImage(GraphicsContext::GetDevice(), image.handle, nullptr);

@@ -5,19 +5,19 @@
 
 class ComputePipeline
 {
-    public:
-        void Create(const std::vector<Descriptor*>& descriptors);
-        void Destroy();
+public:
+    void Create(const std::vector<Descriptor *> &descriptors);
+    void Destroy();
 
-        void LoadShader(std::string_view filename);
-        
-        VkPipelineLayout GetPipelineLayout() const;
-        VkPipeline GetHandle() const;
+    void LoadShader(std::string_view filename);
 
-        ~ComputePipeline();
-    private:
-        VkPipeline mHandle = VK_NULL_HANDLE;
-        VkShaderModule mShader = VK_NULL_HANDLE;
-        VkPipelineLayout mLayout = VK_NULL_HANDLE;
+    VkPipelineLayout GetPipelineLayout() const;
+    VkPipeline GetHandle() const;
 
+    ~ComputePipeline();
+
+private:
+    VkPipeline mHandle = VK_NULL_HANDLE;
+    VkShaderModule mShader = VK_NULL_HANDLE;
+    VkPipelineLayout mLayout = VK_NULL_HANDLE;
 };

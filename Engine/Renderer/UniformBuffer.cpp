@@ -6,7 +6,7 @@
 UniformBuffer::~UniformBuffer()
 {
     CHROME_TRACE_FUNCTION();
-    Destroy();
+    DestroyUniformBuffer();
 }
 
 UniformBuffer::UniformBuffer(size_t size)
@@ -35,7 +35,7 @@ UniformBuffer &UniformBuffer::operator=(UniformBuffer &&uniformBuffer) noexcept
     return *this;
 }
 
-void UniformBuffer::Destroy()
+void UniformBuffer::DestroyUniformBuffer()
 {
     DestroyBuffer(mBuffer);
 }

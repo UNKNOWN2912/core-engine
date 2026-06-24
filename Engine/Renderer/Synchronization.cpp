@@ -1,7 +1,7 @@
 #include "Synchronization.hpp"
 #include "Renderer/GraphicsContext.hpp"
 
-void Semaphore::Create()
+void Semaphore::CreateSemaphore()
 {
     VkSemaphoreCreateInfo createInfo =
         {
@@ -11,11 +11,22 @@ void Semaphore::Create()
     vkCreateSemaphore(GraphicsContext::GetDevice(), &createInfo, nullptr, &mHandle);
 }
 
-void Fence::Create(bool signaled)
+void Semaphore::DestorySemaphore()
 {
-    VkFenceCreateFlags flag;
+    vkDestroySemaphore(GraphicsContext::GetDevice(), mHandle, nullptr);
+}
+VkSemaphore Semaphore::GetHandle() const
+{
+    return mHandle;
+}
+
+void Fence::CreateFence(bool signaled)
+{
+    VkFenceCreateFlags flag = 0;
     if (signaled)
+    {
         flag = VK_FENCE_CREATE_SIGNALED_BIT;
+    }
 
     VkFenceCreateInfo createInfo =
         {
@@ -23,4 +34,13 @@ void Fence::Create(bool signaled)
             .flags = flag};
 
     vkCreateFence(GraphicsContext::GetDevice(), &createInfo, nullptr, &mHandle);
+}
+
+void Fence::DestroyFence()
+{
+    vkDestroyFence(GraphicsContext::GetDevice(), mHandle, nullptr);
+}
+VkFence Fence::GetHandle() const
+{
+    return mHandle;
 }

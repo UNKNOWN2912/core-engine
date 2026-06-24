@@ -2,27 +2,26 @@
 #include "Core/Macro.hpp"
 #include <memory.h>
 
-StaticMesh::StaticMesh()
+Mesh::Mesh()
 {
     CHROME_TRACE_FUNCTION();
 }
 
-StaticMesh::StaticMesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize)
+Mesh::Mesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();
     SetData(vertices, vertexSize, indices, indexSize);
-
 }
 
-StaticMesh::StaticMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
 {
     SetData(vertices, indices);
 }
 
-void StaticMesh::SetData(const void* vertices, size_t vertexSize, const uint32_t* indices, size_t indexSize)
+void Mesh::SetData(const void *vertices, size_t vertexSize, const uint32_t *indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();
-    if(vertexSize != mVertexSize)
+    if (vertexSize != mVertexSize)
     {
         DestroyBuffer(mStagingVertexBuffer);
         DestroyBuffer(mVertexBuffer);
@@ -31,7 +30,7 @@ void StaticMesh::SetData(const void* vertices, size_t vertexSize, const uint32_t
         mVertexSize = vertexSize;
     }
 
-    if(indexSize != mIndexSize)
+    if (indexSize != mIndexSize)
     {
         DestroyBuffer(mStagingIndexBuffer);
         DestroyBuffer(mIndexBuffer);
@@ -49,16 +48,33 @@ void StaticMesh::SetData(const void* vertices, size_t vertexSize, const uint32_t
     mIsValid = true;
 }
 
-void StaticMesh::SetData(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) 
+void Mesh::SetData(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
 {
     SetData(vertices.data(), sizeof(Vertex) * vertices.size(), indices.data(), sizeof(uint32_t) * indices.size());
 }
 
-void StaticMesh::Destroy() 
+void Mesh::Destroy()
 {
     CHROME_TRACE_FUNCTION();
     DestroyBuffer(mStagingVertexBuffer);
     DestroyBuffer(mVertexBuffer);
     DestroyBuffer(mStagingIndexBuffer);
     DestroyBuffer(mIndexBuffer);
+}
+const Buffer &Mesh::GetVertexBuffer() const
+{
+    return mVertexBuffer;
+}
+
+const Buffer &Mesh::GetIndexBuffer() const
+{
+    return mIndexBuffer;
+}
+const std::string &Mesh::GetName() const
+{
+    return mName;
+}
+void Mesh::SetName(const std::string &name)
+{
+    mName = name;
 }

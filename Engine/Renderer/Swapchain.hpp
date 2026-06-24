@@ -6,22 +6,23 @@
 
 class Swapchain
 {
-    public:
-        VkSwapchainKHR GetHandle() const { return mHandle; }
-        const std::vector<Image>& GetImages() const { return mImages; }
-        const glm::uvec2& GetSize() const { return mSize; }
-        uint32_t GetImageCount() const { return mImages.size(); }
+public:
+    void CreateSwapchain(VkSurfaceKHR surface, ImageFormat format, ColorSpace colorSpace, PresentMode presentMode, ImageUsage usage = ImageUsage::ColorAttachment);
+    void DestroySwapchain();
 
-        uint32_t GetNextImageIndex(const Semaphore& semaphore, const Fence& fence) const;
+    uint32_t GetNextImageIndex(const Semaphore &semaphore, const Fence &fence) const;
+    ImageFormat GetFormat() const;
+    VkSwapchainKHR GetHandle() const;
+    const std::vector<ImageDeprecated> &GetImages() const;
+    const glm::uvec2 &GetSize() const;
+    uint32_t GetImageCount() const;
 
-        void CreateSwapchain(const glm::uvec2& size, PresentMode presentMode);
-        void Destroy();
+private:
+    VkSwapchainKHR mHandle = VK_NULL_HANDLE;
+    std::vector<ImageDeprecated> mImages;
+    glm::uvec2 mSize;
+    ImageFormat mFormat;
 
-        ImageFormat GetFormat() const { return mFormat; }
-    private:
-        VkSwapchainKHR mHandle = VK_NULL_HANDLE;
-        std::vector<Image> mImages;
-        glm::uvec2 mSize;
-
-        ImageFormat mFormat;
+private:
+    bool SurfaceFormatSupported(VkSurfaceKHR surface, ImageFormat format, ColorSpace colorSpace);
 };

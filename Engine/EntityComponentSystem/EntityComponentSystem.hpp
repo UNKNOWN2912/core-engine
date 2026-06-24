@@ -17,7 +17,7 @@ class Scene;
 
 class Entity
 {
-  public:
+public:
     Entity() {};
     Entity(EntityId id, Scene *scene);
     EntityId GetId() const
@@ -47,7 +47,7 @@ class Entity
         return mScene != nullptr;
     }
 
-  private:
+private:
     friend class Scene;
 
     EntityId mId = (EntityId)0;
@@ -57,13 +57,13 @@ class Entity
 
 class BaseStorage
 {
-  public:
+public:
 };
 
 template <typename ComponentType>
 class ComponentStorage : public BaseStorage
 {
-  public:
+public:
     using EntityComponentPair = std::pair<Entity, ComponentType>;
 
     template <typename... Args>
@@ -83,7 +83,9 @@ class ComponentStorage : public BaseStorage
         for (EntityComponentPair &pair : mComponents)
         {
             if (pair.first == entity)
+            {
                 return pair.second;
+            }
         }
     }
     const ComponentType &GetComponent(Entity entity) const
@@ -91,7 +93,9 @@ class ComponentStorage : public BaseStorage
         for (EntityComponentPair &pair : mComponents)
         {
             if (pair.first == entity)
+            {
                 return pair.second;
+            }
         }
     }
 
@@ -110,17 +114,18 @@ class ComponentStorage : public BaseStorage
         return mComponents;
     }
 
-  private:
+private:
     std::vector<EntityComponentPair> mComponents;
 };
 
 class Scene
 {
-  public:
+public:
     using ComponentStoragePair = std::pair<ComponentId, std::shared_ptr<BaseStorage>>;
 
     Entity CreateEntity(std::string_view name);
     Entity GetEntityById(EntityId id);
+    Entity GetEntityByName(std::string_view name);
 
     template <typename ComponentType, typename... Args>
     ComponentType &AddComponent(const Entity &entity, Args... args)
@@ -211,7 +216,9 @@ class Scene
         for (const std::pair<Entity, ComponentType> &pair : v)
         {
             if (pair.first == entity)
+            {
                 return true;
+            }
         }
 
         return false;
@@ -235,7 +242,7 @@ class Scene
         return false;
     }
 
-  private:
+private:
     std::vector<Entity> mEntities;
     std::vector<ComponentStoragePair> mStorage;
     EntityId mLastId = (EntityId)UINT64_MAX;

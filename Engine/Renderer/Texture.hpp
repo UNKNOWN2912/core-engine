@@ -8,16 +8,16 @@
 
 class Texture
 {
-  public:
+public:
     void Create(void *data, const glm::uvec2 &size, ImageFormat format);
     void Destroy();
 
     void Load(std::string_view filename);
-    const Image &GetImage() const
+    const ImageDeprecated &GetImage() const
     {
         return mImage;
     }
-    Image &GetImageRef()
+    ImageDeprecated &GetImageRef()
     {
         return mImage;
     }
@@ -38,9 +38,9 @@ class Texture
         mName = name;
     }
 
-  private:
+private:
     std::string mName;
     bool mIsValid = false;
-    Image mImage;
+    ImageDeprecated mImage;
     Buffer mStagingBuffer;
 };

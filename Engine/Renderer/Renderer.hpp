@@ -1,169 +1,178 @@
 #pragma once
-#include "Assets/ShaderManager.hpp"
-#include "Core/Window.hpp"
+#include "Assets/MaterialManager.hpp"
+#include "Assets/MeshManager.hpp"
+#include "Light.hpp"
 #include "Renderer/Camera.hpp"
-#include "Renderer/ComputePipeline.hpp"
-#include "Renderer/InstanceBuffer.hpp"
+#include "Renderer/GraphicsPipeline.hpp"
 #include "Renderer/Material.hpp"
 #include "Renderer/Mesh.hpp"
-#include "Renderer/RenderTarget.hpp"
+#include "Renderer/RenderPass.hpp"
+#include "Renderer/StorageBuffer.hpp"
 #include "Renderer/Swapchain.hpp"
-#include "Renderer/Synchronization.hpp"
 #include "Renderer/Transform.hpp"
 #include "Renderer/UniformBuffer.hpp"
-#include "RendererAttachments.hpp"
+#include "RendererType.hpp"
+#include <unordered_map>
 
-struct RenderCommand
-{
-    Buffer *vertexBuffer;
-    Buffer *indexBuffer;
-    uint32_t indexCount = 0;
-
-    InstanceBuffer *instanceBuffer;
-    uint32_t instanceCount = 0;
-
-    GraphicsPipeline *pipeline;
-    Descriptor *descriptors[16];
-    uint32_t descriptorCount = 0;
-
-    std::byte pushContantData[128];
-    size_t pushContantSize = 0;
-};
+const uint32_t maxLightCount = 1000;
 
 struct FrameInfo
 {
-    Camera camera;
-    bool isRecording = false;
+    bool recording = false;
 };
 
-enum class RendererEvent
+struct RendererSpecification
 {
-    None,
-    DeferredAttachmentResize,
+    DeviceType deviceType = DeviceType::Dedicated;
+};
+
+struct Surface
+{
+    VkSurfaceKHR handle = VK_NULL_HANDLE;
+    Swapchain swapchain;
+    std::vector<FrameBuffer> frameBuffers;
+};
+
+struct RendererMaterialObject
+{
+    GraphicsPipeline pipeline;
+    Descriptor textureDescriptor;
+    Descriptor bufferDescriptor;
+    Descriptor shadowMapDescriptor;
+    Sampler sampler;
+};
+
+struct UniformData
+{
+    glm::mat4 view = glm::mat4(1.f);
+    glm::mat4 projection = glm::mat4(1.f);
+    glm::mat4 directionalMatrix1 = glm::mat4(1.f);
+    glm::mat4 directionalMatrix2 = glm::mat4(1.f);
+    glm::mat4 directionalMatrix3 = glm::mat4(1.f);
+    glm::mat4 directionalMatrix4 = glm::mat4(1.f);
+    glm::vec3 cameraPosition = glm::vec3(0);
+    int lightCount = 0;
+    glm::vec3 cameraFront = glm::vec3(0);
+};
+
+struct PushConstantData
+{
+    glm::mat4 model = glm::mat4(1.f);
+    uint32_t albedoIndex = 0;
+    uint32_t specularIndex = 0;
+    uint32_t roughnessIndex = 0;
+    uint32_t metallicIndex = 0;
+};
+
+struct LightUniformData
+{
+    glm::vec3 position;
+    float intensity;
+
+    glm::vec3 color;
+    float innerAngle;
+
+    glm::vec3 direction;
+    float outerAngle;
+
+    float radius;
+    int type;
+    int shadowMapIndex;
+    int castShadow;
 };
 
 class Renderer
 {
 public:
-    static void Initialize(const Window &window);
+    static void Initialize(const RendererSpecification &specification);
     static void Terminate();
 
-    static void Submit(StaticMesh &mesh, Material &material);
-    static void Submit(StaticMesh &mesh, Material &material, const Transform &transform);
-    static void Submit(const RenderCommand &renderCommand);
-
-    static void BeginFrame(RenderTarget &renderTarget, const Camera &camera = {});
+    static void BeginFrame(const Camera &camera);
     static void EndFrame();
 
-    static bool ResizeSwapchain(const glm::uvec2 &size);
-    static void DisplayToWindow(const RenderTarget &target);
-
-    static const glm::uvec2 &GetSwapchainSize()
+    static void SetResolution(const glm::uvec2 &resolution)
     {
-        return mSwapchain.GetSize();
+        mResolution = resolution;
     }
-    static const RenderPass &GetDeferredRenderPass();
-    static const UniformBuffer &GetDeferredUniformBuffer()
-    {
-        return mDeferred.uniformBuffer;
-    }
+    static const glm::uvec2 &GetResolution();
+    static SampleCount GetSampleCount();
+    static void SetSampleCount(const SampleCount &sampleCount);
+    static Surface CreateSurface(const Window &window);
+    static void ResizeSurface(Surface &surface);
+    static void Present(Surface &surface);
+    static void RegisterMaterial(const Material &material);
 
-    static const Swapchain &GetSwapchain()
-    {
-        return mSwapchain;
-    }
-    static const DeferredAttachment &GetDeferredAttachments()
-    {
-        return mDeferred.attachment;
-    }
-    static const Sampler &GetDefaultSampler()
-    {
-        return mDefaultSampler;
-    }
+    static const std::vector<RenderCommand> &GetRenderCommands();
 
-    static void AddListener(const std::function<bool(uint32_t, void *)> &listener);
+    static void Submit(RenderCommand renderCommand);
+    static void Submit(const Mesh &mesh, const Material &material, const Transform &transform);
+    static void Submit(MaterialID material, MeshID mesh, const Transform &transform);
 
-    static void QueueSwapchainResize(const glm::uvec2 &size);
+    static void SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader);
+    static void GetBasicShader(VertexShaderID &vertexShader, FragmentShaderID &fragmentShader);
 
-    static void DeferredPass();
-    static void LightingPass();
-    static void ResizeAttachments(const glm::uvec2 &size);
+    static void AddLight(const Light &light);
+    static void ClearLights();
 
-    static void GetBasicShader(VertexShaderID &outputVertexShader, FragmentShaderID &outputFragmentShader)
-    {
-        outputVertexShader = mBasicVertexShader;
-        outputFragmentShader = mBasicFragmentShader;
-    }
+    static void BeginLightPlacement();
+    static void EndLightPlacement();
 
-    static void SetBasicShader(VertexShaderID vertexShader, FragmentShaderID fragmentShader)
-    {
-        mBasicVertexShader = vertexShader;
-        mBasicFragmentShader = fragmentShader;
-    }
+    static void SetProjectionMatrix(const glm::mat4 &matrix);
+    static void SetViewMatrix(const glm::mat4 &matrix);
 
 private:
+    static Sampler mSampler;
+    static Sampler mDirectionalShadowSampler;
+    static FrameInfo mFrameInfo;
+    static RendererSpecification mSpecification;
+    static SampleCount mSampleCount;
+    static glm::uvec2 mResolution;
+    static GraphicsPipeline mScenePipeline;
+    static RenderPass mSceneRenderPass;
+    static FrameBuffer mSceneFrameBuffer;
+
+    static ImageDeprecated mSceneColorAttachment;
+    static ImageDeprecated mSceneResolveAttachment;
+    static ImageDeprecated mSceneDepthAttachment;
+    static ImageDeprecated mSceneResolveDepthAttachment;
+
+    static CommandBuffer mCommandBuffer;
+    static Semaphore mImageAcquiredSemaphore;
+    static Semaphore mSwapchainRenderFinished;
+
+    static GraphicsPipeline mPresentPipeline;
+    static RenderPass mPresentRenderPass;
+    static CommandBuffer mPresentCommandBuffer;
+    static Descriptor mPresentInputDescriptor;
+
+    static UniformBuffer mUniformBuffer;
+    static UniformData mUniformData;
+
+    static std::unordered_map<const Material *, RendererMaterialObject> mMaterialObjectMap;
+    static std::vector<RenderCommand> mRenderCommands;
+
+    static Camera mCamera;
+
     static VertexShaderID mBasicVertexShader;
     static FragmentShaderID mBasicFragmentShader;
 
-    friend class EditorLayer;
+    static std::vector<ImageDeprecated> mShadowMaps;
+    static std::vector<LightUniformData> mLight;
+    static StorageBuffer mLightStorageBuffer;
 
-    static struct Deferred
-    {
-        FrameBuffer frameBuffer;
-        RenderPass renderPass;
-        DeferredAttachment attachment;
-        Descriptor descriptor;
+    static Descriptor mShadowMapDescriptor;
+    static UniformBuffer mMaterialBuffer;
 
-        struct UniformData
-        {
-            glm::mat4 projection = glm::mat4(1.f);
-            glm::mat4 view = glm::mat4(1.f);
-            glm::vec3 cameraPosition;
-        } uniformData;
+    static PushConstantData mPushConstantData;
 
-        UniformBuffer uniformBuffer;
-    } mDeferred;
+private:
+    static void CreateSceneRenderPassMultisampled();
+    static void CreateSceneFrameBufferMultisampled();
+    static void CreateSceneAttachmentsMultisampled();
+    static void CreateScenePipelineMultisampled();
+    static void CreatePresentPipeline();
+    static void CreatePresentRenderPass();
 
-    static void CreateDeferredPassObjects();
-
-    static struct Lighting
-    {
-        Descriptor descriptor;
-        ComputePipeline pipeline;
-        Image image;
-
-        UniformBuffer uniformBuffer;
-
-        struct UniformData
-        {
-            glm::vec3 cameraPosition;
-        } uniformData;
-
-        Descriptor uniformDescriptor;
-
-    } mLighting;
-
-    static void CreateLightingPassObjects();
-
-    static glm::uvec2 mSwapchainSize;
-
-    static EventDispatcher mDispatcher;
-    static GraphicsContext mContext;
-    static Swapchain mSwapchain;
-
-    static std::vector<RenderCommand> mRenderCommands;
-    static RenderTarget mCurrentRenderTarget;
-
-    static CommandBuffer mRenderCommandBuffer;
-    static CommandBuffer mTransferToSwapchainCommandBuffer;
-
-    static Semaphore mImageAcquiredSemaphore;
-    static Semaphore mTransferSemaphore;
-    static Semaphore mRenderingSemaphore;
-
-    static Sampler mDefaultSampler;
-
-    static FrameInfo mFrameInfo;
-
-    friend class Editor;
+    static void CreateRendererMaterialObject(const Material &material, RendererMaterialObject &object);
+    static void CmdDrawRenderCommand(const RenderCommand &renderCommand);
 };
