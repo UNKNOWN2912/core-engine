@@ -3,26 +3,20 @@
 #include "CameraController.hpp"
 #include "EntityComponentSystem/Component.hpp"
 #include <Engine.hpp>
-#include <thread>
 
 #define BindCommandCallback(callback) std::bind(&callback, this, std::placeholders::_1)
 
 class RendererRework : public Application
 {
     Surface mSurface;
-
     Camera mCamera;
     CameraController mController;
-
     Scene mScene;
-
-    std::thread mCommandLineThread;
-
     std::vector<Light *> mLights;
 
     void OnInitialize() override
     {
-        int scale = 120;
+        int scale = 240;
         Renderer::SetResolution({16 * scale, 9 * scale});
     }
 
@@ -45,7 +39,7 @@ class RendererRework : public Application
 
         ModelImporter importer;
         importer.Import("Models/cube/cube.gltf", mScene);
-        importer.Import("Models/cube/environment.gltf", mScene);
+        importer.Import("Models/Sponza/Sponza.gltf", mScene);
 
         std::shared_ptr<Material> skyboxMaterial = std::make_shared<Material>();
         skyboxMaterial->vertexShader = ShaderManager::LoadVertexShader("Shaders/skybox.vert.spv");
@@ -108,11 +102,6 @@ class RendererRework : public Application
         {
             mLhold = false;
         }
-
-        if (key == Key::Q)
-        {
-            mToggleLightView = !mToggleLightView;
-        }
     }
 
     bool mLhold = false;
@@ -122,11 +111,6 @@ class RendererRework : public Application
     }
 
     Light *mSun = nullptr;
-
-    bool mToggleLightView = false;
-
-    float mInnerAngle = 50;
-    float mOuterAngle = 60;
 
     void OnUpdate() override
     {
@@ -141,7 +125,7 @@ class RendererRework : public Application
 
         float t = GetElapsedTime() * speed;
 
-        // mSun->SetDirection(glm::vec3(glm::sin(t), (glm::cos(t) + 1.f) / 2.f, 0));
+        mSun->SetDirection(glm::vec3(glm::sin(t), (glm::cos(t) + 1.f) / 2.f, 0));
 
         for (int i = 0; i < mLights.size(); i++)
         {
@@ -156,12 +140,6 @@ class RendererRework : public Application
         }
 
         Renderer::EndLightPlacement();
-
-        if (mToggleLightView)
-        {
-            mCamera.SetViewMatrix(view);
-            mCamera.SetProjectionMatrix(projection);
-        }
 
         Renderer::BeginFrame(mCamera);
 

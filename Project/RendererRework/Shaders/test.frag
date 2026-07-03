@@ -222,37 +222,28 @@ void main()
 
             float bias = max(0.005 * (1.0 - dot(normal, lightDirection)), 0.0005);
 
-            if (cascadeIndex <= 1)
+            if (cascadeIndex <= 2)
             {
                 float pixelSize = 1 / 1024.f;
                 int size = 2;
 
                 for (int x = -size; x <= size; x++)
                 {
-                    vec2 offset = uv + vec2(x * pixelSize, 0);
-                    offset = offset + (random2(Input.fragPos.xy) * pixelSize);
-                    offset = clamp(offset, vec2(0), vec2(0.998));
-
-                    float closestDepth = texture(layeredShadowMap[light.shadowMapIndex], vec3(offset, cascadeIndex)).r;
-                    if (currentDepth > closestDepth + bias)
+                    for (int y = -size; y <= size; y++)
                     {
-                        shadow += 1.f;
-                    }
-                }
-                for (int y = -size; y <= size; y++)
-                {
-                    vec2 offset = uv + vec2(0, y * pixelSize);
-                    offset = offset + (random2(Input.fragPos.xy) * pixelSize);
-                    offset = clamp(offset, vec2(0), vec2(0.998));
+                        vec2 offset = uv + vec2(x * pixelSize, y * pixelSize);
+                        offset = offset + (random2(Input.fragPos.xy) * pixelSize);
+                        offset = clamp(offset, vec2(0), vec2(0.998));
 
-                    float closestDepth = texture(layeredShadowMap[light.shadowMapIndex], vec3(offset, cascadeIndex)).r;
-                    if (currentDepth > closestDepth + bias)
-                    {
-                        shadow += 1.f;
+                        float closestDepth = texture(layeredShadowMap[light.shadowMapIndex], vec3(offset, cascadeIndex)).r;
+                        if (currentDepth > closestDepth + bias)
+                        {
+                            shadow += 1.f;
+                        }
                     }
                 }
 
-                shadow /= pow(((2 * size) + 1) * 2, 1);
+                shadow /= pow(((2 * size) + 1), 2);
             }
             else
             {
@@ -265,7 +256,6 @@ void main()
 
             vec3 lit = litFunction(lightDirection, normal, viewDirection, objectColor, color);
             result += (1 - shadow) * diffuse * density * lit;
-            // result = cascadeColor[cascadeIndex].rgb;
         }
     }
 
