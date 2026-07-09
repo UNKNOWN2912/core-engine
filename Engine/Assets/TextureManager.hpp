@@ -11,7 +11,7 @@ class TextureManager
 public:
     static void Initialize();
     static void Terminate();
-    static TextureID LoadTexture(std::string_view filename);
+    static TextureID LoadTexture(std::string_view filename, ImageFormat format = ImageFormat::RGBA8);
     static TextureID CreateTexture(void *data, const glm::uvec2 &size, ImageFormat format);
 
     static TextureID GenerateID();

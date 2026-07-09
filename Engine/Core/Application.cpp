@@ -195,10 +195,7 @@ void Application::ToggleCursor()
 {
     CHROME_TRACE_FUNCTION();
 
-    if (mWindow.isCursorHidden())
-        mWindow.ShowCursor();
-    else
-        mWindow.HideCursor();
+    mHideCursor = !mWindow.isCursorHidden();
 }
 
 bool Application::IsCursorHidden()

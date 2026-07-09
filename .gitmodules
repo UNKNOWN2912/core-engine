@@ -20,3 +20,7 @@
 [submodule "Engine/Vendor/uuid_v4"]
 	path = Engine/Vendor/uuid_v4
 	url = https://github.com/crashoz/uuid_v4.git
+[submodule "Project/RendererRework/imgui"]
+	path = Project/RendererRework/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking

@@ -1,5 +1,6 @@
 #include "Renderer.hpp"
 #include "Assets/ShaderManager.hpp"
+#include "Core/Application.hpp"
 #include "Renderer/Converter.hpp"
 #include "Renderer/GraphicsContext.hpp"
 #include "Renderer/Helper.hpp"
@@ -23,10 +24,6 @@ void Renderer::Initialize(const RendererSpecification &specification)
 
     mSampler.CreateSampler();
 
-    mDirectionalShadowSampler.SetFilter(Filter::Linear, Filter::Linear);
-    mDirectionalShadowSampler.SetAddressMode(AddressMode::Border, AddressMode::Border, AddressMode::Border);
-    mDirectionalShadowSampler.CreateSampler();
-
     mPresentInputDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
     mPresentInputDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
     mPresentInputDescriptor.AddDescriptor(DescriptorType::StorageImage, ShaderStage::Fragment);
@@ -43,7 +40,15 @@ void Renderer::Initialize(const RendererSpecification &specification)
     mLight.reserve(1000);
 
     mUniformBuffer = UniformBuffer(sizeof(UniformData));
+    mUniformBuffer.SetData(&mUniformData);
     mLightStorageBuffer.CreateStorageBuffer(nullptr, sizeof(Light) * maxLightCount);
+
+    mBufferDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
+    mBufferDescriptor.AddDescriptor(DescriptorType::StorageBuffer, ShaderStage::Fragment);
+    mBufferDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Fragment);
+    mBufferDescriptor.CreateDescriptor();
+    mBufferDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
+    mBufferDescriptor.UpdateBuffer(mLightStorageBuffer.GetBuffer(), 1);
 }
 
 void Renderer::Terminate()
@@ -55,7 +60,6 @@ void Renderer::Terminate()
     DestroyImage(mSceneColorAttachment);
     DestroyImage(mSceneResolveAttachment);
     mSceneFrameBuffer.DestroyFrameBuffer();
-    mScenePipeline.DestroyPipeline();
     mSceneRenderPass.DestroyRenderPass();
     mCommandBuffer.DestroyCommandBuffer();
     mPresentCommandBuffer.DestroyCommandBuffer();
@@ -64,15 +68,6 @@ void Renderer::Terminate()
     mPresentRenderPass.DestroyRenderPass();
 
     mUniformBuffer.DestroyUniformBuffer();
-
-    for (auto &[material, renderObject] : mMaterialObjectMap)
-    {
-        renderObject.bufferDescriptor.DestroyDescriptor();
-        renderObject.pipeline.DestroyPipeline();
-        renderObject.textureDescriptor.DestroyDescriptor();
-        renderObject.sampler.DestroySampler();
-        renderObject.shadowMapDescriptor.DestroyDescriptor();
-    }
 
     mSampler.DestroySampler();
 }
@@ -87,7 +82,10 @@ void Renderer::BeginFrame(const Camera &camera)
     mUniformData.cameraPosition = camera.GetPosition();
     mUniformData.cameraFront = camera.GetFront();
     mUniformData.lightCount = (int)mLight.size();
+    mUniformData.time = Application::GetInstance()->GetElapsedTime();
     mUniformBuffer.SetData(&mUniformData);
+
+    mBufferDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
 }
 
 void Renderer::EndFrame()
@@ -187,6 +185,9 @@ void Renderer::Present(Surface &surface)
 
     vkCmdSetViewport(mPresentCommandBuffer.GetHandle(), 0, 1, &viewport);
     vkCmdSetScissor(mPresentCommandBuffer.GetHandle(), 0, 1, &scissor);
+    vkCmdSetCullMode(mPresentCommandBuffer.GetHandle(), VK_CULL_MODE_NONE);
+    vkCmdSetDepthTestEnable(mPresentCommandBuffer.GetHandle(), false);
+    vkCmdSetDepthWriteEnable(mPresentCommandBuffer.GetHandle(), false);
 
     VkDescriptorSet descriptorSets[] = {mPresentInputDescriptor.GetDescriptorSet()};
     vkCmdBindDescriptorSets(mPresentCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, mPresentPipeline.GetPipelineLayout(), 0, 1, descriptorSets, 0, nullptr);
@@ -218,10 +219,6 @@ void Renderer::Present(Surface &surface)
     vkDeviceWaitIdle(GraphicsContext::GetDevice());
 }
 
-void Renderer::RegisterMaterial(const Material &material)
-{
-    CreateRendererMaterialObject(material, mMaterialObjectMap[&material]);
-}
 const std::vector<RenderCommand> &Renderer::GetRenderCommands()
 {
     return mRenderCommands;
@@ -234,21 +231,30 @@ void Renderer::Submit(RenderCommand renderCommand)
 
 void Renderer::Submit(const Mesh &mesh, const Material &material, const Transform &transform)
 {
-
     RenderCommand renderCommand;
     renderCommand.vertexBuffer = &mesh.GetVertexBuffer();
     renderCommand.indexBuffer = &mesh.GetIndexBuffer();
-    renderCommand.descriptorCount = 4;
-    renderCommand.descriptors[0] = &mMaterialObjectMap[&material].textureDescriptor;
-    renderCommand.descriptors[1] = &mMaterialObjectMap[&material].bufferDescriptor;
+    renderCommand.descriptorCount = 3;
+    renderCommand.descriptors[0] = &TextureManager::GetDescriptor();
+    renderCommand.descriptors[1] = &mBufferDescriptor;
     renderCommand.descriptors[2] = &mShadowMapDescriptor;
-    renderCommand.descriptors[3] = &TextureManager::GetDescriptor();
-    renderCommand.pipeline = &mMaterialObjectMap[&material].pipeline;
+    renderCommand.pipeline = &mShaderPipelineMap[material.shader];
     renderCommand.indexCount = mesh.mIndexSize / sizeof(uint32_t);
+
+    renderCommand.pipelineSettings.cullMode = material.cullMode;
+    renderCommand.pipelineSettings.enableDepthTest = material.enableDepthTest;
+    renderCommand.pipelineSettings.enableDepthWrite = material.enableDepthWrite;
 
     PushConstantData data;
     data.model = transform.GetMatrix();
     data.albedoIndex = (uint32_t)material.albedo;
+    data.roughnessIndex = (uint32_t)material.roughness;
+    data.metallicIndex = (uint32_t)material.metallic;
+    data.normalIndex = (uint32_t)material.normal;
+    data.inputInt = mInputInt;
+    data.roughness = material.roughnessFactor;
+    data.metallic = material.metallicFactor;
+    data.indexOfRefraction = material.indexOfRefraction;
 
     memcpy(renderCommand.pushContantData, &data, sizeof(data));
     renderCommand.pushContantSize = sizeof(data);
@@ -263,14 +269,12 @@ void Renderer::Submit(MaterialID material, MeshID mesh, const Transform &transfo
 
 void Renderer::SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader)
 {
-    mBasicVertexShader = ShaderManager::LoadVertexShader(vertexShader);
-    mBasicFragmentShader = ShaderManager::LoadFragmentShader(fragmentShader);
+    mBasicShaderID = ShaderManager2::Load(vertexShader, fragmentShader);
 }
 
-void Renderer::GetBasicShader(VertexShaderID &vertexShader, FragmentShaderID &fragmentShader)
+ShaderID Renderer::GetBasicShaderID()
 {
-    vertexShader = mBasicVertexShader;
-    fragmentShader = mBasicFragmentShader;
+    return mBasicShaderID;
 }
 
 void Renderer::AddLight(const Light &light)
@@ -314,7 +318,7 @@ void Renderer::EndLightPlacement()
 
     for (int i = 0; i < mShadowMaps.size(); i++)
     {
-        mShadowMapDescriptor.UpdateImageIndex(mShadowMaps[i], ImageLayout::ShaderRead, mDirectionalShadowSampler, 0, i);
+        mShadowMapDescriptor.UpdateImageIndex(mShadowMaps[i], ImageLayout::ShaderRead, mSampler, 0, i);
     }
 }
 void Renderer::SetProjectionMatrix(const glm::mat4 &matrix)
@@ -324,6 +328,46 @@ void Renderer::SetProjectionMatrix(const glm::mat4 &matrix)
 void Renderer::SetViewMatrix(const glm::mat4 &matrix)
 {
     mUniformData.projection = matrix;
+}
+
+void Renderer::CreateGraphicsPipeline(ShaderID id)
+{
+    const Shader &shader = ShaderManager2::Get(id);
+
+    GraphicsPipeline pipeline;
+    pipeline.SetVertexShader(shader.vertex);
+    pipeline.SetFragmentShader(shader.fragment);
+    if (shader.vertex != VK_NULL_HANDLE)
+    {
+        pipeline.SetGeometryShader(shader.geometry);
+    }
+
+    pipeline.AddDescriptors(TextureManager::GetDescriptor());
+    pipeline.AddDescriptors(mBufferDescriptor);
+    pipeline.AddDescriptors(mShadowMapDescriptor);
+    pipeline.SetCullMode(CullMode::Back);
+    pipeline.AddBinding(0, sizeof(Vertex), InputRate::Vertex);
+    pipeline.AddAttribute(0, 0, ImageFormat::RGB32, offsetof(Vertex, position));
+    pipeline.AddAttribute(0, 1, ImageFormat::RG32, offsetof(Vertex, uv));
+    pipeline.AddAttribute(0, 2, ImageFormat::RGB32, offsetof(Vertex, normal));
+    pipeline.AddAttribute(0, 3, ImageFormat::RGB32, offsetof(Vertex, tangent));
+    pipeline.AddAttribute(0, 4, ImageFormat::RGB32, offsetof(Vertex, bitangent));
+    pipeline.EnableDepthWrite(true);
+    pipeline.EnableDepthTesting(true);
+    pipeline.SetMultisampleCount(mSampleCount);
+    pipeline.SetPushConstant(ShaderStage::All, sizeof(PushConstantData));
+    pipeline.AddColorBlendAttachment(true);
+    pipeline.CreatePipeline(mSceneRenderPass, 0);
+
+    mShaderPipelineMap[id] = pipeline;
+}
+VkRenderPass Renderer::GetRenderPass()
+{
+    return mSceneRenderPass.GetHandle();
+}
+const RenderPass &Renderer::GetPresentRenderPass()
+{
+    return mPresentRenderPass;
 }
 
 void Renderer::CreateSceneRenderPassMultisampled()
@@ -359,36 +403,17 @@ void Renderer::CreateSceneAttachmentsMultisampled()
     mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
 }
 
-void Renderer::CreateScenePipelineMultisampled()
-{
-    VertexShaderID vertexID = ShaderManager::LoadVertexShader("Shaders/test.vert.spv");
-    FragmentShaderID fragmentID = ShaderManager::LoadFragmentShader("Shaders/test.frag.spv");
-
-    mScenePipeline.SetVertexShader(ShaderManager::GetVertexShader(vertexID));
-    mScenePipeline.SetFragmentShader(ShaderManager::GetFragmentShader(fragmentID));
-
-    mScenePipeline.AddBinding(0, sizeof(Vertex), InputRate::Vertex);
-    mScenePipeline.AddAttribute(0, 0, ImageFormat::RGB32, offsetof(Vertex, position));
-    mScenePipeline.AddAttribute(0, 1, ImageFormat::RG32, offsetof(Vertex, uv));
-    mScenePipeline.AddAttribute(0, 2, ImageFormat::RGB32, offsetof(Vertex, normal));
-
-    mScenePipeline.SetMultisampleCount(mSampleCount);
-    mScenePipeline.AddColorBlendAttachment(false);
-    mScenePipeline.SetCullMode(CullMode::None);
-    mScenePipeline.CreatePipeline(mSceneRenderPass, 0);
-}
-
 void Renderer::CreatePresentPipeline()
 {
-    VertexShaderID vertexId = ShaderManager::LoadVertexShader("Shaders/fullscreen.vert.spv");
-    FragmentShaderID fragmentId = ShaderManager::LoadFragmentShader("Shaders/fullscreen.frag.spv");
+
+    ShaderID fullscreenShader = ShaderManager2::Load("Shaders/fullscreen.vert.spv", "Shaders/fullscreen.frag.spv", "", "", false);
 
     mPresentPipeline.AddDescriptors(mPresentInputDescriptor);
 
     mPresentPipeline.AddColorBlendAttachment(false);
 
-    mPresentPipeline.SetVertexShader(ShaderManager::GetVertexShader(vertexId));
-    mPresentPipeline.SetFragmentShader(ShaderManager::GetFragmentShader(fragmentId));
+    mPresentPipeline.SetVertexShader(ShaderManager2::Get(fullscreenShader).vertex);
+    mPresentPipeline.SetFragmentShader(ShaderManager2::Get(fullscreenShader).fragment);
 
     mPresentPipeline.SetCullMode(CullMode::None);
 
@@ -404,60 +429,6 @@ void Renderer::CreatePresentRenderPass()
     mPresentRenderPass.AddSubpass(subpass, PipelineBindPoint::Graphic);
     mPresentRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
     mPresentRenderPass.CreateRenderPass();
-}
-
-void Renderer::CreateRendererMaterialObject(const Material &material, RendererMaterialObject &object)
-{
-    if (object.sampler.GetHandle() != VK_NULL_HANDLE)
-    {
-        object.sampler.DestroySampler();
-        object.textureDescriptor.DestroyDescriptor();
-        object.bufferDescriptor.DestroyDescriptor();
-        object.pipeline.DestroyPipeline();
-    }
-
-    object.sampler.SetFilter(material.minFilter, material.magFilter);
-    object.sampler.SetAddressMode(material.addressMode, material.addressMode, material.addressMode);
-    object.sampler.CreateSampler();
-
-    object.textureDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
-    object.textureDescriptor.AddDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment);
-    object.textureDescriptor.CreateDescriptor();
-    if (material.albedo != (TextureID)UINT64_MAX)
-    {
-        object.textureDescriptor.UpdateImage(TextureManager::GetTexture(material.albedo)->GetImage(), ImageLayout::ShaderRead, object.sampler, 0);
-    }
-
-    object.bufferDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
-    object.bufferDescriptor.AddDescriptor(DescriptorType::StorageBuffer, ShaderStage::Fragment);
-    object.bufferDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Fragment);
-    object.bufferDescriptor.CreateDescriptor();
-    object.bufferDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
-    object.bufferDescriptor.UpdateBuffer(mLightStorageBuffer.GetBuffer(), 1);
-
-    object.pipeline.SetVertexShader(ShaderManager::GetVertexShader(material.vertexShader));
-    object.pipeline.SetFragmentShader(ShaderManager::GetFragmentShader(material.fragmentShader));
-    if (material.geometryShader != ShaderManager::GetInvalidGeometryShaderID())
-    {
-        object.pipeline.SetGeometryShader(ShaderManager::GetGeometryShader(material.geometryShader));
-    }
-
-    object.pipeline.AddDescriptors(object.textureDescriptor);
-    object.pipeline.AddDescriptors(object.bufferDescriptor);
-    object.pipeline.AddDescriptors(mShadowMapDescriptor);
-    object.pipeline.AddDescriptors(TextureManager::GetDescriptor());
-
-    object.pipeline.SetCullMode(material.cullMode);
-    object.pipeline.AddBinding(0, sizeof(Vertex), InputRate::Vertex);
-    object.pipeline.AddAttribute(0, 0, ImageFormat::RGB32, offsetof(Vertex, position));
-    object.pipeline.AddAttribute(0, 1, ImageFormat::RGB32, offsetof(Vertex, uv));
-    object.pipeline.AddAttribute(0, 2, ImageFormat::RGB32, offsetof(Vertex, normal));
-    object.pipeline.EnableDepthWrite(material.enableDepthWrite);
-    object.pipeline.EnableDepthTesting(material.enableDepthTest);
-    object.pipeline.SetMultisampleCount(mSampleCount);
-    object.pipeline.SetPushConstant(ShaderStage::All, sizeof(PushConstantData));
-    object.pipeline.AddColorBlendAttachment(true);
-    object.pipeline.CreatePipeline(mSceneRenderPass, 0);
 }
 
 void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand)
@@ -482,6 +453,10 @@ void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand)
 
     vkCmdSetViewport(mCommandBuffer.GetHandle(), 0, 1, &viewport);
     vkCmdSetScissor(mCommandBuffer.GetHandle(), 0, 1, &scissor);
+    vkCmdSetCullMode(mCommandBuffer.GetHandle(), GetVulkanCullMode(renderCommand.pipelineSettings.cullMode));
+    vkCmdSetDepthTestEnable(mCommandBuffer.GetHandle(), (VkBool32)renderCommand.pipelineSettings.enableDepthTest);
+    vkCmdSetDepthWriteEnable(mCommandBuffer.GetHandle(), (VkBool32)renderCommand.pipelineSettings.enableDepthWrite);
+
     vkCmdPushConstants(mCommandBuffer.GetHandle(), renderCommand.pipeline->GetPipelineLayout(), VK_SHADER_STAGE_ALL, 0, renderCommand.pushContantSize, renderCommand.pushContantData);
 
     VkDescriptorSet descriptorSets[32];
@@ -499,7 +474,7 @@ void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand)
 FrameInfo Renderer::mFrameInfo;
 SampleCount Renderer::mSampleCount = SampleCount::Four;
 glm::uvec2 Renderer::mResolution = glm::uvec2(1920, 1080);
-GraphicsPipeline Renderer::mScenePipeline;
+// GraphicsPipeline Renderer::mScenePipeline;
 RenderPass Renderer::mSceneRenderPass;
 FrameBuffer Renderer::mSceneFrameBuffer;
 ImageDeprecated Renderer::mSceneColorAttachment;
@@ -514,16 +489,16 @@ CommandBuffer Renderer::mPresentCommandBuffer;
 Descriptor Renderer::mPresentInputDescriptor;
 UniformBuffer Renderer::mUniformBuffer;
 UniformData Renderer::mUniformData;
-std::unordered_map<const Material *, RendererMaterialObject> Renderer::mMaterialObjectMap;
 std::vector<RenderCommand> Renderer::mRenderCommands;
 Camera Renderer::mCamera;
-VertexShaderID Renderer::mBasicVertexShader = (VertexShaderID)UINT64_MAX;
-FragmentShaderID Renderer::mBasicFragmentShader = (FragmentShaderID)UINT64_MAX;
 ImageDeprecated Renderer::mSceneDepthAttachment;
 ImageDeprecated Renderer::mSceneResolveDepthAttachment;
 StorageBuffer Renderer::mLightStorageBuffer;
 std::vector<LightUniformData> Renderer::mLight;
 Sampler Renderer::mSampler;
-Sampler Renderer::mDirectionalShadowSampler;
 Descriptor Renderer::mShadowMapDescriptor;
 std::vector<ImageDeprecated> Renderer::mShadowMaps;
+Descriptor Renderer::mBufferDescriptor;
+ShaderID Renderer::mBasicShaderID;
+std::unordered_map<ShaderID, GraphicsPipeline> Renderer::mShaderPipelineMap;
+uint32_t Renderer::mInputInt;

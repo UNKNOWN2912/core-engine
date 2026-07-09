@@ -16,16 +16,16 @@ void TextureManager::Terminate()
 {
 }
 
-TextureID TextureManager::LoadTexture(std::string_view filename)
+TextureID TextureManager::LoadTexture(std::string_view filename, ImageFormat format)
 {
     TextureID id = GenerateID();
 
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    texture->Load(filename);
+    texture->Load(filename, format);
 
     mTextureMap[id] = texture;
 
-    mDescriptor.UpdateImageIndex(mTextureMap[id]->GetImage(), ImageLayout::ShaderRead, mSampler, 0, (uint32_t)id);
+    mDescriptor.UpdateImageIndex(mTextureMap[id]->GetImage(), ImageLayout::ShaderRead, texture->GetSampler(), 0, (uint32_t)id);
 
     return id;
 }
@@ -39,7 +39,7 @@ TextureID TextureManager::CreateTexture(void *data, const glm::uvec2 &size, Imag
 
     mTextureMap[id] = texture;
 
-    mDescriptor.UpdateImageIndex(mTextureMap[id]->GetImage(), ImageLayout::ShaderRead, mSampler, 0, (uint32_t)id);
+    mDescriptor.UpdateImageIndex(mTextureMap[id]->GetImage(), ImageLayout::ShaderRead, texture->GetSampler(), 0, (uint32_t)id);
 
     return id;
 }

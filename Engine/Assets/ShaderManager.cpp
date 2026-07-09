@@ -1,114 +1,51 @@
 #include "ShaderManager.hpp"
 #include "Renderer/GraphicsContext.hpp"
+#include "Renderer/Renderer.hpp"
 #include "Renderer/Utility.hpp"
 
-VertexShaderID ShaderManager::LoadVertexShader(std::string_view filename)
+ShaderID ShaderManager2::Load(std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile, std::string_view tessellationFile, bool createRendererObjects)
 {
-    VertexShaderID id = GenerateVertexShaderID();
-    mVertexShaderMap[id] = CreateShaderFromFile(GraphicsContext::GetDevice(), filename.data());
-    return id;
-}
-FragmentShaderID ShaderManager::LoadFragmentShader(std::string_view filename)
-{
-    FragmentShaderID id = GenerateFragmentShaderID();
-    mFragmentShaderMap[id] = CreateShaderFromFile(GraphicsContext::GetDevice(), filename.data());
-    return id;
-}
-VertexShaderID ShaderManager::CreateVertexShader(const std::vector<uint32_t> &code)
-{
-    VertexShaderID id = GenerateVertexShaderID();
-    mVertexShaderMap[id] = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), code);
-    return id;
-}
-
-FragmentShaderID ShaderManager::CreateFragmentShader(const std::vector<uint32_t> &code)
-{
-    FragmentShaderID id = GenerateFragmentShaderID();
-    mFragmentShaderMap[id] = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), code);
-    return id;
-}
-
-VkShaderModule ShaderManager::GetVertexShader(VertexShaderID id)
-{
-    return mVertexShaderMap[id];
-}
-VkShaderModule ShaderManager::GetFragmentShader(FragmentShaderID id)
-{
-    return mFragmentShaderMap[id];
-}
-bool ShaderManager::HasVertexShader(VertexShaderID id)
-{
-    return mVertexShaderMap.contains(id);
-}
-bool ShaderManager::HasFragmentShader(FragmentShaderID id)
-{
-    return mFragmentShaderMap.contains(id);
-}
-
-VertexShaderID ShaderManager::GenerateVertexShaderID()
-{
-    return (VertexShaderID)mLastVertexShaderId++;
-}
-
-FragmentShaderID ShaderManager::GenerateFragmentShaderID()
-{
-    return (FragmentShaderID)mLastFragmentShaderId++;
-}
-VertexShaderID ShaderManager::GetInvalidVertexShaderID()
-{
-    return (VertexShaderID)UINT64_MAX;
-}
-FragmentShaderID ShaderManager::GetInvalidFragmentShaderID()
-{
-    return (FragmentShaderID)UINT64_MAX;
-}
-
-GeometryShaderID ShaderManager::LoadGeometryShader(std::string_view filename)
-{
-    GeometryShaderID id = GenerateGeometryShaderID();
-    mGeometryShaderMap[id] = CreateShaderFromFile(GraphicsContext::GetDevice(), filename.data());
-    return id;
-}
-GeometryShaderID ShaderManager::CreateGeometryShader(const std::vector<uint32_t> &code)
-{
-    GeometryShaderID id = GenerateGeometryShaderID();
-    mGeometryShaderMap[id] = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), code);
-    return id;
-}
-VkShaderModule ShaderManager::GetGeometryShader(GeometryShaderID id)
-{
-    return mGeometryShaderMap[id];
-}
-bool ShaderManager::HasGeometryShader(GeometryShaderID id)
-{
-    return mGeometryShaderMap.contains(id);
-}
-GeometryShaderID ShaderManager::GenerateGeometryShaderID()
-{
-    return (GeometryShaderID)mLastGeometryShaderId++;
-}
-GeometryShaderID ShaderManager::GetInvalidGeometryShaderID()
-{
-    return (GeometryShaderID)UINT32_MAX;
-}
-
-void ShaderManager::Clear()
-{
-    for (auto &[id, module] : mVertexShaderMap)
+    ShaderID id = GenerateID();
+    mShaderMap[id].vertex = CreateShaderFromFile(GraphicsContext::GetDevice(), vertexFile.data());
+    mShaderMap[id].fragment = CreateShaderFromFile(GraphicsContext::GetDevice(), fragmentFile.data());
+    mShaderMap[id].geometry = geometryFile.empty() ? VK_NULL_HANDLE : CreateShaderFromFile(GraphicsContext::GetDevice(), geometryFile.data());
+    mShaderMap[id].tessellation = tessellationFile.empty() ? VK_NULL_HANDLE : CreateShaderFromFile(GraphicsContext::GetDevice(), tessellationFile.data());
+    if (createRendererObjects)
     {
-        vkDestroyShaderModule(GraphicsContext::GetDevice(), module, nullptr);
+        Renderer::CreateGraphicsPipeline(id);
     }
-    for (auto &[id, module] : mFragmentShaderMap)
+    return id;
+}
+ShaderID ShaderManager2::Create(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, bool createRendererObjects)
+{
+    ShaderID id = GenerateID();
+    mShaderMap[id].vertex = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), vertexCode);
+    mShaderMap[id].fragment = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), fragmentCode);
+    mShaderMap[id].geometry = geometryCode.empty() ? VK_NULL_HANDLE : CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), geometryCode);
+    mShaderMap[id].tessellation = tessellationCode.empty() ? VK_NULL_HANDLE : CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), tessellationCode);
+
+    if (createRendererObjects)
     {
-        vkDestroyShaderModule(GraphicsContext::GetDevice(), module, nullptr);
+        Renderer::CreateGraphicsPipeline(id);
     }
-    mVertexShaderMap.clear();
-    mFragmentShaderMap.clear();
+    return id;
+}
+Shader &ShaderManager2::Get(ShaderID id)
+{
+    return mShaderMap[id];
+}
+bool ShaderManager2::Has(ShaderID id)
+{
+    return mShaderMap.contains(id);
+}
+ShaderID ShaderManager2::GenerateID()
+{
+    return (ShaderID)mLastShaderId++;
+}
+ShaderID ShaderManager2::GetInvalidID()
+{
+    return (ShaderID)UINT64_MAX;
 }
 
-uint64_t ShaderManager::mLastVertexShaderId = 0;
-uint64_t ShaderManager::mLastFragmentShaderId = 0;
-uint64_t ShaderManager::mLastGeometryShaderId = 0;
-std::unordered_map<VertexShaderID, VkShaderModule> ShaderManager::mVertexShaderMap;
-std::unordered_map<FragmentShaderID, VkShaderModule> ShaderManager::mFragmentShaderMap;
-std::unordered_map<GeometryShaderID, VkShaderModule> ShaderManager::mGeometryShaderMap;
+uint64_t ShaderManager2::mLastShaderId = 0;
+std::unordered_map<ShaderID, Shader> ShaderManager2::mShaderMap;

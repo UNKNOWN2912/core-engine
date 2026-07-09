@@ -21,28 +21,30 @@ enum class AttributeType
 
 struct Material
 {
-    VertexShaderID vertexShader = ShaderManager::GetInvalidVertexShaderID();
-    FragmentShaderID fragmentShader = ShaderManager::GetInvalidFragmentShaderID();
-    GeometryShaderID geometryShader = ShaderManager::GetInvalidGeometryShaderID();
+    ShaderID shader;
 
     union {
         TextureID textures[32] = {(TextureID)UINT64_MAX};
         struct
         {
             TextureID albedo;
-            TextureID specular;
+            TextureID roughness;
+            TextureID metallic;
+            TextureID normal;
         };
     };
 
     CullMode cullMode = CullMode::Back;
 
+    glm::vec3 colorFactor = glm::vec3(0);
+    float roughnessFactor = 0.5;
+    float metallicFactor = 0.0;
+
+    float indexOfRefraction;
+
     bool enableDepthWrite = true;
     bool enableDepthTest = true;
     bool enableBlending = true;
-
-    Filter magFilter = Filter::Linear;
-    Filter minFilter = Filter::Linear;
-    AddressMode addressMode = AddressMode::Repeat;
 
     std::string name = "Untitled";
 };

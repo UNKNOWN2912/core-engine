@@ -18,6 +18,8 @@ public:
 
     static void Clear();
 
+    static std::unordered_map<MeshID, std::shared_ptr<Mesh>> &GetMap();
+
 private:
     static uint64_t mLastMeshId;
     static std::unordered_map<MeshID, std::shared_ptr<Mesh>> mMeshMap;

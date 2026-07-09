@@ -14,6 +14,10 @@ void MeshManager::Clear()
 {
     mMeshMap.clear();
 }
+std::unordered_map<MeshID, std::shared_ptr<Mesh>> &MeshManager::GetMap()
+{
+    return mMeshMap;
+}
 
 void MeshManager::DestroyMesh(MeshID id)
 {

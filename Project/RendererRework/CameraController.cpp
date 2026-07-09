@@ -35,9 +35,12 @@ void CameraController::Update()
     if (mEnableMouseControl)
     {
 
-        cameraFront.x = sin(glm::radians(mYaw)) * cos(glm::radians(-mPitch));
-        cameraFront.y = sin(glm::radians(-mPitch));
-        cameraFront.z = cos(glm::radians(mYaw)) * cos(glm::radians(-mPitch));
+        cameraFront.x = glm::sin(glm::radians(mEulerAngles.x)) * glm::cos(glm::radians(-mEulerAngles.y));
+        cameraFront.y = glm::sin(glm::radians(-mEulerAngles.y));
+        cameraFront.z = glm::cos(glm::radians(mEulerAngles.x)) * glm::cos(glm::radians(-mEulerAngles.y));
+
+        mEulerAngles.x = glm::mix(mEulerAngles.x, mYaw, 1.f);
+        mEulerAngles.y = glm::mix(mEulerAngles.y, mPitch, 1.f);
 
         mCamera->SetFront(cameraFront);
     }
@@ -83,48 +86,80 @@ void CameraController::OnKeyPress(Key key)
     CHROME_TRACE_FUNCTION();
 
     if (!mEnableControl || !mEnableKeyboardControl)
+    {
         return;
+    }
 
     if (key == Key::W)
+    {
         mMoveForward = true;
+    }
     if (key == Key::S)
+    {
         mMoveBackward = true;
+    }
     if (key == Key::A)
+    {
         mMoveLeft = true;
+    }
     if (key == Key::D)
+    {
         mMoveRight = true;
+    }
     if (key == Key::Space)
+    {
         mMoveUp = true;
+    }
     if (key == Key::LeftShift)
+    {
         mMoveDown = true;
+    }
     if (key == Key::LeftControl)
+    {
         mSpeed *= 5;
+    }
 }
 void CameraController::OnKeyRelease(Key key)
 {
     CHROME_TRACE_FUNCTION();
 
     if (key == Key::W)
+    {
         mMoveForward = false;
+    }
     if (key == Key::S)
+    {
         mMoveBackward = false;
+    }
     if (key == Key::A)
+    {
         mMoveLeft = false;
+    }
     if (key == Key::D)
+    {
         mMoveRight = false;
+    }
     if (key == Key::Space)
+    {
         mMoveUp = false;
+    }
     if (key == Key::LeftShift)
+    {
         mMoveDown = false;
+    }
     if (key == Key::LeftControl)
+    {
         mSpeed /= 5;
+    }
 }
 void CameraController::OnMouseMove(const glm::vec2 &position, const glm::vec2 &offset)
 {
     CHROME_TRACE_FUNCTION();
 
     if (!mEnableControl || !mEnableMouseControl)
+    {
         return;
+    }
 
     mYaw -= offset.x * mSensitivity;
     mPitch += offset.y * mSensitivity;

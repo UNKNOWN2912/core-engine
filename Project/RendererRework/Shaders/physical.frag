@@ -22,6 +22,9 @@ layout(push_constant) uniform PushConstant
     uint roughnessIndex;
     uint metallicIndex;
     uint inputInt;
+    float roughness;
+    float metallic;
+    float indexOfRefraction;
 }
 pushConstant;
 
@@ -64,90 +67,13 @@ layout(set = 1, binding = 1) readonly buffer LightStorage
 }
 lightStorage;
 
-float limitDot(vec3 a, vec3 b)
-{
-    return max(dot(a, b), 0.0);
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////        BRDF         ////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
-
-vec3 FresnelFactor(vec3 f0, float hDotl)
-{
-    return f0 + (1 - f0) * pow(1 - hDotl, 5);
-}
-
-float NormalDistributionGGX(float roughness, float NdotH)
-{
-    float a2 = roughness * roughness;
-    float f = (NdotH * NdotH * (a2 - 1.0f)) + 1.0f;
-    return a2 / max(pi * f * f, 0.000001f);
-}
-
-float GeometryGGX(float NdotX, float roughness)
-{
-    float r = roughness + 1.0;
-    float k = r * r / 8.0;
-    return NdotX / max(NdotX * (1.0 - k) + k, 0.00001);
-}
-
-float Geometry(vec3 normal, vec3 lightDirection, vec3 viewDirection, float roughness)
-{
-    float NdotV = limitDot(normal, viewDirection);
-    float NdotL = limitDot(normal, lightDirection);
-
-    float ggxV = GeometryGGX(NdotV, roughness);
-    float ggxL = GeometryGGX(NdotL, roughness);
-
-    return ggxV * ggxL;
-}
-
-vec3 BRDF(vec3 lightDirection, vec3 viewDirection, vec3 normal, vec3 objectColor, float roughness, float metallic)
-{
-
-    vec3 f0 = mix(vec3(0.04), objectColor, metallic);
-    vec3 halfWay = normalize(lightDirection + viewDirection);
-
-    float HdotV = limitDot(halfWay, viewDirection);
-    float NdotL = limitDot(normal, lightDirection);
-    float NdotV = limitDot(normal, viewDirection);
-    float NdotH = limitDot(normal, halfWay);
-
-    vec3 F = FresnelFactor(f0, HdotV);
-    float D = NormalDistributionGGX(roughness, NdotH);
-    float G = Geometry(normal, lightDirection, viewDirection, roughness);
-
-    vec3 nominator = F * D * G;
-    float denominator = max(4 * NdotV * NdotL, 0.00001);
-    vec3 specular = nominator / denominator;
-
-    vec3 ks = F;
-    vec3 kd = (1 - ks) * (1 - metallic);
-
-    vec3 diffuse = objectColor / pi;
-
-    return kd * diffuse + specular;
-}
-
 ///////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////        END BRDF         ////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
 
 vec3 unlitFunction(vec3 normal, vec3 viewDirection, vec3 objectColor)
 {
-    return objectColor * vec3(0.1, 0.1, 0.1);
-}
-
-vec3 litFunction(vec3 lightDirection, vec3 normal, vec3 viewDirection, vec3 objectColor, vec3 lightColor, float roughness, float metallic)
-{
-    return BRDF(normalize(lightDirection), normalize(viewDirection), normalize(normal), objectColor, max(roughness, 0.00001), max(metallic, 0.00001));
-}
-
-float pointLightDensityFunction(float intensity, float distance)
-{
-    float clight = intensity * pow(1 / max(distance, 0.01), 2);
-    return clight;
+    return objectColor * vec3(0.05, 0.05, 0.05);
 }
 
 float spotLightDensityFunction(float intensity, float innerAngle, float outerAngle, float distance, float angle)
@@ -156,11 +82,6 @@ float spotLightDensityFunction(float intensity, float innerAngle, float outerAng
 
     float clight = intensity * pow(1 / max(distance, 0.01), 2) * ((t));
     return clight;
-}
-
-float directionalLightDensityFunction(float intensity)
-{
-    return intensity;
 }
 
 float LinearizeDepth(float sampledDepth, float zNear, float zFar)
@@ -182,6 +103,76 @@ vec4 cascadeColor[4] = vec4[](
     vec4(0, 0, 1, 1),
     vec4(1, 1, 0, 1));
 
+vec3 LambertDiffuse(vec3 lightDirection, vec3 viewDirection, vec3 objectColor)
+{
+    return objectColor / pi;
+}
+
+vec3 SchlickFresnel(vec3 F0, float NdotH)
+{
+    return F0 + (1 - F0) * pow(1 - NdotH, 5);
+}
+
+float Distribution(float NdotH, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+
+    float NdotH2 = NdotH * NdotH;
+
+    float nominator = a2;
+    float denominator = 1 + NdotH2 * (a2 - 1);
+    denominator = pi * denominator * denominator;
+
+    return nominator / max(denominator, 0.000001);
+}
+
+float G1(float NdotX, float roughness)
+{
+    float a = roughness * roughness;
+
+    float nominator = 2 * NdotX;
+    float denominator = NdotX * (2 - a) + a;
+
+    return nominator / max(denominator, 0.000001);
+}
+
+float GeometryGGX(float NdotV, float NdotL, float roughness)
+{
+    return G1(NdotV, roughness) * G1(NdotL, roughness);
+}
+
+vec3 BRDF(vec3 normal, vec3 lightDirection, vec3 viewDirection, vec3 objectColor, float roughness, float metallic)
+{
+
+    vec3 halfWay = normalize(lightDirection + viewDirection);
+
+    float NdotH = max(dot(normal, halfWay), 0.0);
+    float NdotV = max(dot(normal, viewDirection), 0.0);
+    float NdotL = max(dot(normal, lightDirection), 0.0);
+
+    vec3 fdiffuse = LambertDiffuse(lightDirection, viewDirection, objectColor);
+
+    vec3 F0 = mix(vec3(0.04f), objectColor, metallic);
+    vec3 F = SchlickFresnel(F0, NdotH);
+    float D = Distribution(NdotH, roughness);
+    float G = GeometryGGX(NdotV, NdotL, roughness);
+
+    vec3 nominator = (F * G * D);
+    float denominator = 4 * NdotV * NdotL;
+    vec3 fspecular = nominator / max(denominator, 0.000001);
+
+    vec3 Ks = F;
+    vec3 Kd = (1 - Ks) * (1 - metallic);
+
+    return Kd * fdiffuse + fspecular;
+}
+
+vec3 IncomingLight(vec3 lightColor, float intensity)
+{
+    return lightColor * intensity;
+}
+
 void main()
 {
     if (texture(albedoTextures[pushConstant.albedoIndex], Input.uv).a < 0.1)
@@ -191,6 +182,9 @@ void main()
 
     float roughness = texture(albedoTextures[pushConstant.roughnessIndex], Input.uv).g;
     float metallic = texture(albedoTextures[pushConstant.roughnessIndex], Input.uv).b;
+
+    // roughness = pushConstant.roughness;
+    // metallic = pushConstant.metallic;
 
     vec3 normal = normalize(Input.normal);
 
@@ -238,15 +232,13 @@ void main()
             float diffuse = max(dot(lightDirection, normal), 0.0);
             float density = spotLightDensityFunction(intensity, innerAngle, outerAngle, radius, angle);
 
-            vec3 lit = litFunction(lightDirection, normal, viewDirection, objectColor, color, roughness, metallic);
-            result += density * lit;
+            // vec3 lit = litFunction(lightDirection, normal, viewDirection, objectColor, color, roughness, metallic);
+            // result += density * lit;
         }
         else if (type == LightType_PointLight)
         {
             vec3 lightDirection = normalize(position - Input.fragPos);
             float radius = distance(position, Input.fragPos);
-            float diffuse = max(dot(lightDirection, normal), 0.0);
-            float density = pointLightDensityFunction(intensity, radius);
 
             float shadow = 0.f;
             vec3 fragToLight = Input.fragPos - position;
@@ -261,8 +253,7 @@ void main()
                 shadow = 1.f;
             }
 
-            vec3 lit = litFunction(lightDirection, normal, viewDirection, objectColor, color, roughness, metallic);
-            result += density * lit;
+            result += (BRDF(normal, lightDirection, viewDirection, objectColor, roughness, metallic) * IncomingLight(light.color, light.intensity) * max(dot(normal, lightDirection), 0.0) * (1 - shadow)) / (radius * radius);
         }
         else if (type == LightType_DirectionalLight)
         {
@@ -293,8 +284,6 @@ void main()
             vec2 uv = fragPos[cascadeIndex].xy;
 
             vec3 lightDirection = light.direction;
-            float diffuse = max(dot(lightDirection, normal), 0.0);
-            float density = directionalLightDensityFunction(intensity);
 
             float shadow = 0.f;
             float currentDepth = fragPos[cascadeIndex].z;
@@ -333,19 +322,13 @@ void main()
                 }
             }
 
-            vec3 lit = litFunction(lightDirection, normal, viewDirection, objectColor, color, roughness, metallic);
-            result += (1 - shadow) * diffuse * density * lit;
+            result += (BRDF(normal, lightDirection, viewDirection, objectColor, roughness, metallic) * IncomingLight(light.color, light.intensity) * max(dot(normal, lightDirection), 0.0) * (1 - shadow));
         }
     }
 
     vec3 shaded = unlit + result;
 
-    vec3 white = vec3(1);
-
-    float lDepth = LinearizeDepth(gl_FragCoord.z, 0.01f, 1000.f) / 1000.f;
-    vec3 test = mix(shaded, white, lDepth);
-
-    outputColor = vec4(test, 1.0);
+    outputColor = vec4(shaded, 1.0);
 
     if (pushConstant.inputInt == 1)
     {

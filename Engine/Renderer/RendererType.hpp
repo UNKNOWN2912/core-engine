@@ -18,4 +18,11 @@ struct RenderCommand
 
     std::byte pushContantData[128] = {(std::byte)0};
     size_t pushContantSize = 0;
+
+    struct PipelineSettings
+    {
+        CullMode cullMode = CullMode::Back;
+        bool enableDepthTest = true;
+        bool enableDepthWrite = true;
+    } pipelineSettings;
 };

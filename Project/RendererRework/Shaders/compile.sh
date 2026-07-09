@@ -7,3 +7,4 @@ echo "Compiling shaders"
 ./compile_shader.sh directional
 ./compile_shader.sh bloom
 ./compile_shader.sh blur
+./compile_shader.sh physical

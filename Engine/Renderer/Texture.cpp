@@ -152,7 +152,7 @@ uint32_t GetFormatChannelCount(ImageFormat format)
     }
 }
 
-void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format)
+void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -165,10 +165,10 @@ void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format)
     mStagingBuffer = CreateBuffer(mImage.memorySize, BufferUsage::TransferSource, MemoryProperty::HostVisible | MemoryProperty::HostCoherent);
 
     unsigned char *staging = (unsigned char *)mStagingBuffer.map;
-    unsigned char *idata = (unsigned char *)data;
+    unsigned char *byteData = (unsigned char *)data;
     for (int i = 0; i < size.x * size.y * GetFormatChannelCount(format); i++)
     {
-        staging[i] = idata[i];
+        staging[i] = byteData[i];
     }
 
     CommandBuffer commandBuffer;
@@ -188,9 +188,13 @@ void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format)
     mIsValid = true;
 
     DestroyBuffer(mStagingBuffer);
+
+    mSampler.SetAddressMode(addressMode, addressMode, addressMode);
+    mSampler.SetFilter(minFilter, magFilter);
+    mSampler.CreateSampler();
 }
 
-void Texture::Load(std::string_view filename)
+void Texture::Load(std::string_view filename, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
 {
     CHROME_TRACE_FUNCTION();
 
@@ -203,13 +207,34 @@ void Texture::Load(std::string_view filename)
     glm::ivec2 size;
     stbi_uc *data = stbi_load(filename.data(), &size.x, &size.y, nullptr, 4);
 
-    Create(data, size, ImageFormat::RGBA8);
+    Create(data, size, format, minFilter, magFilter, addressMode);
 
     stbi_image_free(data);
 }
-Texture::~Texture()
+const ImageDeprecated &Texture::GetImage() const
 {
-    Destroy();
+    return mImage;
+}
+
+ImageDeprecated &Texture::GetImageRef()
+{
+    return mImage;
+}
+bool Texture::IsValid() const
+{
+    return mIsValid;
+}
+const std::string &Texture::GetName() const
+{
+    return mName;
+}
+void Texture::SetName(const std::string &name)
+{
+    mName = name;
+}
+const Sampler &Texture::GetSampler() const
+{
+    return mSampler;
 }
 
 void Texture::Destroy()

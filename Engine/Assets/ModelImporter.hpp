@@ -3,8 +3,8 @@
 
 class ModelImporter
 {
-  public:
+public:
     void Import(std::string_view filename, Scene &scene);
 
-  private:
+private:
 };

@@ -53,15 +53,20 @@ struct UniformData
     glm::vec3 cameraPosition = glm::vec3(0);
     int lightCount = 0;
     glm::vec3 cameraFront = glm::vec3(0);
+    float time;
 };
 
 struct PushConstantData
 {
     glm::mat4 model = glm::mat4(1.f);
     uint32_t albedoIndex = 0;
-    uint32_t specularIndex = 0;
+    uint32_t normalIndex = 0;
     uint32_t roughnessIndex = 0;
     uint32_t metallicIndex = 0;
+    uint32_t inputInt = 0;
+    float roughness = 0;
+    float metallic = 0;
+    float indexOfRefraction = 0;
 };
 
 struct LightUniformData
@@ -100,7 +105,6 @@ public:
     static Surface CreateSurface(const Window &window);
     static void ResizeSurface(Surface &surface);
     static void Present(Surface &surface);
-    static void RegisterMaterial(const Material &material);
 
     static const std::vector<RenderCommand> &GetRenderCommands();
 
@@ -109,7 +113,8 @@ public:
     static void Submit(MaterialID material, MeshID mesh, const Transform &transform);
 
     static void SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader);
-    static void GetBasicShader(VertexShaderID &vertexShader, FragmentShaderID &fragmentShader);
+
+    static ShaderID GetBasicShaderID();
 
     static void AddLight(const Light &light);
     static void ClearLights();
@@ -120,14 +125,31 @@ public:
     static void SetProjectionMatrix(const glm::mat4 &matrix);
     static void SetViewMatrix(const glm::mat4 &matrix);
 
+    static void CreateGraphicsPipeline(ShaderID id);
+
+    static uint32_t GetInputInt()
+    {
+        return mInputInt;
+    }
+
+    static void SetInputInt(uint32_t inputInt)
+    {
+        mInputInt = inputInt;
+    }
+
+    static VkRenderPass GetRenderPass();
+    static const RenderPass &GetPresentRenderPass();
+
 private:
+    static uint32_t mInputInt;
+
+    static Descriptor mBufferDescriptor;
+
     static Sampler mSampler;
-    static Sampler mDirectionalShadowSampler;
     static FrameInfo mFrameInfo;
     static RendererSpecification mSpecification;
     static SampleCount mSampleCount;
     static glm::uvec2 mResolution;
-    static GraphicsPipeline mScenePipeline;
     static RenderPass mSceneRenderPass;
     static FrameBuffer mSceneFrameBuffer;
 
@@ -148,31 +170,27 @@ private:
     static UniformBuffer mUniformBuffer;
     static UniformData mUniformData;
 
-    static std::unordered_map<const Material *, RendererMaterialObject> mMaterialObjectMap;
     static std::vector<RenderCommand> mRenderCommands;
 
     static Camera mCamera;
-
-    static VertexShaderID mBasicVertexShader;
-    static FragmentShaderID mBasicFragmentShader;
 
     static std::vector<ImageDeprecated> mShadowMaps;
     static std::vector<LightUniformData> mLight;
     static StorageBuffer mLightStorageBuffer;
 
     static Descriptor mShadowMapDescriptor;
-    static UniformBuffer mMaterialBuffer;
 
-    static PushConstantData mPushConstantData;
+    static std::unordered_map<ShaderID, GraphicsPipeline> mShaderPipelineMap;
+    static ShaderID mBasicShaderID;
 
 private:
     static void CreateSceneRenderPassMultisampled();
     static void CreateSceneFrameBufferMultisampled();
     static void CreateSceneAttachmentsMultisampled();
-    static void CreateScenePipelineMultisampled();
     static void CreatePresentPipeline();
     static void CreatePresentRenderPass();
 
-    static void CreateRendererMaterialObject(const Material &material, RendererMaterialObject &object);
     static void CmdDrawRenderCommand(const RenderCommand &renderCommand);
+
+    friend class RendererRework;
 };

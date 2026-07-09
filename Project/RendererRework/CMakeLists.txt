@@ -1,11 +1,16 @@
 
+include_directories("imgui/")
+
 file(GLOB sources 
-    "*.cpp"
+    "*.cpp",
+    "imgui/*.cpp",
+    "imgui/backends/imgui_impl_glfw.cpp"
+    "imgui/backends/imgui_impl_vulkan.cpp"
     )
     
-    
-    add_executable(RendererRework ${sources}) 
-    target_link_libraries(RendererRework Engine)
+
+add_executable(RendererRework ${sources}) 
+target_link_libraries(RendererRework Engine)
     
     
 set_target_properties(RendererRework PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
