@@ -43,7 +43,7 @@ class RendererRework : public Application
 
         ModelImporter importer;
         importer.Import("Models/cube/cube.gltf", mScene);
-        importer.Import("Models/cube/Car/Car.gltf", mScene);
+        importer.Import("Models/Sponza/Sponza.gltf", mScene);
 
         std::shared_ptr<Material> skyboxMaterial = std::make_shared<Material>();
         skyboxMaterial->shader = ShaderManager2::Load("Shaders/skybox.vert.spv", "Shaders/skybox.frag.spv");
