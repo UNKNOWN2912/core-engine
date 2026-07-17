@@ -61,6 +61,7 @@ bool Application::WindowEventCallback(uint32_t code, void *data)
     }
     case WindowEvent::WindowMove: {
         glm::uvec2 position = *(glm::uvec2 *)data;
+        mCursorPosition = position;
         OnWindowMove(position);
         break;
     }
@@ -142,6 +143,19 @@ float Application::GetDeltaTime()
 float Application::GetElapsedTime()
 {
     return mApplicationTimer.GetElapsedTime();
+}
+
+uint32_t Application::GetFrameCount() const
+{
+    return mFrameCounter;
+}
+uint32_t Application::GetFps() const
+{
+    return mFps;
+}
+const glm::uvec2 &Application::GetCursorPos() const
+{
+    return mCursorPosition;
 }
 
 void Application::MainLoop()

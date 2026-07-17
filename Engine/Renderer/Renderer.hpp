@@ -67,6 +67,7 @@ struct PushConstantData
     float roughness = 0;
     float metallic = 0;
     float indexOfRefraction = 0;
+    glm::vec4 color = glm::vec4(1);
 };
 
 struct LightUniformData
@@ -102,7 +103,7 @@ public:
     static const glm::uvec2 &GetResolution();
     static SampleCount GetSampleCount();
     static void SetSampleCount(const SampleCount &sampleCount);
-    static Surface CreateSurface(const Window &window);
+    static Surface CreateSurface(const Window &window, ImageFormat format = ImageFormat::BGRA8);
     static void ResizeSurface(Surface &surface);
     static void Present(Surface &surface);
 
@@ -137,8 +138,11 @@ public:
         mInputInt = inputInt;
     }
 
-    static VkRenderPass GetRenderPass();
+    static RenderPass &GetRenderPass();
     static const RenderPass &GetPresentRenderPass();
+
+    static const glm::uvec2 &GetViewportSize();
+    static void SetViewportSize(const glm::uvec2 &size);
 
 private:
     static uint32_t mInputInt;
@@ -183,6 +187,8 @@ private:
     static std::unordered_map<ShaderID, GraphicsPipeline> mShaderPipelineMap;
     static ShaderID mBasicShaderID;
 
+    static glm::uvec2 mViewportSize;
+
 private:
     static void CreateSceneRenderPassMultisampled();
     static void CreateSceneFrameBufferMultisampled();
@@ -192,5 +198,5 @@ private:
 
     static void CmdDrawRenderCommand(const RenderCommand &renderCommand);
 
-    friend class RendererRework;
+    friend class Editor;
 };

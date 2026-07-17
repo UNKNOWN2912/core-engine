@@ -43,7 +43,8 @@ void GraphicsContext::Initialize(DeviceType deviceType)
             extensions.push_back(glfwExtensions[i]);
         }
 
-        std::vector<const char *> layers;
+        std::vector<const char *>
+            layers;
 
         if (validationEnabled)
         {

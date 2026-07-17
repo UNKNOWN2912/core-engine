@@ -29,7 +29,7 @@ void Sampler::CreateSampler()
             .addressModeW = mWAddressMode,
             .minLod = 1,
             .maxLod = 1,
-            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+            .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
         };
 
     vkCreateSampler(GraphicsContext::GetDevice(), &createInfo, nullptr, &mHandle);

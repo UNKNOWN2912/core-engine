@@ -128,14 +128,10 @@ public:
         return mLayerStack.Get<T>();
     }
 
-    uint32_t GetFrameCount() const
-    {
-        return mFrameCounter;
-    }
-    uint32_t GetFps() const
-    {
-        return mFps;
-    }
+    uint32_t GetFrameCount() const;
+    uint32_t GetFps() const;
+
+    const glm::uvec2 &GetCursorPos() const;
 
 private:
     bool mRunning = true;
@@ -144,6 +140,8 @@ private:
 
     glm::vec2 previousMousePos = glm::vec2(0);
     Window mWindow;
+
+    glm::uvec2 mCursorPosition = glm::uvec2(0);
 
     uint32_t mFps = 0;
 

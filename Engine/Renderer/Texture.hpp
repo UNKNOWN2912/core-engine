@@ -10,7 +10,7 @@
 class Texture
 {
 public:
-    void Create(void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter = Filter::Nearest, Filter magFilter = Filter::Nearest, AddressMode addressMode = AddressMode::Repeat);
+    void Create(void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter = Filter::Linear, Filter magFilter = Filter::Linear, AddressMode addressMode = AddressMode::Repeat);
     void Destroy();
 
     void Load(std::string_view filename, ImageFormat format = ImageFormat::RGBA8, Filter minFilter = Filter::Linear, Filter magFilter = Filter::Linear, AddressMode addressMode = AddressMode::Repeat);
@@ -22,7 +22,7 @@ public:
     const Sampler &GetSampler() const;
 
 private:
-    std::string mName;
+    std::string mName = "Untitled";
     bool mIsValid = false;
     ImageDeprecated mImage;
     Buffer mStagingBuffer;

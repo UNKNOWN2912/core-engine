@@ -152,6 +152,7 @@ void Image::SetData(const void *data, const glm::uvec2 &size, const glm::uvec2 &
     memcpy(buffer.map, data, GetImageFormatMemorySize(mFormat) * size.x * size.y);
 
     CommandBuffer commandBuffer;
+    commandBuffer.CreateCommandBuffer();
     commandBuffer.BeginRecording();
 
     CmdTransitionLayout(commandBuffer, ImageLayout::TransferDestination);
@@ -178,6 +179,7 @@ void Image::SetData(const void *data, const glm::uvec2 &size, const glm::uvec2 &
 
     commandBuffer.EndRecording();
     commandBuffer.QueueSubmit(GraphicsContext::GetQueues().transfer);
+    vkQueueWaitIdle(GraphicsContext::GetQueues().transfer);
 }
 
 VkImage Image::GetHandle() const

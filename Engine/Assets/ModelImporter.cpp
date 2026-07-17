@@ -131,26 +131,12 @@ MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateria
         cullMode = CullMode::None;
     }
 
+    aiColor4D color = {1, 1, 1, 1};
     if (diffuseTextureId == TextureManager::GetInvalidID())
     {
-        aiColor4D color;
         aimaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color);
         unsigned char pixel[4] = {(unsigned char)(color.r * 255), (unsigned char)(color.g * 255), (unsigned char)(color.b * 255), (unsigned char)(color.a * 255)};
-        diffuseTextureId = TextureManager::CreateTexture(pixel, {1, 1}, ImageFormat::RGBA8);
-    }
-
-    if (roughnessTextureId == TextureManager::GetInvalidID())
-    {
-        aiColor4D color = {0.5, 0.5, 0.5, 1};
-        unsigned char pixel[4] = {(unsigned char)(color.r * 255), (unsigned char)(color.g * 255), (unsigned char)(color.b * 255), (unsigned char)(color.a * 255)};
-        roughnessTextureId = TextureManager::CreateTexture(pixel, {1, 1}, ImageFormat::RGBA8UNORM);
-    }
-
-    if (normalTextureId == TextureManager::GetInvalidID())
-    {
-        aiColor4D color = {0.5, 0.5, 1, 1};
-        unsigned char pixel[4] = {(unsigned char)(color.r * 255), (unsigned char)(color.g * 255), (unsigned char)(color.b * 255), (unsigned char)(color.a * 255)};
-        normalTextureId = TextureManager::CreateTexture(pixel, {1, 1}, ImageFormat::RGBA8UNORM);
+        // diffuseTextureId = TextureManager::CreateTexture(pixel, {1, 1}, ImageFormat::RGBA8);
     }
 
     std::shared_ptr<Material> material = std::make_shared<Material>();
@@ -160,6 +146,7 @@ MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateria
     material->metallic = roughnessTextureId;
     material->normal = normalTextureId;
     material->cullMode = cullMode;
+    material->colorFactor = {color.r, color.g, color.b, color.a};
 
     MaterialID id = MaterialManager::AddMaterial(material);
     materialMap[aimaterial] = id;
@@ -177,8 +164,9 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         MeshID meshId = GetMeshFromAssimpMesh(aimesh, path, meshMap);
         MaterialID materialId = GetMaterialFromAssimpMaterial(aiscene, aimaterial, path, materialMap, textureMap);
 
-        std::string name = MeshManager::GetMesh(meshId)->GetName() + node->mName.C_Str();
+        std::string name = node->mName.C_Str();
         Entity entity = scene.CreateEntity(name);
+        entity.GetComponent<EntityMetadata>().createdFromModel = true;
         if (name.size() == 0)
         {
             entity.GetComponent<EntityMetadata>().name = std::to_string((uint32_t)entity.GetId());
@@ -194,7 +182,7 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         transform.scale = {scale.x, scale.y, scale.z};
 
         entity.AddComponent<Transform>(transform);
-        entity.AddComponent<MeshRendererComponent>(meshId, materialId);
+        entity.AddComponent<MeshRenderer>(meshId, materialId);
     }
 
     for (int i = 0; i < node->mNumChildren; i++)
@@ -220,4 +208,6 @@ void ModelImporter::Import(std::string_view filename, Scene &scene)
     ProcessNode(scene, aiscene, rootNode, basePath, meshMap, materialMap, textureMap);
 
     importer.FreeScene();
+
+    scene.AddModelFileImporter(filename.data());
 }

@@ -25,7 +25,7 @@ public:
 
     static const std::unordered_map<TextureID, std::shared_ptr<Texture>> &GetMap();
 
-    static constexpr TextureID GetInvalidID()
+    static consteval TextureID GetInvalidID()
     {
         return (TextureID)UINT64_MAX;
     }

@@ -28,7 +28,7 @@ struct ShadowPushConstant
 class Light
 {
 public:
-    void Initialize();
+    static void Initialize();
     const glm::vec3 &GetPosition() const;
     const glm::vec3 &GetDirection() const;
     const glm::vec3 &GetColor() const;
@@ -61,6 +61,7 @@ public:
     glm::mat4 GetPointProjection(const glm::vec3 &front, const glm::vec3 &up) const;
 
 private:
+    friend class Editor;
     glm::vec3 mPosition = glm::vec3(0, 0, 0);
     glm::vec3 mDirection = glm::vec3(0, -1, 0);
     glm::vec3 mColor = glm::vec3(1, 1, 1);
@@ -76,14 +77,14 @@ private:
     ImageDeprecated mShadowMap;
     LightType mType = LightType::PointLight;
 
-    CommandBuffer mCommandBuffer;
-    GraphicsPipeline mPointLightPipeline;
-    GraphicsPipeline mDirectionalShadowPipeline;
-    RenderPass mRenderPass;
-    Descriptor mDescriptor;
-    UniformBuffer mUniformBuffer;
-    ShadowMapUniformData mUniformData;
-    Sampler mSampler;
+    static CommandBuffer mCommandBuffer;
+    static GraphicsPipeline mPointLightPipeline;
+    static GraphicsPipeline mDirectionalShadowPipeline;
+    static RenderPass mRenderPass;
+    static Descriptor mDescriptor;
+    static UniformBuffer mUniformBuffer;
+    static ShadowMapUniformData mUniformData;
+    static Sampler mSampler;
 
     Camera mCamera;
     bool mUseTightMatrix = false;

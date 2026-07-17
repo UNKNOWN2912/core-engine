@@ -92,6 +92,8 @@ void Light::GeneratePointLightShadowMap(const std::vector<RenderCommand> &render
     {
         mIsCubeMap = true;
         DestroyImage(mShadowMap);
+        mFrameBuffers.clear();
+
         mShadowMap = CreateCubeMapImage(glm::uvec2(mShadowMapResolution), ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler,
                                         ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
         FrameBuffer frameBuffer;
@@ -177,16 +179,17 @@ void Light::GeneratePointLightShadowMap(const std::vector<RenderCommand> &render
 }
 void Light::GenerateDirectionalLightShadowMap(const std::vector<RenderCommand> &renderCommands)
 {
-    if (!mShadowMapOutdated)
-    {
-        return;
-    }
+    // if (!mShadowMapOutdated)
+    // {
+    //     return;
+    // }
 
     int cascadeCount = 4;
     if (mIsCubeMap || mShadowMap.handle == VK_NULL_HANDLE)
     {
         mIsCubeMap = false;
         DestroyImage(mShadowMap);
+        mFrameBuffers.clear();
         mShadowMap = CreateImage(glm::uvec2(mShadowMapResolution), ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler,
                                  ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One, cascadeCount);
 
@@ -255,6 +258,7 @@ void Light::GenerateSpotLightShadowMap(const std::vector<RenderCommand> &renderC
     if (mIsCubeMap)
     {
         DestroyImage(mShadowMap);
+
         mShadowMap = CreateImage(glm::uvec2(mShadowMapResolution), ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler,
                                  ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
         mIsCubeMap = false;
@@ -449,7 +453,7 @@ glm::mat4 Light::GetDirectionalProjection(uint32_t cascadeIndex) const
 glm::mat4 Light::GetPointProjection(const glm::vec3 &front, const glm::vec3 &up) const
 {
     glm::mat4 view = glm::lookAt(mPosition, mPosition + front, up);
-    glm::mat4 projection = glm::perspective(glm::radians(90.f), 1.f, 0.01f, 100.f);
+    glm::mat4 projection = glm::perspective(glm::radians(90.f), 1.f, 0.2f, 100.f);
     return projection * view;
 }
 
@@ -471,3 +475,12 @@ LightType Light::GetType() const
 {
     return mType;
 }
+
+CommandBuffer Light::mCommandBuffer;
+GraphicsPipeline Light::mPointLightPipeline;
+GraphicsPipeline Light::mDirectionalShadowPipeline;
+RenderPass Light::mRenderPass;
+Descriptor Light::mDescriptor;
+UniformBuffer Light::mUniformBuffer;
+ShadowMapUniformData Light::mUniformData;
+Sampler Light::mSampler;

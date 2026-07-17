@@ -1,1 +1,1 @@
-add_subdirectory(RendererRework)
+add_subdirectory(Editor)

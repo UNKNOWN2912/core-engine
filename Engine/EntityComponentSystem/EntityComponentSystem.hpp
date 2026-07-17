@@ -11,6 +11,7 @@ enum class ComponentId : uint64_t;
 struct EntityMetadata
 {
     std::string name;
+    bool createdFromModel = false;
 };
 
 class Scene;
@@ -35,7 +36,7 @@ public:
     ComponentType &AddComponent(Args... args);
 
     template <typename ComponentType>
-    bool HasComponent();
+    bool HasComponent() const;
 
     bool operator==(const Entity &entity) const
     {
@@ -242,9 +243,21 @@ public:
         return false;
     }
 
+    void AddModelFileImporter(const std::string &filename)
+    {
+        mModelFileDependency.push_back(filename);
+    }
+
+    const std::vector<std::string> &GetModelFileImporter() const
+    {
+        return mModelFileDependency;
+    }
+
 private:
     std::vector<Entity> mEntities;
     std::vector<ComponentStoragePair> mStorage;
+
+    std::vector<std::string> mModelFileDependency;
     EntityId mLastId = (EntityId)UINT64_MAX;
 };
 
@@ -267,7 +280,7 @@ ComponentType &Entity::AddComponent(Args... args)
 }
 
 template <typename ComponentType>
-inline bool Entity::HasComponent()
+inline bool Entity::HasComponent() const
 {
     return mScene->HasComponent<ComponentType>(*this);
 }

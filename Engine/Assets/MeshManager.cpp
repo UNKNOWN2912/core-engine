@@ -26,7 +26,7 @@ void MeshManager::DestroyMesh(MeshID id)
 }
 std::shared_ptr<Mesh> MeshManager::GetMesh(MeshID id)
 {
-    return mMeshMap[id];
+    return (mMeshMap.contains(id)) ? mMeshMap.at(id) : nullptr;
 }
 bool MeshManager::HasMesh(MeshID id)
 {

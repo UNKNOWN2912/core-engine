@@ -1,5 +1,7 @@
 ﻿find_package(Vulkan REQUIRED)
 
+
+
 file(GLOB sources   
     "Core/*.cpp"
     "Maths/*.cpp" 
@@ -22,6 +24,7 @@ file(GLOB platformSource
 endif()
 
 include_directories("$ENV{VULKAN_SDK}/Include/")
+include_directories("Vendor/json/single_include/nlohmann/")
 
 # add_subdirectory(Platform)
 add_subdirectory(Vendor)
@@ -29,7 +32,8 @@ add_subdirectory(Vendor)
 
 add_library(Engine STATIC ${sources} ${platformSource})
 
-# target_link_libraries(Engine Platform)
+target_link_libraries(Engine nlohmann_json)
 target_link_libraries(Engine assimp)
 target_link_libraries(Engine glfw)
 target_link_libraries(Engine Vulkan::Vulkan)
+

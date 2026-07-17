@@ -240,6 +240,8 @@ const Sampler &Texture::GetSampler() const
 void Texture::Destroy()
 {
     if (mIsValid)
+    {
         DestroyImage(mImage);
+    }
     mIsValid = false;
 }

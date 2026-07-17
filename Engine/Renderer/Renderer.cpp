@@ -49,6 +49,8 @@ void Renderer::Initialize(const RendererSpecification &specification)
     mBufferDescriptor.CreateDescriptor();
     mBufferDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
     mBufferDescriptor.UpdateBuffer(mLightStorageBuffer.GetBuffer(), 1);
+
+    mViewportSize = mResolution;
 }
 
 void Renderer::Terminate()
@@ -122,11 +124,11 @@ void Renderer::SetSampleCount(const SampleCount &sampleCount)
     Renderer::mSampleCount = sampleCount;
 };
 
-Surface Renderer::CreateSurface(const Window &window)
+Surface Renderer::CreateSurface(const Window &window, ImageFormat format)
 {
     Surface surface;
     surface.handle = window.CreateWindowSurface();
-    surface.swapchain.CreateSwapchain(surface.handle, ImageFormat::BGRA8, ColorSpace::SRGBNonLinear, PresentMode::Fifo);
+    surface.swapchain.CreateSwapchain(surface.handle, format, ColorSpace::SRGBNonLinear, PresentMode::Fifo);
 
     for (const ImageDeprecated &image : surface.swapchain.GetImages())
     {
@@ -245,6 +247,8 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
     renderCommand.pipelineSettings.enableDepthTest = material.enableDepthTest;
     renderCommand.pipelineSettings.enableDepthWrite = material.enableDepthWrite;
 
+    UINT32_MAX;
+
     PushConstantData data;
     data.model = transform.GetMatrix();
     data.albedoIndex = (uint32_t)material.albedo;
@@ -255,6 +259,7 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
     data.roughness = material.roughnessFactor;
     data.metallic = material.metallicFactor;
     data.indexOfRefraction = material.indexOfRefraction;
+    data.color = material.colorFactor;
 
     memcpy(renderCommand.pushContantData, &data, sizeof(data));
     renderCommand.pushContantSize = sizeof(data);
@@ -361,13 +366,22 @@ void Renderer::CreateGraphicsPipeline(ShaderID id)
 
     mShaderPipelineMap[id] = pipeline;
 }
-VkRenderPass Renderer::GetRenderPass()
+RenderPass &Renderer::GetRenderPass()
 {
-    return mSceneRenderPass.GetHandle();
+    return mSceneRenderPass;
 }
 const RenderPass &Renderer::GetPresentRenderPass()
 {
     return mPresentRenderPass;
+}
+const glm::uvec2 &Renderer::GetViewportSize()
+{
+    return mViewportSize;
+}
+
+void Renderer::SetViewportSize(const glm::uvec2 &size)
+{
+    mViewportSize = size;
 }
 
 void Renderer::CreateSceneRenderPassMultisampled()
@@ -440,8 +454,8 @@ void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand)
 
     VkViewport viewport =
         {
-            .width = (float)mResolution.x,
-            .height = (float)mResolution.y,
+            .width = (float)mViewportSize.x,
+            .height = (float)mViewportSize.y,
             .minDepth = 0.f,
             .maxDepth = 1.f,
         };
@@ -474,7 +488,6 @@ void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand)
 FrameInfo Renderer::mFrameInfo;
 SampleCount Renderer::mSampleCount = SampleCount::Four;
 glm::uvec2 Renderer::mResolution = glm::uvec2(1920, 1080);
-// GraphicsPipeline Renderer::mScenePipeline;
 RenderPass Renderer::mSceneRenderPass;
 FrameBuffer Renderer::mSceneFrameBuffer;
 ImageDeprecated Renderer::mSceneColorAttachment;
@@ -502,3 +515,4 @@ Descriptor Renderer::mBufferDescriptor;
 ShaderID Renderer::mBasicShaderID;
 std::unordered_map<ShaderID, GraphicsPipeline> Renderer::mShaderPipelineMap;
 uint32_t Renderer::mInputInt;
+glm::uvec2 Renderer::mViewportSize;

@@ -35,7 +35,7 @@ TextureID TextureManager::CreateTexture(void *data, const glm::uvec2 &size, Imag
     TextureID id = GenerateID();
 
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    texture->Create(data, size, format);
+    texture->Create(data, size, format, Filter::Linear, Filter::Linear, AddressMode::Border);
 
     mTextureMap[id] = texture;
 
@@ -51,7 +51,7 @@ void TextureManager::DestroyTexture(TextureID id)
 
 std::shared_ptr<Texture> TextureManager::GetTexture(TextureID id)
 {
-    return mTextureMap[id];
+    return mTextureMap.at(id);
 }
 
 bool TextureManager::HasTexture(TextureID id)

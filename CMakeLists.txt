@@ -22,6 +22,7 @@ include_directories("Engine/Vendor/glm/")
 include_directories("Engine/Vendor/stb/")
 include_directories("Engine/Vendor/assimp/include/")
 include_directories("out/Engine/Vendor/assimp/include/")
+include_directories("out/Engine/Vendor/msdfgen/generated_include/")
 # Include sub-projects.
 add_subdirectory ("Engine")
 add_subdirectory ("Project")

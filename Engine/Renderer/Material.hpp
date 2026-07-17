@@ -36,7 +36,7 @@ struct Material
 
     CullMode cullMode = CullMode::Back;
 
-    glm::vec3 colorFactor = glm::vec3(0);
+    glm::vec4 colorFactor = glm::vec4(0);
     float roughnessFactor = 0.5;
     float metallicFactor = 0.0;
 

@@ -24,9 +24,9 @@ void MaterialManager::DestroyMaterial(MaterialID materialId)
     mMaterialMap[materialId].reset();
 }
 
-std::shared_ptr<Material> MaterialManager::GetMaterial(MaterialID materialId)
+std::shared_ptr<Material> MaterialManager::GetMaterial(MaterialID id)
 {
-    return mMaterialMap[materialId];
+    return mMaterialMap.contains(id) ? mMaterialMap.at(id) : nullptr;
 }
 
 bool MaterialManager::HasMaterial(MaterialID materialId)
