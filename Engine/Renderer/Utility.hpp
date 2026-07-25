@@ -1,0 +1,50 @@
+#pragma once
+#include "Renderer/Types.hpp"
+#include <glm/glm.hpp>
+#include <vector>
+#include <vulkan/vulkan.h>
+
+struct Buffer
+{
+    VkBuffer handle = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    size_t size = 0;
+    void *map = nullptr;
+};
+
+struct ImageDeprecated
+{
+    VkImage handle = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView view = VK_NULL_HANDLE;
+    VkDeviceSize memorySize = 0;
+    glm::uvec2 size = {0, 0};
+    ImageFormat format;
+};
+
+uint32_t FindMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags memoryProperties);
+
+Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryProperties);
+void DestroyBuffer(Buffer &buffer);
+void TransferBufferData(const Buffer &srcBuffer, Buffer &dstBuffer);
+
+ImageDeprecated CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t layerCount = 1, uint32_t mipmapCount = 1);
+ImageDeprecated CreateCubeMapImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount);
+void DestroyImage(ImageDeprecated &image);
+
+VkImageView CreateImageView(VkImage image, ImageFormat format, ImageAspect aspect);
+
+VkCommandBuffer AllocateCommandBuffer(VkCommandPool commandPool);
+void BeginCommandBuffer(VkCommandBuffer commandBuffer, bool singleUse);
+void EndCommandBuffer(VkCommandBuffer commandBuffer);
+void ExecuteCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue);
+VkShaderModule CreateShaderModuleFromMemory(VkDevice device, const std::vector<uint32_t> &code);
+VkShaderModule CreateShaderFromFile(VkDevice device, const char *filename);
+
+VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescriptorSetLayoutBinding> bindings);
+VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize> sizes, uint32_t maxSets);
+VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout setLayout, VkDescriptorPool descriptorPool);
+VkPipelineLayout CreatePipelineLayout(std::initializer_list<VkDescriptorSetLayout> setLayouts, std::initializer_list<VkPushConstantRange> pushConstant);
+
+void TransitionImageLayout(ImageLayout oldLayout, ImageLayout newLayout, ImageAspect aspectMask, const ImageDeprecated &image);
+void TransferImageData(const Buffer &srcBuffer, ImageDeprecated &dstImage, ImageAspect aspectMask);
