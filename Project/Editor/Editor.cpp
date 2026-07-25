@@ -40,10 +40,7 @@ class Editor : public Application
 
     std::shared_ptr<Mesh> mBillboard = std::make_shared<Mesh>();
 
-    Font mFont;
-
-    void
-    OnInitialize() override
+    void OnInitialize() override
     {
         int scale = 240;
         Renderer::SetResolution({16 * scale, 9 * scale});
@@ -66,14 +63,14 @@ class Editor : public Application
         modelImporter.Import("./Models/City/scene.gltf", mScene);
 
         std::shared_ptr<Material> skyboxMaterial = std::make_shared<Material>();
-        skyboxMaterial->shader = ShaderManager2::Load("Shaders/skybox.vert.spv", "Shaders/skybox.frag.spv");
+        skyboxMaterial->shader = ShaderManager::Load("Shaders/skybox.vert.spv", "Shaders/skybox.frag.spv");
         skyboxMaterial->cullMode = CullMode::None;
         skyboxMaterial->enableDepthTest = false;
         skyboxMaterial->enableDepthWrite = false;
         skyboxMaterial->name = "skybox";
 
         Entity skyboxEntity = mScene.GetEntityByName("Cube");
-        MeshRenderer &meshRenderer = skyboxEntity.GetComponent<MeshRenderer>();
+        MeshRendererComponent &meshRenderer = skyboxEntity.GetComponent<MeshRendererComponent>();
         meshRenderer.material = MaterialManager::AddMaterial(skyboxMaterial);
 
         Light::Initialize();
@@ -83,9 +80,16 @@ class Editor : public Application
 
         TextRenderer::Initialize();
 
-        FontImporter fontImporter;
-        mFont = fontImporter.Import("Fonts/GoogleSans-Regular.ttf");
+        FontID id = FontManager::Load("Fonts/GoogleSans-Regular.ttf", 128);
+
+        mTextEntity = mScene.CreateEntity("Text");
+        mTextEntity.AddComponent<Transform>();
+        auto &text = mTextEntity.AddComponent<TextComponent>();
+        text.text = "Hello world";
+        text.fontId = id;
     }
+
+    Entity mTextEntity;
 
     void OnWindowResize(const glm::uvec2 &size) override
     {
@@ -105,6 +109,8 @@ class Editor : public Application
         mController.Update();
         mCamera.Calculate();
 
+        mTextEntity.GetComponent<TextComponent>().text = std::to_string(GetFps());
+
         TextRenderer::SetCamera(mCamera);
 
         Renderer::BeginLightPlacement();
@@ -123,15 +129,27 @@ class Editor : public Application
 
         Renderer::BeginFrame(mCamera);
 
-        for (const auto &[entity, component] : mScene.GetEntities<MeshRenderer>())
+        for (const auto &[entity, component] : mScene.GetEntities<MeshRendererComponent>())
         {
-            if (component.material != (MaterialID)UINT64_MAX && component.mesh != (MeshID)UINT64_MAX)
+            if (component.material == (MaterialID)UINT64_MAX || component.mesh == (MeshID)UINT64_MAX)
             {
-                Renderer::Submit(component.material, component.mesh, entity.GetComponent<Transform>());
+                continue;
             }
+
+            Renderer::Submit(component.material, component.mesh, entity.GetComponent<Transform>());
         }
 
-        TextRenderer::DrawText(mFont, "Hello");
+        for (const auto &[entity, textComponent] : mScene.GetEntities<TextComponent>())
+        {
+            if (textComponent.fontId == INVALID_FONT_ID && entity.HasComponent<Transform>())
+            {
+                continue;
+            }
+
+            TextRenderer::DrawText(FontManager::GetFont(textComponent.fontId), textComponent.text, textComponent.spacing, textComponent.color, entity.GetComponent<Transform>());
+        }
+
+        TextRenderer::Flush();
 
         Renderer::EndFrame();
 
@@ -178,8 +196,6 @@ class Editor : public Application
         vkCmdSetCullMode(Renderer::mPresentCommandBuffer.GetHandle(), VK_CULL_MODE_NONE);
         vkCmdSetDepthTestEnable(Renderer::mPresentCommandBuffer.GetHandle(), false);
         vkCmdSetDepthWriteEnable(Renderer::mPresentCommandBuffer.GetHandle(), false);
-
-        // vkCmdDraw(Renderer::mPresentCommandBuffer.GetHandle(), 6, 1, 0, 0);
 
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Renderer::mPresentCommandBuffer.GetHandle());
 

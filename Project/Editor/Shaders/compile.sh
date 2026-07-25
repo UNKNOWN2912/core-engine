@@ -5,3 +5,4 @@ echo "Compiling shaders"
 ./compile_shader.sh shadow
 ./compile_shader.sh directional
 ./compile_shader.sh physical
+./compile_shader.sh text

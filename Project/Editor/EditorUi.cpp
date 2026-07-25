@@ -5,6 +5,7 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include <Core/Application.hpp>
+#include <filesystem>
 #include <format>
 
 const char *const imguiColorName[] =
@@ -73,6 +74,104 @@ const char *const imguiColorName[] =
         "ImGuiCol_NavWindowingDimBg",
         "ImGuiCol_ModalWindowDimBg",
 };
+
+struct FileDialogOpenFileConfig
+{
+};
+
+struct FileDialogOpenDirectoryConfig
+{
+};
+
+struct WidgetData
+{
+    bool opened = false;
+    std::filesystem::path currentDirectory;
+    std::filesystem::path selectedPath;
+};
+
+class FileDialog
+{
+public:
+    bool OpenFile(std::string_view label, std::string_view rootDirectory, std::string &file, const FileDialogOpenFileConfig &config = {});
+    bool OpenDirectory(std::string_view label, std::string_view rootDirectory, std::string &directory, const FileDialogOpenDirectoryConfig &config = {});
+
+private:
+    std::unordered_map<std::string, WidgetData> mData;
+};
+
+bool FileDialog::OpenFile(std::string_view label, std::string_view rootDirectory, std::string &file, const FileDialogOpenFileConfig &config)
+{
+
+    WidgetData &data = mData[label.data()];
+    if (data.opened)
+    {
+    }
+    else
+    {
+        if (rootDirectory == ".")
+        {
+            data.currentDirectory = std::filesystem::current_path();
+        }
+        else
+        {
+            data.currentDirectory = std::filesystem::absolute(rootDirectory);
+        }
+    }
+
+    ImGui::Begin(label.data());
+    ImGui::Text("dir: %s", data.currentDirectory.c_str());
+
+    if (ImGui::Selectable(".."))
+    {
+        data.currentDirectory = data.currentDirectory.parent_path();
+    }
+
+    std::string typeString = "F: ";
+    for (const auto &entry : std::filesystem::directory_iterator(data.currentDirectory))
+    {
+        typeString = "F: ";
+        if (entry.is_directory())
+        {
+            typeString = "D: ";
+        }
+
+        std::string displayPath = typeString + std::filesystem::relative(entry.path(), data.currentDirectory).string();
+        if (ImGui::Selectable(displayPath.c_str(), data.selectedPath == entry.path(), ImGuiSelectableFlags_AllowDoubleClick))
+        {
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            {
+                if (entry.is_directory())
+                {
+                    data.currentDirectory = std::filesystem::absolute(entry.path());
+                }
+                else
+                {
+                    data.opened = false;
+                    file = std::filesystem::absolute(entry.path());
+                    ImGui::End();
+                    return true;
+                }
+            }
+            else
+            {
+                data.selectedPath = entry.path();
+            }
+        }
+    }
+
+    ImGui::End();
+
+    data.opened = true;
+    return false;
+}
+
+bool FileDialog::OpenDirectory(std::string_view label, std::string_view rootDirectory, std::string &directory, const FileDialogOpenDirectoryConfig &config)
+{
+    ImGui::Begin(label.data());
+
+    ImGui::End();
+}
 
 void EditorUI::Initialize(const ImageDeprecated &sceneImage, const Window &window, const Surface &surface)
 {
@@ -168,18 +267,45 @@ void EditorUI::TextureSelector(std::string_view label, TextureID &textureId)
         textureName = TextureManager::GetTexture(textureId)->GetName();
     }
 
-    if (ImGui::BeginCombo(label.data(), textureName.c_str()))
+    if (!ImGui::BeginCombo(label.data(), textureName.c_str()))
     {
-        for (const auto &[id, texture] : TextureManager::GetMap())
-        {
-            if (ImGui::Selectable(texture->GetName().c_str(), id == textureId))
-            {
-                textureId = id;
-            }
-        }
-        ImGui::EndCombo();
+        return;
     }
+
+    for (const auto &[id, texture] : TextureManager::GetMap())
+    {
+        if (ImGui::Selectable(texture->GetName().c_str(), id == textureId))
+        {
+            textureId = id;
+        }
+    }
+    ImGui::EndCombo();
 }
+
+void EditorUI::FontSelector(std::string_view label, FontID &fontId)
+{
+    std::string fontName = "None";
+    if (FontManager::HasFont(fontId))
+    {
+        fontName = FontManager::GetFont(fontId).GetName();
+    }
+
+    if (!ImGui::BeginCombo(label.data(), fontName.c_str()))
+    {
+        return;
+    }
+
+    for (const auto &[id, font] : FontManager::GetMap())
+    {
+        if (ImGui::Selectable(font.GetName().c_str(), id == fontId))
+        {
+            fontId = id;
+        }
+    }
+
+    ImGui::EndCombo();
+}
+
 void EditorUI::SetScene(Scene &scene)
 {
     mScene = &scene;
@@ -194,8 +320,10 @@ void EditorUI::OnRender(Camera &camera, CameraController &controller)
 
     ImGui::DockSpaceOverViewport();
 
+    MainMenuBar();
+    BezierView();
     StyleEditor();
-    ViewPanel(camera);
+    ValuePanel(camera);
     GameView(camera, controller);
     PropertyPanel();
     EntityPanel();
@@ -251,11 +379,15 @@ void EditorUI::PropertyPanel()
         {
             if (ImGui::Button("Mesh Renderer"))
             {
-                mSelectedEntity.AddComponent<MeshRenderer>();
+                mSelectedEntity.AddComponent<MeshRendererComponent>();
             }
             if (ImGui::Button("Light"))
             {
                 mSelectedEntity.AddComponent<Light>();
+            }
+            if (ImGui::Button("Text"))
+            {
+                mSelectedEntity.AddComponent<TextComponent>();
             }
             ImGui::EndPopup();
         }
@@ -264,11 +396,15 @@ void EditorUI::PropertyPanel()
         MeshRendererController();
         LightController();
         EntityMetadataController();
+        TextComponentController();
     }
 
     ImGui::End();
 }
-void EditorUI::ViewPanel(Camera &camera)
+
+FileDialog dialog;
+
+void EditorUI::ValuePanel(Camera &camera)
 {
     ImGui::Begin("Value editor");
 
@@ -283,12 +419,114 @@ void EditorUI::ViewPanel(Camera &camera)
     camera.SetFront(DragFloat3("Front", camera.GetFront(), 0.01f));
 
     ImGui::SeparatorText("Text Renderer");
-    float spacing = TextRenderer::GetSpacing();
-    ImGui::DragFloat("spacing", &spacing, 0.01f);
-    TextRenderer::SetSpacing(spacing);
 
     ImGui::End();
 }
+
+ImVec2 glmVec2toImVec2(const glm::vec2 &value)
+{
+    return {value.x, value.y};
+}
+
+int count = 0;
+
+glm::vec2 QuadraticBezierCurve(const glm::vec2 &p0, const glm::vec2 &p1, const glm::vec2 &p2, float t)
+{
+    glm::vec2 c = glm::mix(p0, p1, t);
+    glm::vec2 d = glm::mix(p1, p2, t);
+
+    glm::vec2 result = glm::mix(c, d, t);
+    return result;
+}
+
+void EditorUI::BezierView()
+{
+    ImGui::Begin("Bezier view");
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+    FontID id = FontID(0);
+    const Font &font = FontManager::GetFont(id);
+    const Glyph &glyph = font.GetGlyph('C');
+    float scale = 1000.f;
+
+    // for (int i = 0; i < glyph.contours.size(); i++)
+    // {
+    //     for (int j = 0; j < glyph.contours[i].points.size(); j++)
+    //     {
+    //         glm::vec2 p0 = ((glyph.contours[i].points[j].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+    //         drawList->AddCircleFilled(glmVec2toImVec2(p0), 5, IM_COL32(255, 255, 255, 255));
+    //     }
+    // }
+
+    for (int i = 0; i < glyph.contours.size(); i++)
+    {
+        const Contour &contour = glyph.contours[i];
+
+        for (int c = 1; c < contour.points.size(); c++)
+        {
+            glm::vec2 p0 = glm::vec2(0);
+            glm::vec2 p1 = glm::vec2(0);
+            glm::vec2 p2 = glm::vec2(0);
+            // on on
+            if (contour.points[c - 1].control == ContourPointType::On && contour.points[c].control == ContourPointType::On)
+            {
+                p0 = ((contour.points[c - 1].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+                p2 = ((contour.points[c].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+                p1 = glm::mix(p0, p2, 0.5);
+
+                // drawList->AddBezierQuadratic(glmVec2toImVec2(p0), glmVec2toImVec2(p1), glmVec2toImVec2(p2), IM_COL32(255, 255, 255, 255), 0.3);
+
+                for (int k = 0; k <= count; k++)
+                {
+                    glm::vec2 m = QuadraticBezierCurve(p0, p1, p2, float(k) / float(count));
+                    drawList->AddCircleFilled(glmVec2toImVec2(m), 5.f, IM_COL32_WHITE);
+                }
+            }
+            // on quadratic on
+            else if (contour.points[c - 1].control == ContourPointType::On && contour.points[c].control == ContourPointType::Quadratic && contour.points[c + 1].control == ContourPointType::On)
+            {
+                p0 = ((contour.points[c - 1].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+                p2 = ((contour.points[c + 1].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+                p1 = glm::mix(p0, p2, 0.5);
+                // p1 = ((contour.points[c].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+
+                // drawList->AddBezierQuadratic(glmVec2toImVec2(p0), glmVec2toImVec2(p1), glmVec2toImVec2(p2), IM_COL32(255, 255, 255, 255), 0.3);
+                for (int k = 0; k <= count; k++)
+                {
+                    glm::vec2 m = QuadraticBezierCurve(p0, p1, p2, float(k) / float(count));
+                    drawList->AddCircleFilled(glmVec2toImVec2(m), 5.f, IM_COL32_WHITE);
+                }
+            }
+            // quadratic quadratic
+            else if (contour.points[c - 1].control == ContourPointType::Quadratic && contour.points[c].control == ContourPointType::Quadratic)
+            {
+                p0 = ((contour.points[c - 1].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+                p2 = ((contour.points[c].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+                p1 = glm::mix(p0, p2, 0.5);
+                // drawList->AddBezierQuadratic(glmVec2toImVec2(p0), glmVec2toImVec2(p1), glmVec2toImVec2(p2), IM_COL32(255, 255, 255, 255), 0.3);
+                for (int k = 0; k <= count; k++)
+                {
+                    glm::vec2 m = QuadraticBezierCurve(p0, p1, p2, float(k) / float(count));
+                    drawList->AddCircleFilled(glmVec2toImVec2(m), 5.f, IM_COL32_WHITE);
+                }
+            }
+        }
+
+        uint32_t secondLastPos = contour.points.size() - 1;
+        uint32_t lastPos = 0;
+        if (contour.points[secondLastPos].control == ContourPointType::On && contour.points[lastPos].control == ContourPointType::On)
+        {
+            glm::vec2 p0 = ((contour.points[secondLastPos].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+            glm::vec2 p2 = ((contour.points[lastPos].position / glyph.pixelSize) * scale) + glm::vec2(100.f) + glm::vec2(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+            glm::vec2 p1 = glm::mix(p0, p2, 0.5);
+            drawList->AddBezierQuadratic(glmVec2toImVec2(p0), glmVec2toImVec2(p1), glmVec2toImVec2(p2), IM_COL32(255, 255, 255, 255), 0.3);
+        }
+    }
+    ImGui::SliderInt("Count", &count, 0, 20);
+
+    ImGui::End();
+}
+
 void EditorUI::GameView(Camera &camera, CameraController &controller)
 {
     ImGui::Begin("Game view");
@@ -370,15 +608,34 @@ void EditorUI::EntityMetadataController()
     ImGui::PopID();
 }
 
+void EditorUI::TextComponentController()
+{
+    if (!mSelectedEntity.HasComponent<TextComponent>())
+    {
+        return;
+    }
+
+    ImGui::SeparatorText("Text");
+    ImGui::PushID("Text");
+
+    TextComponent &component = mSelectedEntity.GetComponent<TextComponent>();
+    ImGui::InputText("Text", &component.text);
+    component.spacing = DragFloat("Spacing", component.spacing, 0.01f);
+    FontSelector("Font", component.fontId);
+    ImGui::ColorEdit4("Color", &component.color.x);
+
+    ImGui::PopID();
+}
+
 void EditorUI::MeshRendererController()
 {
-    if (!mSelectedEntity.HasComponent<MeshRenderer>())
+    if (!mSelectedEntity.HasComponent<MeshRendererComponent>())
     {
         return;
     }
 
     ImGui::PushID("MeshRendererComponent");
-    MeshRenderer &component = mSelectedEntity.GetComponent<MeshRenderer>();
+    MeshRendererComponent &component = mSelectedEntity.GetComponent<MeshRendererComponent>();
     ImGui::SeparatorText("Mesh Renderer");
 
     std::shared_ptr<Mesh> cMesh = MeshManager::GetMesh(component.mesh);
@@ -488,9 +745,33 @@ void EditorUI::LightController()
     }
     ImGui::PopID();
 }
+
 void EditorUI::AddImages(const Image &image)
 {
     mViewImages.emplace_back(image.GetImageView().GetHandle(), image.GetSize());
+}
+
+void EditorUI::MainMenuBar()
+{
+    ImGui::BeginMainMenuBar();
+
+    if (ImGui::BeginMenu("File"))
+    {
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Edit"))
+    {
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("View"))
+    {
+        MenuItem("Texture Manager", [&]() { mEnableImageImporter = true; });
+        ImGui::EndMenu();
+    }
+
+    ImGui::EndMainMenuBar();
 }
 
 void EditorUI::SetImageForViewer(VkImageView view)
@@ -533,4 +814,27 @@ void EditorUI::ShowCursor()
 void EditorUI::HideCursor()
 {
     Application::GetInstance()->HideCursor();
+}
+
+void EditorUI::Button(std::string_view label, const std::function<void()> &onClick, const std::function<void()> &onDoubleClick)
+{
+    if (ImGui::Button(label.data()))
+    {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && onClick != nullptr)
+        {
+            onClick();
+        }
+        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && onDoubleClick != nullptr)
+        {
+            onDoubleClick();
+        }
+    }
+}
+
+void EditorUI::MenuItem(std::string_view label, const std::function<void()> &callback)
+{
+    if (ImGui::MenuItem(label.data()))
+    {
+        callback();
+    }
 }

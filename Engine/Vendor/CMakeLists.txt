@@ -1,9 +1,0 @@
-add_subdirectory(glfw)
-
-set(ASSIMP_BUILD_TESTS OFF)
-set(ASSIMP_INSTALL OFF)
-set(BUILD_SHARED_LIBS OFF)
-set(ASSIMP_BUILD_MINIZIP ON)
-set(ASSIMP_WARNINGS_AS_ERRORS OFF)
-add_subdirectory(assimp)
-add_subdirectory(json)
