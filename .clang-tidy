@@ -1,0 +1,369 @@
+# .clang-tidy — performance & readability configuration
+# Compatible with clang-tidy 14+
+# Run: clang-tidy <file> --config-file=.clang-tidy
+
+---
+Checks: >
+  -*,
+
+  # ── Readability ────────────────────────────────────────────────────────────
+  readability-avoid-const-params-in-decls,
+  readability-braces-around-statements,
+  readability-const-return-type,
+  readability-container-contains,
+  readability-container-data-pointer,
+  readability-container-size-empty,
+  readability-delete-null-pointer,
+  readability-duplicate-include,
+  readability-else-after-return,
+  readability-function-cognitive-complexity,
+  readability-identifier-naming,
+  readability-inconsistent-declaration-parameter-name,
+  readability-make-member-function-const,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-named-parameter,
+  readability-non-const-parameter,
+  readability-operators-representation,
+  readability-qualified-auto,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-redundant-function-ptr-dereference,
+  readability-redundant-member-init,
+  readability-redundant-preprocessor,
+  readability-redundant-smartptr-get,
+  readability-redundant-string-cstr,
+  readability-redundant-string-init,
+  readability-simplify-boolean-expr,
+  readability-simplify-subscript-expr,
+  readability-static-accessed-through-instance,
+  readability-static-definition-in-anonymous-namespace,
+  readability-string-compare,
+  readability-suspicious-call-argument,
+  readability-uniqueptr-delete-release,
+
+  # ── Performance ────────────────────────────────────────────────────────────
+  performance-avoid-endl,
+  performance-faster-string-find,
+  performance-for-range-copy,
+  performance-implicit-conversion-in-loop,
+  performance-inefficient-algorithm,
+  performance-inefficient-string-concatenation,
+  performance-inefficient-vector-operation,
+  performance-move-const-arg,
+  performance-move-constructor-init,
+  performance-no-automatic-move,
+  performance-no-int-to-ptr,
+  performance-noexcept-destructor,
+  performance-noexcept-move-constructor,
+  performance-noexcept-swap,
+  performance-trivially-destructible,
+  performance-type-promotion-in-math-fn,
+  performance-unnecessary-copy-initialization,
+  performance-unnecessary-value-param,
+
+  # ── Modernise (readability + perf via idioms) ──────────────────────────────
+  modernize-avoid-bind,
+  modernize-concat-nested-namespaces,
+  modernize-deprecated-headers,
+  modernize-deprecated-ios-base-aliases,
+  modernize-make-shared,
+  modernize-make-unique,
+  modernize-pass-by-value,
+  modernize-raw-string-literal,
+  modernize-redundant-void-arg,
+  modernize-replace-auto-ptr,
+  modernize-replace-disallow-copy-and-assign-macro,
+  modernize-replace-random-shuffle,
+  modernize-return-braced-init-list,
+  modernize-shrink-to-fit,
+  modernize-unary-static-assert,
+  modernize-use-bool-literals,
+  modernize-use-contains,
+  modernize-use-default-member-init,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-noexcept,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-ranges,
+  modernize-use-std-format,
+  modernize-use-std-print,
+  modernize-use-transparent-functors,
+  modernize-use-uncaught-exceptions,
+  modernize-use-using,
+
+  # ── Bugprone (catches subtle anti-patterns that also hurt clarity) ──────────
+  bugprone-argument-comment,
+  bugprone-assert-side-effect,
+  bugprone-assignment-in-if-condition,
+  bugprone-bool-pointer-implicit-conversion,
+  bugprone-branch-clone,
+  bugprone-copy-constructor-init,
+  bugprone-dangling-handle,
+  bugprone-dynamic-static-initializers,
+  bugprone-empty-catch,
+  bugprone-exception-escape,
+  bugprone-implicit-widening-of-multiplication-result,
+  bugprone-incorrect-roundings,
+  bugprone-infinite-loop,
+  bugprone-integer-division,
+  bugprone-lambda-function-name,
+  bugprone-misplaced-operator-in-strlen-in-alloc,
+  bugprone-misplaced-pointer-arithmetic-in-alloc,
+  bugprone-misplaced-widening-cast,
+  bugprone-move-forwarding-reference,
+  bugprone-multiple-statement-macro,
+  bugprone-narrowing-conversions,
+  bugprone-no-escape,
+  bugprone-not-null-terminated-result,
+  bugprone-parent-virtual-call,
+  bugprone-posix-return,
+  bugprone-redundant-branch-condition,
+  bugprone-shared-ptr-array-mismatch,
+  bugprone-signal-handler,
+  bugprone-signed-char-misuse,
+  bugprone-sizeof-container,
+  bugprone-sizeof-expression,
+  bugprone-spuriously-wake-up-functions,
+  bugprone-standalone-empty,
+  bugprone-string-constructor,
+  bugprone-string-integer-assignment,
+  bugprone-string-literal-with-embedded-nul,
+  bugprone-stringview-nullptr,
+  bugprone-suspicious-enum-usage,
+  bugprone-suspicious-include,
+  bugprone-suspicious-memory-comparison,
+  bugprone-suspicious-memset-usage,
+  bugprone-suspicious-missing-comma,
+  bugprone-suspicious-realloc-usage,
+  bugprone-suspicious-semicolon,
+  bugprone-suspicious-string-compare,
+  bugprone-swapped-arguments,
+  bugprone-terminating-continue,
+  bugprone-throw-keyword-missing,
+  bugprone-too-small-loop-variable,
+  bugprone-unchecked-optional-access,
+  bugprone-undefined-memory-manipulation,
+  bugprone-undelegated-constructor,
+  bugprone-unhandled-exception-at-new,
+  bugprone-unhandled-self-assignment,
+  bugprone-unique-ptr-array-mismatch,
+  bugprone-unsafe-functions,
+  bugprone-unused-raii,
+  bugprone-unused-return-value,
+  bugprone-use-after-move,
+  bugprone-virtual-near-miss,
+
+  # ── C++ Core Guidelines (subset — overlaps with above) ────────────────────
+  cppcoreguidelines-avoid-capturing-lambda-coroutines,
+  cppcoreguidelines-avoid-const-or-ref-data-members,
+  cppcoreguidelines-avoid-do-while,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  cppcoreguidelines-avoid-reference-coroutine-parameters,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-interfaces-global-init,
+  cppcoreguidelines-macro-usage,
+  cppcoreguidelines-narrowing-conversions,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-pro-type-static-cast-downcast,
+  <!-- cppcoreguidelines-pro-type-vararg, -->
+  cppcoreguidelines-rvalue-reference-param-not-moved,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-use-default-member-init,
+
+  # ── Misc (small, targeted) ─────────────────────────────────────────────────
+  misc-confusable-identifiers,
+  misc-const-correctness,
+  misc-coroutine-hostile-raii,
+  misc-header-include-cycle,
+  misc-include-cleaner,
+  misc-misplaced-const,
+  misc-new-delete-overloads,
+  misc-no-recursion,
+  misc-non-copyable-objects,
+  misc-non-private-member-variables-in-classes,
+  misc-redundant-expression,
+  misc-static-assert,
+  misc-throw-by-value-catch-by-reference,
+  misc-unconventional-assign-operator,
+  misc-uniqueptr-reset-release,
+  misc-unused-alias-decls,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  misc-use-anonymous-namespace,
+
+WarningsAsErrors: ''
+
+HeaderFilterRegex: '(src|include)/.*\.(h|hpp|hxx)$'
+
+FormatStyle: file
+
+CheckOptions:
+  # ── Readability ────────────────────────────────────────────────────────────
+
+  # Cognitive complexity: warn when a single function becomes too hard to follow
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: '25'
+  - key:   readability-function-cognitive-complexity.IgnoreMacros
+    value: 'true'
+
+  # Naming conventions: Google-style as a baseline (adjust to your project)
+  - key:   readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key:   readability-identifier-naming.StructCase
+    value: CamelCase
+  - key:   readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key:   readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key:   readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key:   readability-identifier-naming.ConstantCase
+    value: camelCase          # kMyConst (Google) — change to UPPER_CASE if preferred
+  - key:   readability-identifier-naming.FunctionCase
+    value: CamelBack
+  - key:   readability-identifier-naming.MethodCase
+    value: CamelBack
+  - key:   readability-identifier-naming.MemberCase
+    value: camelBack
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: 'm'
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: CamelBack
+  - key:   readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key:   readability-identifier-naming.VariableCase
+    value: camelBack
+  - key:   readability-identifier-naming.LocalVariableCase
+    value: camelBack
+  - key:   readability-identifier-naming.GlobalVariableCase
+    value: camelBack
+  - key:   readability-identifier-naming.NamespaceCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key:   readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+
+
+  # Implicit bool conversion: alert on things like if (ptr) and if (int_val)
+  - key:   readability-implicit-bool-conversion.AllowIntegerConditions
+    value: 'false'
+  - key:   readability-implicit-bool-conversion.AllowPointerConditions
+    value: 'false'
+
+  # ── Performance ────────────────────────────────────────────────────────────
+
+  # Flag large value parameters that could be passed by const-ref
+  - key:   performance-unnecessary-value-param.AllowedTypes
+    value: ''
+
+  # Inefficient string concat: warn only for loops (not simple a+b+c)
+  - key:   performance-inefficient-string-concatenation.StrictMode
+    value: 'false'
+
+  # ── Modernise ──────────────────────────────────────────────────────────────
+
+  # use-auto: only suggest auto when the type is already spelled on the RHS
+  - key:   modernize-use-auto.MinTypeNameLength
+    value: '5'
+  - key:   modernize-use-auto.RemoveStars
+    value: 'false'
+
+  # pass-by-value: only apply when the move is unambiguously beneficial
+  - key:   modernize-pass-by-value.IncludeStyle
+    value: llvm
+
+  # loop-convert: do not suggest ranged-for when the index is still needed
+  - key:   modernize-loop-convert.MinConfidence
+    value: reasonable
+  - key:   modernize-loop-convert.NamingStyle
+    value: CamelCase
+
+  # use-emplace: target the most commonly misused containers
+  - key:   modernize-use-emplace.ContainersWithPushBack
+    value: '::std::vector;::std::list;::std::deque'
+  - key:   modernize-use-emplace.SmartPointers
+    value: '::std::shared_ptr;::std::unique_ptr;::std::weak_ptr;::std::auto_ptr'
+  - key:   modernize-use-emplace.TupleTypes
+    value: '::std::pair;::std::tuple'
+  - key:   modernize-use-emplace.TupleMakeFunctions
+    value: '::std::make_pair;::std::make_tuple'
+
+  # trailing return type: only enforce on new/modified code, not lambdas
+  - key:   modernize-use-trailing-return-type.TransformFunctions
+    value: 'true'
+  - key:   modernize-use-trailing-return-type.TransformLambdas
+    value: 'false'
+
+  # ── Bugprone ───────────────────────────────────────────────────────────────
+
+  # Narrowing cast: treat signed ↔ unsigned mismatches as warnings
+  - key:   bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+    value: 'true'
+  - key:   bugprone-narrowing-conversions.WarnOnEquivalentBitWidth
+    value: 'false'
+  - key:   bugprone-narrowing-conversions.PedanticMode
+    value: 'false'
+
+  # Argument comment: alert on likely copy-paste errors in call sites
+  - key:   bugprone-argument-comment.StrictMode
+    value: 'false'
+  - key:   bugprone-argument-comment.CommentBoolLiterals
+    value: 'true'
+  - key:   bugprone-argument-comment.CommentNullPtrs
+    value: 'true'
+  - key:   bugprone-argument-comment.CommentIntegerLiterals
+    value: 'false'
+  - key:   bugprone-argument-comment.CommentStringLiterals
+    value: 'false'
+  - key:   bugprone-argument-comment.CommentFloatLiterals
+    value: 'false'
+  - key:   bugprone-argument-comment.CommentUserDefinedLiterals
+    value: 'false'
+
+  # ── Core Guidelines ────────────────────────────────────────────────────────
+
+  # macro-usage: whitelist guards and common utility macros
+  - key:   cppcoreguidelines-macro-usage.AllowedRegexp
+    value: '^(NDEBUG|DEBUG|ASSERT|CHECK|LOG|DCHECK|VLOG|NOTREACHED|DISALLOW_).*'
+  - key:   cppcoreguidelines-macro-usage.IgnoreCommandLineMacros
+    value: 'true'
+  - key:   cppcoreguidelines-macro-usage.CheckCapsOnly
+    value: 'false'
+
+  # pro-bounds: relax for operator[] on std types checked by size_empty above
+  - key:   cppcoreguidelines-pro-bounds-constant-array-index.GslHeader
+    value: ''
+
+  # ── Misc ───────────────────────────────────────────────────────────────────
+
+  # const-correctness: add const to locals that are never written after init
+  - key:   misc-const-correctness.TransformValues
+    value: 'true'
+  - key:   misc-const-correctness.TransformReferences
+    value: 'false'
+  - key:   misc-const-correctness.TransformPointersAsValues
+    value: 'false'
+  - key:   misc-const-correctness.WarnPointersAsValues
+    value: 'false'
+
+  # non-private member variables: allow POD aggregates and config structs
+  - key:   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: 'true'
+
+  # unused-parameters: only warn when there is no forwarded-to implementation
+  - key:   misc-unused-parameters.StrictMode
+    value: 'false'
