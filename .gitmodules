@@ -1,0 +1,21 @@
+[submodule "Vendor/glfw"]
+	path = Vendor/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Vendor/glm"]
+	path = Vendor/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Vendor/stb"]
+	path = Vendor/stb
+	url = https://github.com/nothings/stb.git
+[submodule "Vendor/json"]
+	path = Vendor/json
+	url = https://github.com/nlohmann/json.git
+[submodule "Vendor/uuid_v4"]
+	path = Vendor/uuid_v4
+	url = https://github.com/crashoz/uuid_v4.git
+[submodule "Vendor/freetype"]
+	path = Vendor/freetype
+	url = https://github.com/freetype/freetype.git
+[submodule "Vendor/assimp"]
+	path = Vendor/assimp
+	url = https://github.com/assimp/assimp.git
