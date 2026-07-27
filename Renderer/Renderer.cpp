@@ -17,9 +17,19 @@ void Renderer::Initialize(const RendererSpecification &specification)
     mShadowMapDescriptor.AddBindlessDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment, 1024);
     mShadowMapDescriptor.CreateDescriptor();
 
-    CreateSceneRenderPassMultisampled();
-    CreateSceneAttachmentsMultisampled();
-    CreateSceneFrameBufferMultisampled();
+    if (mSampleCount != SampleCount::One)
+    {
+
+        CreateSceneRenderPassMultisampled();
+        CreateSceneAttachmentsMultisampled();
+        CreateSceneFrameBufferMultisampled();
+    }
+    else
+    {
+        CreateSceneRenderPass();
+        CreateSceneAttachments();
+        CreateSceneFrameBuffer();
+    }
     mCommandBuffer.CreateCommandBuffer();
 
     mSampler.CreateSampler();
@@ -97,7 +107,7 @@ void Renderer::EndFrame()
 
     mCommandBuffer.BeginRecording();
 
-    mSceneRenderPass.CmdBeginRenderPass(mCommandBuffer, mSceneFrameBuffer, mResolution, {{1, 0, 1, 1}, {1, 0, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}});
+    mSceneRenderPass.CmdBeginRenderPass(mCommandBuffer, mSceneFrameBuffer, mResolution, {{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 1, 1, 1}, {1, 1, 1, 1}});
 
     RenderCommand mPreviousCommand;
 
@@ -417,6 +427,33 @@ void Renderer::CreateSceneAttachmentsMultisampled()
     mSceneColorAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment, ImageAspect::Color, MemoryProperty::DeviceLocal, mSampleCount);
     mSceneResolveAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
     mSceneDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal, mSampleCount);
+    mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
+}
+
+void Renderer::CreateSceneRenderPass()
+{
+    uint32_t colorResolve = mSceneRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    uint32_t depthResolve = mSceneRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+
+    Subpass subpass;
+    subpass.AddColorAttachment(colorResolve);
+    subpass.SetDepthAttachment(depthResolve);
+
+    mSceneRenderPass.AddSubpass(subpass, PipelineBindPoint::Graphic);
+
+    mSceneRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
+
+    mSceneRenderPass.CreateRenderPass();
+}
+
+void Renderer::CreateSceneFrameBuffer()
+{
+    mSceneFrameBuffer.CreateFrameBuffer({mSceneResolveAttachment, mSceneResolveDepthAttachment}, mSceneRenderPass);
+}
+
+void Renderer::CreateSceneAttachments()
+{
+    mSceneResolveAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
     mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
 }
 

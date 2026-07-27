@@ -26,6 +26,7 @@ VkPipelineBindPoint GetVulkanPipelineBindPoint(PipelineBindPoint bindPoint);
 VkColorSpaceKHR GetVulkanColorSpace(ColorSpace colorspace);
 VkImageViewType GetVulkanViewType(ViewType viewtype);
 VkImageType GetVulkanImageType(ImageType type);
+VkComponentSwizzle GetVulkanComponentSwizzle(ComponentSwizzle swizzle);
 
 ImageFormat GetNativeImageFormat(VkFormat imageFormat);
 ImageLayout GetNativeImageLayout(VkImageLayout imageLayout);
@@ -51,3 +52,4 @@ PipelineBindPoint GetNativePipelineBindPoint(VkPipelineBindPoint bindPoint);
 ColorSpace GetNativeColorSpace(VkColorSpaceKHR colorspace);
 ViewType GetNativeViewType(VkImageViewType viewtype);
 ImageType GetNativeImageType(VkImageType type);
+ComponentSwizzle GetNativeComponentSwizzle(VkComponentSwizzle swizzle);

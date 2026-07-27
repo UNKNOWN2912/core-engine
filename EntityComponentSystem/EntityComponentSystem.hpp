@@ -51,7 +51,7 @@ public:
 private:
     friend class Scene;
 
-    EntityId mId = (EntityId)0;
+    EntityId mId = (EntityId)UINT64_MAX;
 
     Scene *mScene = nullptr;
 };

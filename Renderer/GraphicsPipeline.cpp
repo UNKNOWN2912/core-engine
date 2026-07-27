@@ -113,7 +113,7 @@ void GraphicsPipeline::AddColorBlendAttachment(bool enableBlending)
     CHROME_TRACE_FUNCTION();
     VkPipelineColorBlendAttachmentState state =
         {
-            .blendEnable = VK_TRUE,
+            .blendEnable = enableBlending ? VK_TRUE : VK_FALSE,
             .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
             .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
             .colorBlendOp = VK_BLEND_OP_ADD,

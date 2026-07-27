@@ -326,3 +326,15 @@ enum class ImageType
     TwoDimensional,
     ThreeDimensional,
 };
+
+enum class ComponentSwizzle
+{
+    None,
+    Identity,
+    Zero,
+    One,
+    R,
+    G,
+    B,
+    A,
+};

@@ -1,5 +1,6 @@
 #include "FontImporter.hpp"
 #include "Core/Macro.hpp"
+#include "ftoutln.h"
 #include <freetype.h>
 
 class FreeTypeManager
@@ -29,6 +30,105 @@ private:
     static FT_Library mLibrary;
 };
 
+struct FreetypeUserData
+{
+    uint32_t fontSize = 0;
+    glm::vec2 start = glm::vec2(0);
+    std::vector<Contour> *contours = nullptr;
+    std::vector<BezierCurve> *bezier = nullptr;
+    Contour *currentContour = nullptr;
+    Font *font = nullptr;
+    glm::vec2 min = glm::vec2(FLT_MAX);
+    glm::vec2 max = glm::vec2(FLT_MIN);
+};
+
+glm::vec2 FtVector2ToGlmVec2(const FT_Vector *vec)
+{
+    return {vec->x, vec->y};
+}
+
+int moveTo(const FT_Vector *to, void *user)
+{
+    FreetypeUserData &data = *(FreetypeUserData *)user;
+    glm::vec2 t = {to->x / 64, to->y / 64};
+    t /= data.fontSize;
+    t.y = 1 - t.y;
+
+    data.currentContour = &data.contours->emplace_back();
+    data.currentContour->startIndex = data.bezier->size();
+    data.start = t;
+
+    return 0;
+}
+int lineTo(const FT_Vector *to, void *user)
+{
+    FreetypeUserData &data = *(FreetypeUserData *)user;
+    glm::vec2 t = {to->x / 64, to->y / 64};
+    t /= data.fontSize;
+    t.y = 1 - t.y;
+
+    BezierCurve curve;
+    curve.start = data.start;
+    curve.end = t;
+    curve.control = glm::mix(curve.start, curve.end, 0.5);
+
+    data.bezier->push_back(curve);
+    data.currentContour->count++;
+    data.start = curve.end;
+
+    data.min = glm::min(data.min, curve.start);
+    data.min = glm::min(data.min, curve.end);
+
+    data.max = glm::max(data.max, curve.start);
+    data.max = glm::max(data.max, curve.end);
+
+    return 0;
+}
+int conicTo(const FT_Vector *control, const FT_Vector *to, void *user)
+{
+    FreetypeUserData &data = *(FreetypeUserData *)user;
+    glm::vec2 t = {to->x / 64, to->y / 64};
+    t /= data.fontSize;
+    t.y = 1 - t.y;
+    glm::vec2 c = {control->x / 64, control->y / 64};
+    c /= data.fontSize;
+    c.y = 1 - c.y;
+
+    BezierCurve curve;
+    curve.start = data.start;
+    curve.end = t;
+    curve.control = c;
+
+    data.bezier->push_back(curve);
+    data.currentContour->count++;
+    data.start = curve.end;
+
+    data.min = glm::min(data.min, curve.start);
+    data.min = glm::min(data.min, curve.end);
+
+    data.max = glm::max(data.max, curve.start);
+    data.max = glm::max(data.max, curve.end);
+
+    return 0;
+}
+int cubicTo(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, void *user)
+{
+    FreetypeUserData &data = *(FreetypeUserData *)user;
+    glm::vec2 t = {to->x / 64, to->y / 64};
+    glm::vec2 c1 = {control1->x / 64, control1->y / 64};
+    glm::vec2 c2 = {control2->x / 64, control2->y / 64};
+
+    t /= data.fontSize;
+    c1 /= data.fontSize;
+    c2 /= data.fontSize;
+
+    t.y = 1 - t.y;
+    c1.y = 1 - c1.y;
+    c2.y = 1 - c2.y;
+
+    return 0;
+}
+
 Font FontImporter::Import(std::string_view filename, uint32_t size)
 {
     if (!mInitialize)
@@ -49,72 +149,67 @@ Font FontImporter::Import(std::string_view filename, uint32_t size)
         ERROR("Failed to set freetype size");
     }
 
-    std::string printableCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789{|}~:;<=>?@!\"#\\$%&'()*+,-./ ";
+    std::string printableCharacters = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ";
 
     Font font;
     for (char ch : printableCharacters)
     {
-        error = FT_Load_Char(face, ch, FT_LOAD_RENDER);
+        error = FT_Load_Char(face, ch, FT_LOAD_DEFAULT);
         if (error != FT_Err_Ok)
         {
             ERROR("Failed to load freetype char: {}", ch);
         }
         Glyph fontData;
 
-        const FT_Bitmap &bitmap = face->glyph->bitmap;
-        glm::uvec2 imageSize = glm::uvec2(bitmap.width, bitmap.rows);
-        unsigned char *data = new unsigned char[size_t(imageSize.x * imageSize.y * 4)];
+        FreetypeUserData userData;
+        userData.font = &font;
+        userData.contours = &fontData.contours;
+        userData.bezier = &font.mCurves;
+        userData.fontSize = size;
 
-        if (ch != ' ')
-        {
-            fontData.textureId = TextureManager::CreateTexture(bitmap.buffer, imageSize, ImageFormat::R8UNORM, Filter::Nearest, Filter::Nearest);
-        }
-        else
-        {
-            unsigned char spaceData[4] = {0};
-            fontData.textureId = TextureManager::CreateTexture(spaceData, {1, 1}, ImageFormat::R8UNORM, Filter::Nearest, Filter::Nearest);
-        }
-
-        FT_Outline outline = face->glyph->outline;
-        unsigned short contourStart = 0;
-
-        for (unsigned short i = 0; i < outline.n_contours; i++)
-        {
-            Contour contour;
-            for (unsigned short j = contourStart; j <= outline.contours[i]; j++)
+        FT_Outline_Funcs functions =
             {
-                ContourPoint point;
-                point.position = {outline.points[j].x / 64, outline.points[j].y / 64};
+                .move_to = moveTo,
+                .line_to = lineTo,
+                .conic_to = conicTo,
+                .cubic_to = cubicTo,
+                .shift = 0,
+                .delta = 0,
+            };
 
-                if (outline.tags[j] == FT_CURVE_TAG_ON)
-                {
-                    point.control = ContourPointType::On;
-                }
-                else if (outline.tags[j] == FT_CURVE_TAG_CUBIC)
-                {
-                    point.control = ContourPointType::Cubic;
-                }
-                else if (outline.tags[j] == FT_CURVE_TAG_CONIC)
-                {
-                    point.control = ContourPointType::Quadratic;
-                }
-
-                contour.points.push_back(point);
-            }
-            fontData.contours.push_back(contour);
-
-            contourStart = outline.contours[i];
-        }
+        FT_Outline_Decompose(&face->glyph->outline, &functions, (void *)&userData);
 
         fontData.advance = {(float)face->glyph->advance.x / 64, (float)face->glyph->advance.y / 64};
         fontData.bearing = {face->glyph->bitmap_left, face->glyph->bitmap_top};
         fontData.size = {face->glyph->bitmap.width, face->glyph->bitmap.rows};
-        fontData.pixelSize = float(size);
+        fontData.min = userData.min;
+        fontData.max = userData.max;
 
-        std::shared_ptr<Texture> texture = TextureManager::GetTexture(fontData.textureId);
-        texture->SetName(std::format("Font: {}", ch));
+        fontData.advance /= size;
+        fontData.bearing /= size;
+        fontData.size /= size;
+
+        for (int i = 0; i < fontData.contours.size(); i++)
+        {
+            const Contour &contour = fontData.contours[i];
+            for (uint32_t j = contour.startIndex; j < contour.startIndex + contour.count; j++)
+            {
+                BezierCurve &curve = font.mCurves[j];
+
+                curve.control -= fontData.min;
+                curve.end -= fontData.min;
+                curve.start -= fontData.min;
+
+                curve.control /= fontData.size;
+                curve.end /= fontData.size;
+                curve.start /= fontData.size;
+            }
+        }
+
         font.SetGlyphData(ch, fontData);
     }
+
+    font.mStorageBuffer.CreateStorageBuffer(font.mCurves.data(), font.mCurves.size() * sizeof(BezierCurve));
 
     font.SetName(filename);
 

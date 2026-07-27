@@ -5,7 +5,7 @@
 #include "Renderer/Utility.hpp"
 #include <vulkan/vulkan.h>
 
-void ImageView::CreateImageView(const ImageDeprecated &image, ViewType type, ImageAspect aspect, uint32_t baseLayer, uint32_t layerCount, uint32_t baseMipmapLevel, uint32_t mipmapCount)
+void ImageView::CreateImageView(const ImageDeprecated &image, ViewType type, ImageAspect aspect, uint32_t baseLayer, uint32_t layerCount, uint32_t baseMipmapLevel, uint32_t mipmapCount, const Swizzle &swizzle)
 {
     VkImageViewCreateInfo createInfo =
         {
@@ -15,10 +15,10 @@ void ImageView::CreateImageView(const ImageDeprecated &image, ViewType type, Ima
             .format = GetVulkanImageFormat(image.format),
             .components =
                 {
-                    .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .r = GetVulkanComponentSwizzle(swizzle.r),
+                    .g = GetVulkanComponentSwizzle(swizzle.g),
+                    .b = GetVulkanComponentSwizzle(swizzle.b),
+                    .a = GetVulkanComponentSwizzle(swizzle.a),
                 },
             .subresourceRange =
                 {
@@ -32,7 +32,7 @@ void ImageView::CreateImageView(const ImageDeprecated &image, ViewType type, Ima
 
     vkCreateImageView(GraphicsContext::GetDevice(), &createInfo, nullptr, &mHandle);
 }
-void ImageView::CreateImageView(const Image &image, ViewType type, ImageAspect aspect, uint32_t baseLayer, uint32_t layerCount, uint32_t baseMipmapLevel, uint32_t mipmapCount)
+void ImageView::CreateImageView(const Image &image, ViewType type, ImageAspect aspect, uint32_t baseLayer, uint32_t layerCount, uint32_t baseMipmapLevel, uint32_t mipmapCount, const Swizzle &swizzle)
 {
     VkImageViewCreateInfo createInfo =
         {
@@ -42,10 +42,10 @@ void ImageView::CreateImageView(const Image &image, ViewType type, ImageAspect a
             .format = GetVulkanImageFormat(image.GetFormat()),
             .components =
                 {
-                    .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .r = GetVulkanComponentSwizzle(swizzle.r),
+                    .g = GetVulkanComponentSwizzle(swizzle.g),
+                    .b = GetVulkanComponentSwizzle(swizzle.b),
+                    .a = GetVulkanComponentSwizzle(swizzle.a),
                 },
             .subresourceRange =
                 {
