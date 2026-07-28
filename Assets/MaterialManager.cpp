@@ -3,11 +3,11 @@
 MaterialID MaterialManager::LoadMaterial(std::string_view filename)
 {
     MaterialID id = GenerateID();
-    mMaterialMap[id] = std::make_shared<Material>();
+    mMaterialMap[id] = Material();
     return id;
 }
 
-MaterialID MaterialManager::AddMaterial(std::shared_ptr<Material> material)
+MaterialID MaterialManager::AddMaterial(const Material &material)
 {
     MaterialID id = GenerateID();
     mMaterialMap[id] = material;
@@ -21,27 +21,27 @@ MaterialID MaterialManager::GenerateID()
 
 void MaterialManager::DestroyMaterial(MaterialID materialId)
 {
-    mMaterialMap[materialId].reset();
+    mMaterialMap[materialId] = {};
 }
 
-std::shared_ptr<Material> MaterialManager::GetMaterial(MaterialID id)
+Material &MaterialManager::GetMaterial(MaterialID id)
 {
-    return mMaterialMap.contains(id) ? mMaterialMap.at(id) : nullptr;
+    return mMaterialMap.at(id);
 }
 
 bool MaterialManager::HasMaterial(MaterialID materialId)
 {
-    return GetMaterial(materialId) == nullptr;
+    return mMaterialMap.contains(materialId);
 }
 void MaterialManager::Clear()
 {
     mMaterialMap.clear();
 }
 
-const std::unordered_map<MaterialID, std::shared_ptr<Material>> &MaterialManager::GetMap()
+const std::unordered_map<MaterialID, Material> &MaterialManager::GetMap()
 {
     return MaterialManager::mMaterialMap;
 }
 
 uint64_t MaterialManager::mLastMaterialId = 0;
-std::unordered_map<MaterialID, std::shared_ptr<Material>> MaterialManager::mMaterialMap;
+std::unordered_map<MaterialID, Material> MaterialManager::mMaterialMap;

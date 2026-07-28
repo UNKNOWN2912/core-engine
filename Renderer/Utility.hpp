@@ -8,7 +8,7 @@ struct Buffer
 {
     VkBuffer handle = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    size_t size = 0;
+    size_t capacity = 0;
     void *map = nullptr;
 };
 

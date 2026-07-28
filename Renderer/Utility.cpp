@@ -52,7 +52,7 @@ Buffer CreateBuffer(size_t size, BufferUsage usage, MemoryProperty memoryPropert
 
     vkAllocateMemory(GraphicsContext::GetDevice(), &allocateInfo, nullptr, &buffer.memory);
 
-    buffer.size = size;
+    buffer.capacity = size;
 
     vkBindBufferMemory(GraphicsContext::GetDevice(), buffer.handle, buffer.memory, 0);
 
@@ -99,7 +99,7 @@ void TransferBufferData(const Buffer &srcBuffer, Buffer &dstBuffer)
         {
             .srcOffset = 0,
             .dstOffset = 0,
-            .size = srcBuffer.size,
+            .size = srcBuffer.capacity,
         };
 
     vkCmdCopyBuffer(commandBuffer, srcBuffer.handle, dstBuffer.handle, 1, &region);

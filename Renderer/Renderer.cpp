@@ -264,10 +264,10 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
 
     PushConstantData data;
     data.model = transform.GetMatrix();
-    data.albedoIndex = (uint32_t)material.albedo;
-    data.roughnessIndex = (uint32_t)material.roughness;
-    data.metallicIndex = (uint32_t)material.metallic;
-    data.normalIndex = (uint32_t)material.normal;
+    data.albedoIndex = (uint32_t)material.albedoTexture;
+    data.roughnessIndex = (uint32_t)material.roughnessTexture;
+    data.metallicIndex = (uint32_t)material.metallicTexture;
+    data.normalIndex = (uint32_t)material.normalTexture;
     data.inputInt = mInputInt;
     data.roughness = material.roughnessFactor;
     data.metallic = material.metallicFactor;
@@ -282,7 +282,7 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
 
 void Renderer::Submit(MaterialID material, MeshID mesh, const Transform &transform)
 {
-    Submit(*MeshManager::GetMesh(mesh), *MaterialManager::GetMaterial(material), transform);
+    Submit(*MeshManager::GetMesh(mesh), MaterialManager::GetMaterial(material), transform);
 }
 
 void Renderer::SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader)

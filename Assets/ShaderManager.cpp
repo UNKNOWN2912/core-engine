@@ -10,6 +10,11 @@ ShaderID ShaderManager::Load(std::string_view vertexFile, std::string_view fragm
     mShaderMap[id].fragment = CreateShaderFromFile(GraphicsContext::GetDevice(), fragmentFile.data());
     mShaderMap[id].geometry = geometryFile.empty() ? VK_NULL_HANDLE : CreateShaderFromFile(GraphicsContext::GetDevice(), geometryFile.data());
     mShaderMap[id].tessellation = tessellationFile.empty() ? VK_NULL_HANDLE : CreateShaderFromFile(GraphicsContext::GetDevice(), tessellationFile.data());
+    mShaderMap[id].vertexPath = vertexFile;
+    mShaderMap[id].fragmentPath = fragmentFile;
+    mShaderMap[id].geometryPath = geometryFile;
+    mShaderMap[id].tessellationPath = tessellationFile;
+    mShaderMap[id].createRendererObjects = createRendererObjects;
     if (createRendererObjects)
     {
         Renderer::CreateGraphicsPipeline(id);
@@ -27,6 +32,7 @@ ShaderID ShaderManager::Create(const std::vector<uint32_t> &vertexCode, const st
     mShaderMap[id].fragment = CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), fragmentCode);
     mShaderMap[id].geometry = geometryCode.empty() ? VK_NULL_HANDLE : CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), geometryCode);
     mShaderMap[id].tessellation = tessellationCode.empty() ? VK_NULL_HANDLE : CreateShaderModuleFromMemory(GraphicsContext::GetDevice(), tessellationCode);
+    mShaderMap[id].createRendererObjects = false;
 
     if (createRendererObjects)
     {
@@ -49,6 +55,11 @@ ShaderID ShaderManager::GenerateID()
 ShaderID ShaderManager::GetInvalidID()
 {
     return (ShaderID)UINT64_MAX;
+}
+
+const std::unordered_map<ShaderID, Shader> &ShaderManager::GetMap()
+{
+    return ShaderManager::mShaderMap;
 }
 
 uint64_t ShaderManager::mLastShaderId = 0;

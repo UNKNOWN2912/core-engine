@@ -1,5 +1,6 @@
 #pragma once
 #include "Assets/Font.hpp"
+#include "Assets/FontManager.hpp"
 #include "Assets/MeshManager.hpp"
 #include "Assets/ShaderManager.hpp"
 #include "Renderer/Camera.hpp"
@@ -32,8 +33,8 @@ struct TextPushConstant
 struct TextProperty
 {
     float spacing = 1.f;
-    glm::vec4 forgroundColor;
-    glm::vec4 backgroundColor;
+    glm::vec4 forgroundColor = glm::vec4(1);
+    glm::vec4 backgroundColor = glm::vec4(0);
     Transform transform;
 };
 
@@ -43,11 +44,13 @@ public:
     static void Initialize();
     static void Terminate();
 
-    static void DrawText(const Font &font, const std::string &text, float spacing = 1.f, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(1), const Transform &transform = {});
-    static void DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(0), const Transform &transform = {});
+    static void DrawText(FontID id, const std::string &text, float spacing = 1.f, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(1), const Transform &transform = {});
+    static void DrawCharacter(FontID id, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(0), const Transform &transform = {});
 
-    static void DrawText(const Font &font, const std::string &text, const TextProperty &property);
-    static void DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const TextProperty &property);
+    static void DrawText(FontID id, const std::string &text, const TextProperty &property);
+    static void DrawCharacter(FontID id, char ch, const glm::vec3 &position, const TextProperty &property);
+
+    static void DrawText(FontID id, const std::string &text, const std::function<TextProperty(char ch, uint32_t index, const glm::vec2 &position, float totalSize)> &callback);
 
     static void SetCamera(const Camera &camera);
     static void SetSpacing(float spacing);
@@ -70,8 +73,6 @@ private:
 
     static Buffer mVertexBuffer;
     static Buffer mIndexBuffer;
-
-    static MeshID mQuadMeshId;
 
     static Buffer mQuadVertexBuffer;
     static Buffer mQuadIndexBuffer;

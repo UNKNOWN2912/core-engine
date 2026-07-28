@@ -10,7 +10,7 @@ enum class FontID : uint64_t;
 class FontManager
 {
 public:
-    static FontID Load(std::string_view filename, uint32_t fontSize);
+    static FontID Load(std::string_view filename, uint32_t fontSize = 1024);
     static void Destroy(FontID id);
     static const std::unordered_map<FontID, Font> &GetMap();
     static const Font &GetFont(FontID id);

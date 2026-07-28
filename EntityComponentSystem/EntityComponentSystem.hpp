@@ -5,13 +5,14 @@
 #include <string_view>
 #include <vector>
 
-enum class EntityId : uint64_t;
+enum class EntityID : uint64_t;
 enum class ComponentId : uint64_t;
 
 struct EntityMetadata
 {
     std::string name;
     bool createdFromModel = false;
+    bool enableSerializing = false;
 };
 
 class Scene;
@@ -20,8 +21,8 @@ class Entity
 {
 public:
     Entity() {};
-    Entity(EntityId id, Scene *scene);
-    EntityId GetId() const
+    Entity(EntityID id, Scene *scene);
+    EntityID GetId() const
     {
         return mId;
     }
@@ -51,7 +52,7 @@ public:
 private:
     friend class Scene;
 
-    EntityId mId = (EntityId)UINT64_MAX;
+    EntityID mId = (EntityID)UINT64_MAX;
 
     Scene *mScene = nullptr;
 };
@@ -125,7 +126,7 @@ public:
     using ComponentStoragePair = std::pair<ComponentId, std::shared_ptr<BaseStorage>>;
 
     Entity CreateEntity(std::string_view name);
-    Entity GetEntityById(EntityId id);
+    Entity GetEntityById(EntityID id);
     Entity GetEntityByName(std::string_view name);
 
     template <typename ComponentType, typename... Args>
@@ -258,7 +259,7 @@ private:
     std::vector<ComponentStoragePair> mStorage;
 
     std::vector<std::string> mModelFileDependency;
-    EntityId mLastId = (EntityId)UINT64_MAX;
+    EntityID mLastId = (EntityID)UINT64_MAX;
 };
 
 template <typename ComponentType>

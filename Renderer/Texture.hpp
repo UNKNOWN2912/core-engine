@@ -21,11 +21,26 @@ public:
     void SetName(const std::string &name);
     const Sampler &GetSampler() const;
 
+    void SetFilename(std::string_view filename);
+    const std::string &GetFilename() const;
+
+    bool IsEnableSerializing() const
+    {
+        return mEnableSerializing;
+    }
+    void EnableSerializing(bool enable)
+    {
+        mEnableSerializing = enable;
+    }
+
 private:
     std::string mName = "Untitled";
+    std::string mFileName;
     bool mIsValid = false;
     ImageDeprecated mImage;
     Buffer mStagingBuffer;
+
+    bool mEnableSerializing = false;
 
     Sampler mSampler;
 };

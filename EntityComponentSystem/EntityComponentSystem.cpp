@@ -2,7 +2,7 @@
 
 Entity Scene::CreateEntity(std::string_view name)
 {
-    mLastId = EntityId(uint32_t(mLastId) + 1);
+    mLastId = EntityID(uint32_t(mLastId) + 1);
     Entity entity = mEntities.emplace_back(mLastId, this);
 
     entity.AddComponent<EntityMetadata>().name = name;
@@ -10,11 +10,11 @@ Entity Scene::CreateEntity(std::string_view name)
     return entity;
 }
 
-Entity Scene::GetEntityById(EntityId id)
+Entity Scene::GetEntityById(EntityID id)
 {
     for (int i = 0; i < mEntities.size(); i++)
     {
-        if (mEntities[i].mId == (EntityId)id)
+        if (mEntities[i].mId == (EntityID)id)
         {
             return mEntities[i];
         }
@@ -23,7 +23,7 @@ Entity Scene::GetEntityById(EntityId id)
     return Entity();
 }
 
-Entity::Entity(EntityId id, Scene *scene)
+Entity::Entity(EntityID id, Scene *scene)
     : mId(id), mScene(scene)
 {
 }

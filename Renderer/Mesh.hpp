@@ -29,10 +29,18 @@ public:
 
     void SetData(const void *vertices, size_t vertexSize, const uint32_t *indices, size_t indexSize);
     void SetData(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-    bool IsValid() const
+
+    void *GetVertexData() const
     {
-        return mIsValid;
+        return mStagingVertexBuffer.map;
     }
+
+    void *GetIndexData() const
+    {
+        return mStagingIndexBuffer.map;
+    }
+
+    bool IsValid() const;
 
     void Destroy();
 
@@ -42,8 +50,15 @@ public:
     const std::string &GetName() const;
     void SetName(const std::string &name);
 
+    static void Initialize();
+
+    void EnableSerializing(bool enable);
+    bool IsSerializingEnabled() const;
+
 private:
     std::string mName;
+
+    bool mEnableSerializing = false;
 
     friend class Renderer;
 

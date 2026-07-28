@@ -1,4 +1,5 @@
 #include "TextRenderer.hpp"
+#include "Maths/Random.hpp"
 #include "Renderer/Renderer.hpp"
 #include <cstring>
 
@@ -51,9 +52,8 @@ void TextRenderer::Initialize()
     DestroyBuffer(mStagingVertexBuffer);
     DestroyBuffer(mStagingIndexBuffer);
 
-    mQuadMeshId = MeshManager::CreateMesh(vertices, indices);
+    // mQuadMeshId = MeshManager::CreateMesh(vertices, indices);
 
-    // mShaderID = ShaderManager::Load("Shaders/text.vert.spv", "Shaders/text.frag.spv", false);
     mShaderID = ShaderManager::Load("Shaders/bezier.vert.spv", "Shaders/bezier.frag.spv", false);
 
     mUniformBuffer = UniformBuffer(sizeof(TextUniformData), &mUniformData);
@@ -100,8 +100,10 @@ void TextRenderer::Terminate()
 {
 }
 
-void TextRenderer::DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor, const glm::vec4 &backgroundColor, const Transform &transform)
+void TextRenderer::DrawCharacter(FontID id, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor, const glm::vec4 &backgroundColor, const Transform &transform)
 {
+    const Font &font = FontManager::GetFont(id);
+
     mBezierDescriptor.UpdateBuffer(font.GetStorageBuffer().GetBuffer(), 0);
 
     Glyph glyph = font.GetGlyph(ch);
@@ -137,8 +139,10 @@ void TextRenderer::DrawCharacter(const Font &font, char ch, const glm::vec3 &pos
     mInstanceData.push_back(instanceData);
 }
 
-void TextRenderer::DrawText(const Font &font, const std::string &text, float spacing, const glm::vec4 &forgroundColor, const glm::vec4 &backgroundColor, const Transform &transform)
+void TextRenderer::DrawText(FontID id, const std::string &text, float spacing, const glm::vec4 &forgroundColor, const glm::vec4 &backgroundColor, const Transform &transform)
 {
+    const Font &font = FontManager::GetFont(id);
+
     glm::vec3 position = glm::vec3(0);
 
     float totalSize = 0;
@@ -154,13 +158,15 @@ void TextRenderer::DrawText(const Font &font, const std::string &text, float spa
     for (char ch : text)
     {
         const Glyph &glyph = font.GetGlyph(ch);
-        DrawCharacter(font, ch, position, forgroundColor, backgroundColor, transform);
+        DrawCharacter(id, ch, position, forgroundColor, backgroundColor, transform);
         position.x += font.GetGlyph(ch).advance.x * spacing;
     }
 }
 
-void TextRenderer::DrawText(const Font &font, const std::string &text, const TextProperty &property)
+void TextRenderer::DrawText(FontID id, const std::string &text, const TextProperty &property)
 {
+    const Font &font = FontManager::GetFont(id);
+
     glm::vec3 position = glm::vec3(0);
 
     float totalSize = 0;
@@ -176,14 +182,40 @@ void TextRenderer::DrawText(const Font &font, const std::string &text, const Tex
     for (char ch : text)
     {
         const Glyph &glyph = font.GetGlyph(ch);
-        DrawCharacter(font, ch, position, property);
+        DrawCharacter(id, ch, position, property);
         position.x += font.GetGlyph(ch).advance.x * property.spacing;
     }
 }
 
-void TextRenderer::DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const TextProperty &property)
+void TextRenderer::DrawCharacter(FontID id, char ch, const glm::vec3 &position, const TextProperty &property)
 {
-    DrawCharacter(font, ch, position, property.forgroundColor, property.backgroundColor, property.transform);
+    DrawCharacter(id, ch, position, property.forgroundColor, property.backgroundColor, property.transform);
+}
+
+void TextRenderer::DrawText(FontID id, const std::string &text, const std::function<TextProperty(char ch, uint32_t index, const glm::vec2 &position, float totalSize)> &callback)
+{
+    const Font &font = FontManager::GetFont(id);
+
+    glm::vec3 position = glm::vec3(0);
+
+    float totalSize = 0;
+    for (char ch : text)
+    {
+        const Glyph &glyph = font.GetGlyph(ch);
+        totalSize += font.GetGlyph(ch).advance.x;
+    }
+
+    totalSize = 0.f - (totalSize * 0.5f);
+    position.x = totalSize;
+
+    for (int i = 0; i < text.size(); i++)
+    {
+        char ch = text[i];
+        TextProperty property = callback(ch, i, position, totalSize);
+        const Glyph &glyph = font.GetGlyph(ch);
+        DrawCharacter(id, ch, position, property);
+        position.x += font.GetGlyph(ch).advance.x * property.spacing;
+    }
 }
 
 void TextRenderer::Flush()
@@ -193,8 +225,6 @@ void TextRenderer::Flush()
         return;
     }
 
-    const std::shared_ptr<Mesh> quad = MeshManager::GetMesh(mQuadMeshId);
-
     mInstanceBuffer.SetData(mInstanceData.data(), mInstanceData.size() * sizeof(TextInstanceData));
 
     RenderCommand renderCommand = {};
@@ -203,7 +233,7 @@ void TextRenderer::Flush()
     renderCommand.descriptors[1] = &mBezierDescriptor;
     renderCommand.indexBuffer = &mIndexBuffer;
     renderCommand.vertexBuffer = &mVertexBuffer;
-    renderCommand.indexCount = quad->GetIndexBuffer().size / sizeof(uint32_t);
+    renderCommand.indexCount = mIndexBuffer.capacity / sizeof(uint32_t);
     renderCommand.instanceBuffer = &mInstanceBuffer;
     renderCommand.instanceCount = mInstanceData.size();
     renderCommand.pipeline = &mTextPipeline;
@@ -232,7 +262,6 @@ Camera TextRenderer::mCamera;
 ShaderID TextRenderer::mShaderID;
 Buffer TextRenderer::mVertexBuffer;
 Buffer TextRenderer::mIndexBuffer;
-MeshID TextRenderer::mQuadMeshId;
 InstanceBuffer TextRenderer::mInstanceBuffer;
 std::vector<TextInstanceData> TextRenderer::mInstanceData;
 TextPushConstant TextRenderer::mPushConstant;

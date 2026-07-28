@@ -168,7 +168,7 @@ void Descriptor::UpdateBuffer(const Buffer &buffer, uint32_t binding)
         {
             .buffer = buffer.handle,
             .offset = 0,
-            .range = buffer.size,
+            .range = buffer.capacity,
         };
 
     VkWriteDescriptorSet writeDescriptorSet =
