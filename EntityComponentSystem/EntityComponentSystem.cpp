@@ -38,5 +38,9 @@ Entity Scene::GetEntityByName(std::string_view name)
         }
     }
 
-    return Entity();
+    return {};
+}
+const std::vector<std::string> &Scene::GetModelFileImporter() const
+{
+    return mModelFileDependency;
 }

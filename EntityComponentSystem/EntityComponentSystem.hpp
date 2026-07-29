@@ -1,4 +1,8 @@
 #pragma once
+#include "Assets/FontManager.hpp"
+#include "Assets/MaterialManager.hpp"
+#include "Assets/MeshManager.hpp"
+#include "Assets/TextureManager.hpp"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -249,10 +253,7 @@ public:
         mModelFileDependency.push_back(filename);
     }
 
-    const std::vector<std::string> &GetModelFileImporter() const
-    {
-        return mModelFileDependency;
-    }
+    const std::vector<std::string> &GetModelFileImporter() const;
 
 private:
     std::vector<Entity> mEntities;

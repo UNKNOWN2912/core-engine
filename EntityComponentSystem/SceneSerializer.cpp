@@ -271,16 +271,28 @@ struct Maps
     std::unordered_map<uint32_t, EntityID> entityIDMap;
 };
 
-void LoadFonts(const json::array_t &array, Maps &maps)
+void LoadFonts(const json &json, Maps &maps)
 {
+    if (!json.contains("fonts"))
+    {
+        return;
+    }
+
+    const json::array_t &array = json.at("fonts");
     for (int i = 0; i < array.size(); i++)
     {
         maps.fontIDMap[i] = FontManager::Load(std::string(array[i]));
     }
 }
 
-void LoadTextures(const json::array_t &array, Maps &maps)
+void LoadTextures(const json &json, Maps &maps)
 {
+    if (!json.contains("textures"))
+    {
+        return;
+    }
+
+    const json::array_t &array = json.at("textures");
     for (int i = 0; i < array.size(); i++)
     {
         maps.textureIDMap[i] = TextureManager::LoadTexture(std::string(array[i]["filename"]));
@@ -289,30 +301,36 @@ void LoadTextures(const json::array_t &array, Maps &maps)
     }
 }
 
-void LoadMaterials(const json::array_t &array, Maps &maps)
+void LoadMaterials(const json &json, Maps &maps)
 {
+    if (!json.contains("materials"))
+    {
+        return;
+    }
+
+    const json::array_t &array = json.at("materials");
+
     for (int i = 0; i < array.size(); i++)
     {
-        const json &json = array[i];
         Material material;
 
-        material.albedoTexture = maps.textureIDMap[json["albedoTexture"]];
-        material.metallicTexture = maps.textureIDMap[json["metallicTexture"]];
-        material.roughnessTexture = maps.textureIDMap[json["roughnessTexture"]];
-        material.normalTexture = maps.textureIDMap[json["normalTexture"]];
-        material.shader = json["shader"];
-        material.cullMode = json["cullMode"];
-        material.roughnessFactor = json["roughnessFactor"];
-        material.metallicFactor = json["metallicFactor"];
-        material.indexOfRefraction = json["indexOfRefraction"];
-        material.enableDepthWrite = json["enableDepthWrite"];
-        material.enableDepthTest = json["enableDepthTest"];
-        material.enableBlending = json["enableBlending"];
-        material.name = json["name"];
-        material.colorFactor.r = json["colorFactor"][0];
-        material.colorFactor.g = json["colorFactor"][1];
-        material.colorFactor.b = json["colorFactor"][2];
-        material.colorFactor.a = json["colorFactor"][3];
+        material.albedoTexture = maps.textureIDMap[array[i].at("albedoTexture")];
+        material.metallicTexture = maps.textureIDMap[array[i].at("metallicTexture")];
+        material.roughnessTexture = maps.textureIDMap[array[i].at("roughnessTexture")];
+        material.normalTexture = maps.textureIDMap[array[i].at("normalTexture")];
+        material.shader = array[i].at("shader");
+        material.cullMode = array[i].at("cullMode");
+        material.roughnessFactor = array[i].at("roughnessFactor");
+        material.metallicFactor = array[i].at("metallicFactor");
+        material.indexOfRefraction = array[i].at("indexOfRefraction");
+        material.enableDepthWrite = array[i].at("enableDepthWrite");
+        material.enableDepthTest = array[i].at("enableDepthTest");
+        material.enableBlending = array[i].at("enableBlending");
+        material.name = array[i].at("name");
+        material.colorFactor.r = array[i].at("colorFactor")[0];
+        material.colorFactor.g = array[i].at("colorFactor")[1];
+        material.colorFactor.b = array[i].at("colorFactor")[2];
+        material.colorFactor.a = array[i].at("colorFactor")[3];
         material.enableSerializing = true;
 
         maps.materialIDMap[i] = MaterialManager::AddMaterial(material);
@@ -334,22 +352,29 @@ unsigned char *GetDataFromBinaryFile(std::string_view filename)
     return data;
 }
 
-void LoadMeshes(const json::array_t &array, Maps &maps, std::string_view vertexFile, std::string_view indexFile)
+void LoadMeshes(const json &json, Maps &maps, std::string_view vertexFile, std::string_view indexFile)
 {
+    if (!json.contains("meshes"))
+    {
+        return;
+    }
+
+    const json::array_t &array = json.at("meshes");
+
     unsigned char *vertexData = GetDataFromBinaryFile(vertexFile);
     unsigned char *indexData = GetDataFromBinaryFile(indexFile);
 
     for (int i = 0; i < array.size(); i++)
     {
-        const json &json = array[i];
+        const nlohmann::json &meshJson = array[i];
 
-        uint32_t indexCount = json["indexCount"];
-        uint32_t vertexCount = json["vertexCount"];
+        uint32_t indexCount = meshJson["indexCount"];
+        uint32_t vertexCount = meshJson["vertexCount"];
 
-        size_t indexOffset = json["indexOffset"];
-        size_t vertexOffset = json["vertexOffset"];
+        size_t indexOffset = meshJson["indexOffset"];
+        size_t vertexOffset = meshJson["vertexOffset"];
 
-        std::string name = json["name"];
+        std::string name = meshJson["name"];
 
         std::vector<Vertex> vertices;
         vertices.resize(vertexCount);
@@ -367,12 +392,19 @@ void LoadMeshes(const json::array_t &array, Maps &maps, std::string_view vertexF
     }
 }
 
-void LoadEntities(Scene &scene, const json::array_t &array, Maps &maps)
+void LoadEntities(Scene &scene, const json &json, Maps &maps)
 {
+    if (!json.contains("entities"))
+    {
+        return;
+    }
+
+    const json::array_t &array = json.at("entities");
+
     for (int i = 0; i < array.size(); i++)
     {
         EntityMetadata metadata;
-        const json &metadataJson = array[i]["entityMetadata"];
+        const nlohmann::json &metadataJson = array[i]["entityMetadata"];
 
         metadata.name = metadataJson["name"];
         metadata.createdFromModel = true;
@@ -383,7 +415,7 @@ void LoadEntities(Scene &scene, const json::array_t &array, Maps &maps)
 
         if (array[i].contains("meshRendererComponent"))
         {
-            const json &meshRendererJson = array[i]["meshRendererComponent"];
+            const nlohmann::json &meshRendererJson = array[i]["meshRendererComponent"];
 
             MeshRendererComponent &meshRenderer = entity.AddComponent<MeshRendererComponent>();
 
@@ -395,7 +427,7 @@ void LoadEntities(Scene &scene, const json::array_t &array, Maps &maps)
         }
         if (array[i].contains("transform"))
         {
-            const json &transformJson = array[i]["transform"];
+            const nlohmann::json &transformJson = array[i]["transform"];
 
             Transform &transform = entity.AddComponent<Transform>();
             transform.position = {transformJson["position"][0], transformJson["position"][1], transformJson["position"][2]};
@@ -404,7 +436,7 @@ void LoadEntities(Scene &scene, const json::array_t &array, Maps &maps)
         }
         if (array[i].contains("textComponent"))
         {
-            const json &textComponentJson = array[i]["textComponent"];
+            const nlohmann::json &textComponentJson = array[i]["textComponent"];
 
             TextComponent &textComponent = entity.AddComponent<TextComponent>();
             textComponent.text = textComponentJson["text"];
@@ -415,7 +447,7 @@ void LoadEntities(Scene &scene, const json::array_t &array, Maps &maps)
         }
         if (array[i].contains("light"))
         {
-            const json &lightJson = array[i]["light"];
+            const nlohmann::json &lightJson = array[i]["light"];
             Light &light = entity.AddComponent<Light>();
             light.SetColor({lightJson["color"][0], lightJson["color"][1], lightJson["color"][2]});
             light.SetPosition({lightJson["position"][0], lightJson["position"][1], lightJson["position"][2]});
@@ -433,9 +465,9 @@ void SceneSerializer::Import(std::string_view filename, Scene &scene)
     std::ifstream input(filename.data());
     json json = json::parse(input);
 
-    LoadFonts(json["fonts"], maps);
-    LoadTextures(json["textures"], maps);
-    LoadMaterials(json["materials"], maps);
-    LoadMeshes(json["meshes"], maps, "vertex.bin", "index.bin");
-    LoadEntities(scene, json["entities"], maps);
+    LoadFonts(json, maps);
+    LoadTextures(json, maps);
+    LoadMaterials(json, maps);
+    LoadMeshes(json, maps, "vertex.bin", "index.bin");
+    LoadEntities(scene, json, maps);
 }

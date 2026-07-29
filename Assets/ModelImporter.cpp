@@ -172,6 +172,7 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         std::string name = node->mName.C_Str();
         Entity entity = scene.CreateEntity(name);
         entity.GetComponent<EntityMetadata>().createdFromModel = true;
+        entity.GetComponent<EntityMetadata>().enableSerializing = true;
         if (name.size() == 0)
         {
             entity.GetComponent<EntityMetadata>().name = std::to_string((uint32_t)entity.GetId());
