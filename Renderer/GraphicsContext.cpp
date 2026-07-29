@@ -16,7 +16,7 @@ void GraphicsContext::Initialize(DeviceType deviceType)
 {
     CHROME_TRACE_FUNCTION();
 
-    bool validationEnabled = false;
+    bool validationEnabled = true;
 
     {
         VkApplicationInfo appInfo =

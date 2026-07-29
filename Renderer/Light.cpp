@@ -65,6 +65,17 @@ void Light::Initialize()
     mSampler.CreateSampler();
 }
 
+void Light::Terminate()
+{
+    mCommandBuffer.DestroyCommandBuffer();
+    mPointLightPipeline.DestroyPipeline();
+    mDirectionalShadowPipeline.DestroyPipeline();
+    mRenderPass.DestroyRenderPass();
+    mDescriptor.DestroyDescriptor();
+    mUniformBuffer.DestroyUniformBuffer();
+    mSampler.DestroySampler();
+}
+
 void Light::GenerateShadowMap(const std::vector<RenderCommand> &renderCommand)
 {
     switch (mType)

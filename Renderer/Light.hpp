@@ -29,6 +29,8 @@ class Light
 {
 public:
     static void Initialize();
+    static void Terminate();
+
     const glm::vec3 &GetPosition() const;
     const glm::vec3 &GetDirection() const;
     const glm::vec3 &GetColor() const;

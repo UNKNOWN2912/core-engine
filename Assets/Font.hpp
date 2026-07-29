@@ -1,33 +1,29 @@
 #pragma once
 #include "Assets/TextureManager.hpp"
+#include "Renderer/StorageBuffer.hpp"
 #include <unordered_map>
 
-enum class ContourPointType
+struct BezierCurve
 {
-    On,
-    Quadratic,
-    Cubic
-};
-
-struct ContourPoint
-{
-    glm::vec2 position = {};
-    ContourPointType control = ContourPointType::On;
+    glm::vec2 start = glm::vec2(0);
+    glm::vec2 control = glm::vec2(0);
+    glm::vec2 end = glm::vec2(0);
 };
 
 struct Contour
 {
-    std::vector<ContourPoint> points;
+    uint32_t startIndex = UINT32_MAX;
+    uint32_t count = 0;
 };
 
 struct Glyph
 {
-    TextureID textureId = (TextureID)UINT64_MAX;
-
-    float pixelSize;
     glm::vec2 advance;
     glm::vec2 bearing;
     glm::vec2 size;
+
+    glm::vec2 max = glm::vec2(FLT_MIN);
+    glm::vec2 min = glm::vec2(FLT_MAX);
 
     std::vector<Contour> contours;
 };
@@ -55,8 +51,23 @@ public:
         return mName;
     }
 
+    const std::vector<BezierCurve> &GetBezierCurve() const
+    {
+        return mCurves;
+    }
+
+    const StorageBuffer &GetStorageBuffer() const
+    {
+        return mStorageBuffer;
+    }
+
 private:
     std::unordered_map<char, Glyph> mCharaterImageMap;
-    float mFontSize = 0.f;
+    std::vector<BezierCurve> mCurves;
     std::string mName;
+    float mFontSize = 0.f;
+
+    StorageBuffer mStorageBuffer;
+
+    friend class FontImporter;
 };

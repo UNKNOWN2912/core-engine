@@ -492,7 +492,6 @@ VkPresentModeKHR GetVulkanPresentMode(PresentMode presentMode)
         return VK_PRESENT_MODE_IMMEDIATE_KHR;
     case PresentMode::FifoLatestReady:
         return VK_PRESENT_MODE_FIFO_LATEST_READY_KHR;
-        break;
     }
 
     ERROR("Invalid present mode");
@@ -507,13 +506,10 @@ VkCullModeFlags GetVulkanCullMode(CullMode mode)
     {
     case CullMode::None:
         return VK_CULL_MODE_NONE;
-        break;
     case CullMode::Front:
         return VK_CULL_MODE_FRONT_BIT;
-        break;
     case CullMode::Back:
         return VK_CULL_MODE_BACK_BIT;
-        break;
     }
     ERROR("Invalid cull mode");
     return VK_CULL_MODE_FLAG_BITS_MAX_ENUM;
@@ -593,7 +589,6 @@ VkColorSpaceKHR GetVulkanColorSpace(ColorSpace colorspace)
         return VK_COLOR_SPACE_DISPLAY_NATIVE_AMD;
     case ColorSpace::None:
         return (VkColorSpaceKHR)0;
-        break;
     }
 
     ERROR("Invalid colorspace");
@@ -620,7 +615,6 @@ VkImageViewType GetVulkanViewType(ViewType viewtype)
         return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
     case ViewType::CubeArray:
         return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-        break;
     }
 
     ERROR("Invalid view type");
@@ -645,6 +639,33 @@ VkImageType GetVulkanImageType(ImageType type)
     return VK_IMAGE_TYPE_MAX_ENUM;
 }
 
+VkComponentSwizzle GetVulkanComponentSwizzle(ComponentSwizzle swizzle)
+{
+    switch (swizzle)
+    {
+    case ComponentSwizzle::None:
+        return VK_COMPONENT_SWIZZLE_IDENTITY;
+    case ComponentSwizzle::Identity:
+        return VK_COMPONENT_SWIZZLE_IDENTITY;
+    case ComponentSwizzle::Zero:
+        return VK_COMPONENT_SWIZZLE_ZERO;
+    case ComponentSwizzle::One:
+        return VK_COMPONENT_SWIZZLE_ONE;
+    case ComponentSwizzle::R:
+        return VK_COMPONENT_SWIZZLE_R;
+    case ComponentSwizzle::G:
+        return VK_COMPONENT_SWIZZLE_G;
+    case ComponentSwizzle::B:
+        return VK_COMPONENT_SWIZZLE_B;
+    case ComponentSwizzle::A:
+        return VK_COMPONENT_SWIZZLE_A;
+    }
+
+    ERROR("Invalid component swizzle");
+
+    return VK_COMPONENT_SWIZZLE_IDENTITY;
+}
+
 VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive)
 {
     CHROME_TRACE_FUNCTION();
@@ -652,16 +673,12 @@ VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive)
     {
     case PrimitiveType::None:
         return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-        break;
     case PrimitiveType::Triangle:
         return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        break;
     case PrimitiveType::Line:
         return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-        break;
     case PrimitiveType::Point:
         return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-        break;
     };
 
     ERROR("Invalid primitive");
@@ -675,13 +692,10 @@ VkFrontFace GetVulkanFrontsFace(FrontFace face)
     {
     case FrontFace::None:
         return VK_FRONT_FACE_MAX_ENUM;
-        break;
     case FrontFace::Clockwise:
         return VK_FRONT_FACE_CLOCKWISE;
-        break;
     case FrontFace::CounterClockwise:
         return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        break;
     }
 
     ERROR("Invalid front face");
@@ -1163,13 +1177,10 @@ FrontFace GetNativeFrontsFace(VkFrontFace face)
     {
     case VK_FRONT_FACE_MAX_ENUM:
         return FrontFace::None;
-        break;
     case VK_FRONT_FACE_CLOCKWISE:
         return FrontFace::Clockwise;
-        break;
     case VK_FRONT_FACE_COUNTER_CLOCKWISE:
         return FrontFace::CounterClockwise;
-        break;
     }
 
     ERROR("Invalid front face");
@@ -1183,16 +1194,12 @@ PrimitiveType GetNativePrimitive(VkPrimitiveTopology primitive)
     {
     case VK_PRIMITIVE_TOPOLOGY_MAX_ENUM:
         return PrimitiveType::None;
-        break;
     case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
         return PrimitiveType::Triangle;
-        break;
     case VK_PRIMITIVE_TOPOLOGY_LINE_LIST:
         return PrimitiveType::Line;
-        break;
     case VK_PRIMITIVE_TOPOLOGY_POINT_LIST:
         return PrimitiveType::Point;
-        break;
     };
 
     ERROR("Invalid primitive");
@@ -1205,13 +1212,10 @@ CullMode GetNativeCullMode(VkCullModeFlags mode)
     {
     case VK_CULL_MODE_NONE:
         return CullMode::None;
-        break;
     case VK_CULL_MODE_FRONT_BIT:
         return CullMode::Front;
-        break;
     case VK_CULL_MODE_BACK_BIT:
         return CullMode::Back;
-        break;
     }
     ERROR("Invalid cull mode");
     return CullMode::None;
@@ -1331,4 +1335,31 @@ ImageType GetNativeImageType(VkImageType type)
 
     ERROR("Invalid image type");
     return ImageType::None;
+}
+
+ComponentSwizzle GetNativeComponentSwizzle(VkComponentSwizzle swizzle)
+{
+    switch (swizzle)
+    {
+    case VK_COMPONENT_SWIZZLE_IDENTITY:
+        return ComponentSwizzle::Identity;
+    case VK_COMPONENT_SWIZZLE_ZERO:
+        return ComponentSwizzle::Zero;
+    case VK_COMPONENT_SWIZZLE_ONE:
+        return ComponentSwizzle::One;
+    case VK_COMPONENT_SWIZZLE_R:
+        return ComponentSwizzle::R;
+    case VK_COMPONENT_SWIZZLE_G:
+        return ComponentSwizzle::G;
+    case VK_COMPONENT_SWIZZLE_B:
+        return ComponentSwizzle::B;
+    case VK_COMPONENT_SWIZZLE_A:
+        return ComponentSwizzle::A;
+    case VK_COMPONENT_SWIZZLE_MAX_ENUM:
+        return ComponentSwizzle::None;
+    }
+
+    ERROR("Invalid component swizzle");
+
+    return ComponentSwizzle::None;
 }

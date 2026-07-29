@@ -21,5 +21,6 @@ struct TextComponent
     std::string text;
     float spacing = 1.f;
     FontID fontId = INVALID_FONT_ID;
-    glm::vec4 color = glm::vec4(1);
+    glm::vec4 forgroundColor = glm::vec4(1);
+    glm::vec4 backgroundColor = glm::vec4(0);
 };

@@ -14,6 +14,13 @@ struct Shader
     VkShaderModule fragment;
     VkShaderModule geometry;
     VkShaderModule tessellation;
+
+    std::string vertexPath;
+    std::string fragmentPath;
+    std::string geometryPath;
+    std::string tessellationPath;
+
+    bool createRendererObjects;
 };
 
 class ShaderManager
@@ -26,6 +33,7 @@ public:
     static bool Has(ShaderID id);
     static ShaderID GenerateID();
     static ShaderID GetInvalidID();
+    static const std::unordered_map<ShaderID, Shader> &GetMap();
 
 private:
     static uint64_t mLastShaderId;

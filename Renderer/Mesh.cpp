@@ -53,6 +53,11 @@ void Mesh::SetData(const std::vector<Vertex> &vertices, const std::vector<uint32
     SetData(vertices.data(), sizeof(Vertex) * vertices.size(), indices.data(), sizeof(uint32_t) * indices.size());
 }
 
+bool Mesh::IsValid() const
+{
+    return mIsValid;
+}
+
 void Mesh::Destroy()
 {
     CHROME_TRACE_FUNCTION();
@@ -77,4 +82,18 @@ const std::string &Mesh::GetName() const
 void Mesh::SetName(const std::string &name)
 {
     mName = name;
+}
+
+void Mesh::Initialize()
+{
+}
+
+void Mesh::EnableSerializing(bool enable)
+{
+    mEnableSerializing = enable;
+}
+
+bool Mesh::IsSerializingEnabled() const
+{
+    return mEnableSerializing;
 }

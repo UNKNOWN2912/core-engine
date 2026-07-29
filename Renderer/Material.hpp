@@ -21,18 +21,12 @@ enum class AttributeType
 
 struct Material
 {
-    ShaderID shader;
+    ShaderID shader = INVALID_SHADER_ID;
 
-    union {
-        TextureID textures[32] = {(TextureID)UINT64_MAX};
-        struct
-        {
-            TextureID albedo;
-            TextureID roughness;
-            TextureID metallic;
-            TextureID normal;
-        };
-    };
+    TextureID albedoTexture = INVALID_TEXTURE_ID;
+    TextureID roughnessTexture = INVALID_TEXTURE_ID;
+    TextureID metallicTexture = INVALID_TEXTURE_ID;
+    TextureID normalTexture = INVALID_TEXTURE_ID;
 
     CullMode cullMode = CullMode::Back;
 
@@ -40,11 +34,13 @@ struct Material
     float roughnessFactor = 0.5;
     float metallicFactor = 0.0;
 
-    float indexOfRefraction;
+    float indexOfRefraction{};
 
     bool enableDepthWrite = true;
     bool enableDepthTest = true;
     bool enableBlending = true;
+
+    bool enableSerializing = false;
 
     std::string name = "Untitled";
 };

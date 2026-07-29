@@ -64,6 +64,7 @@ MeshID GetMeshFromAssimpMesh(const aiMesh *aimesh, const std::string &path, std:
     }
 
     mesh->SetName(identifier);
+    mesh->EnableSerializing(true);
 
     meshMap[aimesh] = meshId;
 
@@ -89,7 +90,10 @@ TextureID LoadAssimpTexture(aiTextureType type, const std::string &path, const a
             {
                 std::string fullPath = path + texturePath.C_Str();
                 result = TextureManager::LoadTexture(fullPath, normalized ? ImageFormat::RGBA8 : ImageFormat::RGBA8UNORM);
-                TextureManager::GetTexture(result)->SetName(fullPath);
+                Texture &texture = *TextureManager::GetTexture(result);
+                texture.SetName(fullPath);
+                texture.SetFilename(fullPath);
+                texture.EnableSerializing(true);
                 textureMap[texturePath.C_Str()] = result;
             }
             else
@@ -139,14 +143,15 @@ MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateria
         // diffuseTextureId = TextureManager::CreateTexture(pixel, {1, 1}, ImageFormat::RGBA8);
     }
 
-    std::shared_ptr<Material> material = std::make_shared<Material>();
-    material->shader = Renderer::GetBasicShaderID();
-    material->albedo = diffuseTextureId;
-    material->roughness = roughnessTextureId;
-    material->metallic = roughnessTextureId;
-    material->normal = normalTextureId;
-    material->cullMode = cullMode;
-    material->colorFactor = {color.r, color.g, color.b, color.a};
+    Material material;
+    material.shader = Renderer::GetBasicShaderID();
+    material.albedoTexture = diffuseTextureId;
+    material.roughnessTexture = roughnessTextureId;
+    material.metallicTexture = roughnessTextureId;
+    material.normalTexture = normalTextureId;
+    material.cullMode = cullMode;
+    material.colorFactor = {color.r, color.g, color.b, color.a};
+    material.enableSerializing = true;
 
     MaterialID id = MaterialManager::AddMaterial(material);
     materialMap[aimaterial] = id;
@@ -167,6 +172,7 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         std::string name = node->mName.C_Str();
         Entity entity = scene.CreateEntity(name);
         entity.GetComponent<EntityMetadata>().createdFromModel = true;
+        entity.GetComponent<EntityMetadata>().enableSerializing = true;
         if (name.size() == 0)
         {
             entity.GetComponent<EntityMetadata>().name = std::to_string((uint32_t)entity.GetId());

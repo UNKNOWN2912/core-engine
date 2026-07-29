@@ -6,7 +6,7 @@
 UniformBuffer::~UniformBuffer()
 {
     CHROME_TRACE_FUNCTION();
-    DestroyUniformBuffer();
+    // DestroyUniformBuffer();
 }
 
 UniformBuffer::UniformBuffer(size_t size)
@@ -43,7 +43,7 @@ void UniformBuffer::DestroyUniformBuffer()
 void UniformBuffer::SetData(void *data)
 {
     CHROME_TRACE_FUNCTION();
-    memcpy(mBuffer.map, data, mBuffer.size);
+    memcpy(mBuffer.map, data, mBuffer.capacity);
 }
 
 const Buffer &UniformBuffer::GetBuffer() const

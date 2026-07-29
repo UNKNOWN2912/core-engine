@@ -17,9 +17,19 @@ void Renderer::Initialize(const RendererSpecification &specification)
     mShadowMapDescriptor.AddBindlessDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment, 1024);
     mShadowMapDescriptor.CreateDescriptor();
 
-    CreateSceneRenderPassMultisampled();
-    CreateSceneAttachmentsMultisampled();
-    CreateSceneFrameBufferMultisampled();
+    if (mSampleCount != SampleCount::One)
+    {
+
+        CreateSceneRenderPassMultisampled();
+        CreateSceneAttachmentsMultisampled();
+        CreateSceneFrameBufferMultisampled();
+    }
+    else
+    {
+        CreateSceneRenderPass();
+        CreateSceneAttachments();
+        CreateSceneFrameBuffer();
+    }
     mCommandBuffer.CreateCommandBuffer();
 
     mSampler.CreateSampler();
@@ -97,7 +107,7 @@ void Renderer::EndFrame()
 
     mCommandBuffer.BeginRecording();
 
-    mSceneRenderPass.CmdBeginRenderPass(mCommandBuffer, mSceneFrameBuffer, mResolution, {{1, 0, 1, 1}, {1, 0, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}});
+    mSceneRenderPass.CmdBeginRenderPass(mCommandBuffer, mSceneFrameBuffer, mResolution, {{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 1, 1, 1}, {1, 1, 1, 1}});
 
     RenderCommand mPreviousCommand;
 
@@ -254,10 +264,10 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
 
     PushConstantData data;
     data.model = transform.GetMatrix();
-    data.albedoIndex = (uint32_t)material.albedo;
-    data.roughnessIndex = (uint32_t)material.roughness;
-    data.metallicIndex = (uint32_t)material.metallic;
-    data.normalIndex = (uint32_t)material.normal;
+    data.albedoIndex = (uint32_t)material.albedoTexture;
+    data.roughnessIndex = (uint32_t)material.roughnessTexture;
+    data.metallicIndex = (uint32_t)material.metallicTexture;
+    data.normalIndex = (uint32_t)material.normalTexture;
     data.inputInt = mInputInt;
     data.roughness = material.roughnessFactor;
     data.metallic = material.metallicFactor;
@@ -272,7 +282,7 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
 
 void Renderer::Submit(MaterialID material, MeshID mesh, const Transform &transform)
 {
-    Submit(*MeshManager::GetMesh(mesh), *MaterialManager::GetMaterial(material), transform);
+    Submit(*MeshManager::GetMesh(mesh), MaterialManager::GetMaterial(material), transform);
 }
 
 void Renderer::SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader)
@@ -417,6 +427,33 @@ void Renderer::CreateSceneAttachmentsMultisampled()
     mSceneColorAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment, ImageAspect::Color, MemoryProperty::DeviceLocal, mSampleCount);
     mSceneResolveAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
     mSceneDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal, mSampleCount);
+    mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
+}
+
+void Renderer::CreateSceneRenderPass()
+{
+    uint32_t colorResolve = mSceneRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    uint32_t depthResolve = mSceneRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+
+    Subpass subpass;
+    subpass.AddColorAttachment(colorResolve);
+    subpass.SetDepthAttachment(depthResolve);
+
+    mSceneRenderPass.AddSubpass(subpass, PipelineBindPoint::Graphic);
+
+    mSceneRenderPass.AddDependency(RenderPass::ExternalSubpass, 0, PipelineStage::ColorAttachmentOutput, PipelineStage::ColorAttachmentOutput);
+
+    mSceneRenderPass.CreateRenderPass();
+}
+
+void Renderer::CreateSceneFrameBuffer()
+{
+    mSceneFrameBuffer.CreateFrameBuffer({mSceneResolveAttachment, mSceneResolveDepthAttachment}, mSceneRenderPass);
+}
+
+void Renderer::CreateSceneAttachments()
+{
+    mSceneResolveAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
     mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
 }
 

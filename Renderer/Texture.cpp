@@ -208,9 +208,11 @@ void Texture::Load(std::string_view filename, ImageFormat format, Filter minFilt
     stbi_uc *data = stbi_load(filename.data(), &size.x, &size.y, nullptr, 4);
 
     Create(data, size, format, minFilter, magFilter, addressMode);
-
+    SetFilename(filename);
+    SetName(filename.data());
     stbi_image_free(data);
 }
+
 const ImageDeprecated &Texture::GetImage() const
 {
     return mImage;
@@ -235,6 +237,16 @@ void Texture::SetName(const std::string &name)
 const Sampler &Texture::GetSampler() const
 {
     return mSampler;
+}
+
+void Texture::SetFilename(std::string_view filename)
+{
+    mFileName = filename;
+}
+
+const std::string &Texture::GetFilename() const
+{
+    return mFileName;
 }
 
 void Texture::Destroy()

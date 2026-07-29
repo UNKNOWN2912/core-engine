@@ -1,4 +1,5 @@
 #include "RenderPass.hpp"
+#include "Core/Macro.hpp"
 #include "Renderer/Converter.hpp"
 #include "Renderer/GraphicsContext.hpp"
 
@@ -198,6 +199,11 @@ void RenderPass::CreateRenderPass()
     mSubpasses.clear();
     mAttachments.clear();
     mDependencies.clear();
+
+    if (mHandle == (VkRenderPass)0x00005b000000005b)
+    {
+        LOG("Somethig");
+    }
 }
 
 void RenderPass::DestroyRenderPass()
@@ -206,6 +212,7 @@ void RenderPass::DestroyRenderPass()
     {
         return;
     }
+
     mAttachments.clear();
     mDependencies.clear();
     mSubpasses.clear();

@@ -193,6 +193,9 @@ private:
     static void CreateSceneRenderPassMultisampled();
     static void CreateSceneFrameBufferMultisampled();
     static void CreateSceneAttachmentsMultisampled();
+    static void CreateSceneRenderPass();
+    static void CreateSceneFrameBuffer();
+    static void CreateSceneAttachments();
     static void CreatePresentPipeline();
     static void CreatePresentRenderPass();
 
