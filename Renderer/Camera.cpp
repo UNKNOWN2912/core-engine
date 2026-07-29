@@ -134,6 +134,12 @@ void Camera::Calculate()
     }
 
     mProjection[1][1] *= -1;
+
+    mInverse = glm::inverse(mProjection * mView);
+}
+const glm::mat4 &Camera::GetInverse() const
+{
+    return mInverse;
 }
 
 void Camera::CalculatePerspective()

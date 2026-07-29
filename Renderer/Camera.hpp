@@ -46,6 +46,8 @@ public:
 
     void Calculate();
 
+    const glm::mat4 &GetInverse() const;
+
 private:
     void CalculatePerspective();
     void CalculateOrthographic();
@@ -65,6 +67,8 @@ private:
     float mAspectRatio = 1.f;
     float mNearPlane = 0.01f;
     float mFarPlane = 100.f;
+
+    glm::mat4 mInverse = glm::mat4(1.f);
 
     CameraType mType = CameraType::Perspective;
 };

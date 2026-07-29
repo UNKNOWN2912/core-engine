@@ -144,6 +144,11 @@ public:
     static const glm::uvec2 &GetViewportSize();
     static void SetViewportSize(const glm::uvec2 &size);
 
+    static const Descriptor &GetBufferDescriptor()
+    {
+        return mBufferDescriptor;
+    }
+
 private:
     static uint32_t mInputInt;
 
