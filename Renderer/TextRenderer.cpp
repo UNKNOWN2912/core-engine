@@ -84,8 +84,8 @@ void TextRenderer::Initialize()
 
     mTextPipeline.SetPushConstant(ShaderStage::All, sizeof(TextPushConstant));
 
-    mTextPipeline.EnableDepthTesting(true);
-    mTextPipeline.EnableDepthWrite(true);
+    mTextPipeline.EnableDepthTesting(false);
+    mTextPipeline.EnableDepthWrite(false);
     mTextPipeline.SetCullMode(CullMode::None);
 
     mTextPipeline.SetVertexShader(ShaderManager::Get(mShaderID).vertex);
@@ -148,15 +148,26 @@ void TextRenderer::DrawText(FontID id, const std::string &text, float spacing, c
     float totalSize = 0;
     for (char ch : text)
     {
+        if (ch == '\n')
+        {
+            continue;
+        }
         const Glyph &glyph = font.GetGlyph(ch);
         totalSize += font.GetGlyph(ch).advance.x * spacing;
     }
 
-    totalSize = 0.f - (totalSize * 0.5f);
-    position.x = totalSize;
+    // totalSize = 0.f - (totalSize * 0.5f);
+    position.x = 0;
 
     for (char ch : text)
     {
+        if (ch == '\n')
+        {
+            position.y -= font.GetMaxHeight();
+            position.x = 0;
+
+            continue;
+        }
         const Glyph &glyph = font.GetGlyph(ch);
         DrawCharacter(id, ch, position, forgroundColor, backgroundColor, transform);
         position.x += font.GetGlyph(ch).advance.x * spacing;
@@ -172,6 +183,10 @@ void TextRenderer::DrawText(FontID id, const std::string &text, const TextProper
     float totalSize = 0;
     for (char ch : text)
     {
+        if (ch == '\n')
+        {
+            continue;
+        }
         const Glyph &glyph = font.GetGlyph(ch);
         totalSize += font.GetGlyph(ch).advance.x * property.spacing;
     }
@@ -181,6 +196,12 @@ void TextRenderer::DrawText(FontID id, const std::string &text, const TextProper
 
     for (char ch : text)
     {
+        if (ch == '\n')
+        {
+            position.y -= font.GetMaxHeight();
+            position.x = 0;
+            continue;
+        }
         const Glyph &glyph = font.GetGlyph(ch);
         DrawCharacter(id, ch, position, property);
         position.x += font.GetGlyph(ch).advance.x * property.spacing;
@@ -201,8 +222,12 @@ void TextRenderer::DrawText(FontID id, const std::string &text, const std::funct
     float totalSize = 0;
     for (char ch : text)
     {
+        if (ch == '\n')
+        {
+            continue;
+        }
         const Glyph &glyph = font.GetGlyph(ch);
-        totalSize += font.GetGlyph(ch).advance.x;
+        totalSize += font.GetGlyph(ch).advance.x * 1.f;
     }
 
     totalSize = 0.f - (totalSize * 0.5f);
@@ -211,6 +236,13 @@ void TextRenderer::DrawText(FontID id, const std::string &text, const std::funct
     for (int i = 0; i < text.size(); i++)
     {
         char ch = text[i];
+        if (ch == '\n')
+        {
+            position.y -= font.GetMaxHeight();
+            position.x = 0;
+            continue;
+        }
+
         TextProperty property = callback(ch, i, position, totalSize);
         const Glyph &glyph = font.GetGlyph(ch);
         DrawCharacter(id, ch, position, property);
@@ -239,6 +271,8 @@ void TextRenderer::Flush()
     renderCommand.pipeline = &mTextPipeline;
     renderCommand.pipelineSettings.cullMode = CullMode::None;
     renderCommand.pushContantSize = sizeof(TextPushConstant);
+    renderCommand.pipelineSettings.enableDepthTest = false;
+    renderCommand.pipelineSettings.enableDepthWrite = false;
     memcpy(renderCommand.pushContantData, &mPushConstant, sizeof(TextPushConstant));
 
     Renderer::Submit(renderCommand);

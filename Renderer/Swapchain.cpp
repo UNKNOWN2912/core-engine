@@ -27,6 +27,10 @@ void Swapchain::CreateSwapchain(VkSurfaceKHR surface, ImageFormat format, ColorS
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GraphicsContext::GetPhysicalDevice(), surface, &capabilities);
     uint32_t imageCount = glm::min(capabilities.minImageCount + 1, capabilities.maxImageCount);
+    if (capabilities.maxImageCount == 0)
+    {
+        imageCount = capabilities.minImageCount;
+    }
 
     mSize.x = capabilities.maxImageExtent.width;
     mSize.y = capabilities.maxImageExtent.height;

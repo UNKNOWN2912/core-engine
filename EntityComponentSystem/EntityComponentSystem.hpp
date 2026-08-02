@@ -53,6 +53,11 @@ public:
         return mScene != nullptr;
     }
 
+    Scene &GetParentScene()
+    {
+        return *mScene;
+    }
+
 private:
     friend class Scene;
 

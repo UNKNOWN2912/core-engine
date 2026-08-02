@@ -133,6 +133,15 @@ public:
 
     const glm::uvec2 &GetCursorPos() const;
 
+    const RendererSpecification &GetRendererSpecification() const
+    {
+        return mRendererSpecification;
+    }
+    void SetRendererSpecification(const RendererSpecification &specification)
+    {
+        mRendererSpecification = specification;
+    }
+
 private:
     bool mRunning = true;
     static Application *instance;

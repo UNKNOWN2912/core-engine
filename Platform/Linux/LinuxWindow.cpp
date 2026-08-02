@@ -530,9 +530,9 @@ Window::Window(const glm::uvec2 &size, std::string_view title)
 void Window::HideCursor()
 {
     CHROME_TRACE_FUNCTION();
-    if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+    if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_HIDDEN)
     {
-        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     }
 }
 

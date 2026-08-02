@@ -185,6 +185,8 @@ Font FontImporter::Import(std::string_view filename, uint32_t size)
         fontData.min = userData.min;
         fontData.max = userData.max;
 
+        font.mMaxHeight = glm::max(font.mMaxHeight, fontData.max.y);
+
         fontData.advance /= size;
         fontData.bearing /= size;
         fontData.size /= size;

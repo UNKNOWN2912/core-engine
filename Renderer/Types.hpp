@@ -235,9 +235,9 @@ enum class MemoryProperty : uint64_t
     HostCoherent = 1 << 3
 };
 
-DefineBitOperators(MemoryProperty, uint64_t)
+DefineBitOperators(MemoryProperty, uint64_t);
 
-    enum class DeviceType
+enum class DeviceType
 {
     None = 0,
     Dedicated,

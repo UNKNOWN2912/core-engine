@@ -4,7 +4,6 @@
 #include <format>
 #include <thread>
 
-
 #undef CHROME_TRACE_FUNCTION
 
 ChromeTraceProfiler::ChromeTraceProfiler(std::string_view filename)
@@ -21,11 +20,8 @@ ChromeTraceProfiler::~ChromeTraceProfiler()
         std::lock_guard<std::mutex> lock(mWriteMutex);
         mRunning = false;
     }
-    
 
     mReaderThread.join();
-
-    
 
     fseek(mFp, -2, SEEK_END);
     fwrite("\n]", 1, 2, mFp);
@@ -33,80 +29,85 @@ ChromeTraceProfiler::~ChromeTraceProfiler()
     fclose(mFp);
 }
 
-ChromeFunctionTrace ChromeTraceProfiler::ProfileFunction(std::string_view name, uint32_t pid, uint32_t tid) 
+ChromeFunctionTrace ChromeTraceProfiler::ProfileFunction(std::string_view name, uint32_t pid, uint32_t tid)
 {
-    return ChromeFunctionTrace(name, pid, tid, this);     
+    return ChromeFunctionTrace(name, pid, tid, this);
 }
 
-void ChromeTraceProfiler::SetWriteFile(std::string_view filename) 
+void ChromeTraceProfiler::SetWriteFile(std::string_view filename)
 {
-    if(mFp != nullptr)
+    if (mFp != nullptr)
+    {
         fclose(mFp);
-        
+    }
+
     mFp = fopen(filename.data(), "w");
 
     fwrite("[\n", 1, 2, mFp);
 
     fflush(mFp);
-
 }
 
-void ChromeTraceProfiler::WriteBeginEntry(std::string_view name, uint32_t pid, uint32_t tid, float currentTime) 
+void ChromeTraceProfiler::WriteBeginEntry(std::string_view name, uint32_t pid, uint32_t tid, float currentTime)
 {
-    if(!mEnableWrite)
+    if (!mEnableWrite)
+    {
         return;
-    uint64_t nanoSecond = currentTime * 1e6;
+    }
+    uint64_t milliSecond = uint64_t(currentTime * 1000000.f);
     std::lock_guard<std::mutex> lock(mWriteMutex);
-    mTraceQueue.emplace(name ,pid, tid, currentTime, true);
+    mTraceQueue.emplace(name, pid, tid, currentTime, true);
 }
 
-
-void ChromeTraceProfiler::WriteEndEntry(std::string_view name, uint32_t pid, uint32_t tid, float currentTime) 
+void ChromeTraceProfiler::WriteEndEntry(std::string_view name, uint32_t pid, uint32_t tid, float currentTime)
 {
-    if(!mEnableWrite)
+    if (!mEnableWrite)
+    {
         return;
-    uint64_t nanoSecond = currentTime * 1e6;
+    }
+
+    uint64_t milliSecond = uint64_t(currentTime * 1000000.f);
     std::lock_guard<std::mutex> lock(mWriteMutex);
-    mTraceQueue.emplace(name ,pid, tid, currentTime, false);
+    mTraceQueue.emplace(name, pid, tid, currentTime, false);
 }
 
-void ChromeTraceProfiler::WriteBeginEntry(std::string_view name, uint32_t pid, uint32_t tid) 
+void ChromeTraceProfiler::WriteBeginEntry(std::string_view name, uint32_t pid, uint32_t tid)
 {
-    WriteBeginEntry(name, pid, tid, GetGlobalTimeElapsed());    
+    WriteBeginEntry(name, pid, tid, GetGlobalTimeElapsed());
 }
 
-void ChromeTraceProfiler::WriteEndEntry(std::string_view name, uint32_t pid, uint32_t tid) 
+void ChromeTraceProfiler::WriteEndEntry(std::string_view name, uint32_t pid, uint32_t tid)
 {
-    WriteEndEntry(name, pid, tid, GetGlobalTimeElapsed());    
+    WriteEndEntry(name, pid, tid, GetGlobalTimeElapsed());
 }
 
-void ChromeTraceProfiler::Reader() 
+void ChromeTraceProfiler::Reader()
 {
-    while(mRunning)
+    while (mRunning)
     {
         std::lock_guard<std::mutex> lock(mWriteMutex);
-        while(!mTraceQueue.empty())
+        while (!mTraceQueue.empty())
         {
             ChromeTraceEntry entry = mTraceQueue.front();
             mTraceQueue.pop();
-            std::string formattedString = std::format("\t{{\"name\": \"{}\", \"cat\": \"PERF\", \"ph\": \"{}\", \"pid\": {}, \"tid\": {}, \"ts\": {}}},\n", entry.name.data(), (entry.begin) ? 'B'  : 'E', entry.pid, entry.tid, entry.timeInMicrosecond);
+            std::string formattedString = std::format("\t{{\"name\": \"{}\", \"cat\": \"PERF\", \"ph\": \"{}\", \"pid\": {}, \"tid\": {}, \"ts\": {}}},\n", entry.name.data(), (entry.begin) ? 'B' : 'E', entry.pid, entry.tid, entry.timeInMicrosecond);
             fwrite(formattedString.data(), 1, formattedString.size(), mFp);
         }
-    }    
+    }
 }
 
-void ChromeTraceProfiler::EnableTracing(bool enable) 
+void ChromeTraceProfiler::EnableTracing(bool enable)
 {
-    mEnableWrite = enable;    
+    mEnableWrite = enable;
 }
 
-ChromeFunctionTrace::ChromeFunctionTrace(std::string_view name, uint32_t pid, uint32_t tid, ChromeTraceProfiler* profiler)
+ChromeFunctionTrace::ChromeFunctionTrace(std::string_view name, uint32_t pid, uint32_t tid, ChromeTraceProfiler *profiler)
     : mName(name), mPid(pid), mTid(tid), mProfiler(profiler)
-{ 
-    mProfiler->WriteBeginEntry(mName, mPid, mTid); 
+{
+    mProfiler->WriteBeginEntry(mName, mPid, mTid);
 }
 
-ChromeFunctionTrace::~ChromeFunctionTrace() 
+ChromeFunctionTrace::~ChromeFunctionTrace()
 {
-    mProfiler->WriteEndEntry(mName, mPid, mTid); 
+    mProfiler->WriteEndEntry(mName, mPid, mTid);
 }

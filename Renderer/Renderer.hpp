@@ -24,6 +24,7 @@ struct FrameInfo
 struct RendererSpecification
 {
     DeviceType deviceType = DeviceType::Dedicated;
+    ImageFormat presentationFormat = ImageFormat::BGRA8;
 };
 
 struct Surface
@@ -94,7 +95,7 @@ public:
     static void Terminate();
 
     static void BeginFrame(const Camera &camera);
-    static void EndFrame();
+    static void EndFrame(const glm::vec4 &clearColor = glm::vec4(1, 0, 1, 1));
 
     static void SetResolution(const glm::uvec2 &resolution)
     {
@@ -104,7 +105,7 @@ public:
     static SampleCount GetSampleCount();
     static void SetSampleCount(const SampleCount &sampleCount);
     static Surface CreateSurface(const Window &window, ImageFormat format = ImageFormat::BGRA8);
-    static void ResizeSurface(Surface &surface);
+    static void ResizeSurface(Surface &surface, ImageFormat format);
     static void Present(Surface &surface);
 
     static const std::vector<RenderCommand> &GetRenderCommands();
@@ -147,6 +148,26 @@ public:
     static const Descriptor &GetBufferDescriptor()
     {
         return mBufferDescriptor;
+    }
+
+    static const Descriptor &GetShadowMapDescriptor()
+    {
+        return mShadowMapDescriptor;
+    }
+
+    static const GraphicsPipeline &GetShaderPipeline(ShaderID shader)
+    {
+        return mShaderPipelineMap[shader];
+    }
+
+    static const RendererSpecification &GetSpecification()
+    {
+        return Renderer::mSpecification;
+    }
+
+    static Camera &GetCamera()
+    {
+        return mCamera;
     }
 
 private:

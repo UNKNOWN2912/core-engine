@@ -19,7 +19,6 @@ void Renderer::Initialize(const RendererSpecification &specification)
 
     if (mSampleCount != SampleCount::One)
     {
-
         CreateSceneRenderPassMultisampled();
         CreateSceneAttachmentsMultisampled();
         CreateSceneFrameBufferMultisampled();
@@ -30,6 +29,7 @@ void Renderer::Initialize(const RendererSpecification &specification)
         CreateSceneAttachments();
         CreateSceneFrameBuffer();
     }
+
     mCommandBuffer.CreateCommandBuffer();
 
     mSampler.CreateSampler();
@@ -100,19 +100,20 @@ void Renderer::BeginFrame(const Camera &camera)
     mBufferDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
 }
 
-void Renderer::EndFrame()
+void Renderer::EndFrame(const glm::vec4 &clearColor)
 {
     assert(mFrameInfo.recording);
     mFrameInfo = FrameInfo();
 
     mCommandBuffer.BeginRecording();
-
-    mSceneRenderPass.CmdBeginRenderPass(mCommandBuffer, mSceneFrameBuffer, mResolution, {{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 1, 1, 1}, {1, 1, 1, 1}});
+    VkClearValue vkClearColor = {clearColor.r, clearColor.g, clearColor.b, clearColor.a};
+    mSceneRenderPass.CmdBeginRenderPass(mCommandBuffer, mSceneFrameBuffer, mResolution, {vkClearColor, vkClearColor, {1, 1, 1, 1}, {1, 1, 1, 1}});
 
     RenderCommand mPreviousCommand;
 
-    for (const RenderCommand &renderCommand : mRenderCommands)
+    for (const auto &[index, renderCommand] : mRenderCommands | std::views::enumerate)
     {
+
         CmdDrawRenderCommand(renderCommand, mPreviousCommand);
         mPreviousCommand = renderCommand;
     }
@@ -153,7 +154,7 @@ Surface Renderer::CreateSurface(const Window &window, ImageFormat format)
     return surface;
 }
 
-void Renderer::ResizeSurface(Surface &surface)
+void Renderer::ResizeSurface(Surface &surface, ImageFormat format)
 {
     vkDeviceWaitIdle(GraphicsContext::GetDevice());
     for (auto &framebuffer : surface.frameBuffers)
@@ -164,7 +165,7 @@ void Renderer::ResizeSurface(Surface &surface)
 
     surface.swapchain.DestroySwapchain();
 
-    surface.swapchain.CreateSwapchain(surface.handle, ImageFormat::BGRA8, ColorSpace::SRGBNonLinear, PresentMode::Fifo);
+    surface.swapchain.CreateSwapchain(surface.handle, format, ColorSpace::SRGBNonLinear, PresentMode::Fifo);
 
     for (const ImageDeprecated &image : surface.swapchain.GetImages())
     {
@@ -183,7 +184,7 @@ void Renderer::Present(Surface &surface)
     }
 
     mPresentCommandBuffer.BeginRecording();
-    mPresentRenderPass.CmdBeginRenderPass(mPresentCommandBuffer, surface.frameBuffers[imageIndex], surface.swapchain.GetSize(), {{1, 1, 1, 1}});
+    mPresentRenderPass.CmdBeginRenderPass(mPresentCommandBuffer, surface.frameBuffers[imageIndex], surface.swapchain.GetSize(), {{0, 0, 0, 0}});
 
     VkViewport viewport =
         {
@@ -259,8 +260,6 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
     renderCommand.pipelineSettings.cullMode = material.cullMode;
     renderCommand.pipelineSettings.enableDepthTest = material.enableDepthTest;
     renderCommand.pipelineSettings.enableDepthWrite = material.enableDepthWrite;
-
-    UINT32_MAX;
 
     PushConstantData data;
     data.model = transform.GetMatrix();
@@ -399,8 +398,8 @@ void Renderer::SetViewportSize(const glm::uvec2 &size)
 
 void Renderer::CreateSceneRenderPassMultisampled()
 {
-    uint32_t colorResolve = mSceneRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
-    uint32_t colorAttachment = mSceneRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::None, ImageLayout::ColorAttachment, LoadOperation::Clear, StoreOperation::DontCare, LoadOperation::DontCare, StoreOperation::DontCare, mSampleCount);
+    uint32_t colorResolve = mSceneRenderPass.AddAttachment(mSpecification.presentationFormat, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    uint32_t colorAttachment = mSceneRenderPass.AddAttachment(mSpecification.presentationFormat, ImageLayout::None, ImageLayout::ColorAttachment, LoadOperation::Clear, StoreOperation::DontCare, LoadOperation::DontCare, StoreOperation::DontCare, mSampleCount);
     uint32_t depthResolve = mSceneRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
     uint32_t depthAttachment = mSceneRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::None, ImageLayout::DepthStencil, LoadOperation::Clear, StoreOperation::DontCare, LoadOperation::DontCare, StoreOperation::DontCare, mSampleCount);
 
@@ -424,15 +423,15 @@ void Renderer::CreateSceneFrameBufferMultisampled()
 
 void Renderer::CreateSceneAttachmentsMultisampled()
 {
-    mSceneColorAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment, ImageAspect::Color, MemoryProperty::DeviceLocal, mSampleCount);
-    mSceneResolveAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
+    mSceneColorAttachment = CreateImage(mResolution, mSpecification.presentationFormat, ImageUsage::ColorAttachment, ImageAspect::Color, MemoryProperty::DeviceLocal, mSampleCount);
+    mSceneResolveAttachment = CreateImage(mResolution, mSpecification.presentationFormat, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
     mSceneDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil, ImageAspect::Depth, MemoryProperty::DeviceLocal, mSampleCount);
     mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
 }
 
 void Renderer::CreateSceneRenderPass()
 {
-    uint32_t colorResolve = mSceneRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
+    uint32_t colorResolve = mSceneRenderPass.AddAttachment(mSpecification.presentationFormat, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
     uint32_t depthResolve = mSceneRenderPass.AddAttachment(ImageFormat::D32, ImageLayout::None, ImageLayout::ShaderRead, LoadOperation::Clear, StoreOperation::Store);
 
     Subpass subpass;
@@ -453,7 +452,7 @@ void Renderer::CreateSceneFrameBuffer()
 
 void Renderer::CreateSceneAttachments()
 {
-    mSceneResolveAttachment = CreateImage(mResolution, ImageFormat::BGRA8, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
+    mSceneResolveAttachment = CreateImage(mResolution, mSpecification.presentationFormat, ImageUsage::ColorAttachment | ImageUsage::Sampler | ImageUsage::TransferSource, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One);
     mSceneResolveDepthAttachment = CreateImage(mResolution, ImageFormat::D32, ImageUsage::DepthStencil | ImageUsage::Sampler, ImageAspect::Depth, MemoryProperty::DeviceLocal, SampleCount::One);
 }
 
@@ -476,7 +475,7 @@ void Renderer::CreatePresentPipeline()
 
 void Renderer::CreatePresentRenderPass()
 {
-    mPresentRenderPass.AddAttachment(ImageFormat::BGRA8, ImageLayout::None, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
+    mPresentRenderPass.AddAttachment(mSpecification.presentationFormat, ImageLayout::None, ImageLayout::PresentSource, LoadOperation::Clear, StoreOperation::Store);
 
     Subpass subpass;
     subpass.AddColorAttachment(0);
@@ -487,6 +486,12 @@ void Renderer::CreatePresentRenderPass()
 
 void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand, const RenderCommand &previousCommand)
 {
+
+    if (renderCommand.pipeline != previousCommand.pipeline)
+    {
+        renderCommand.pipeline->CmdBindPipeline(mCommandBuffer);
+    }
+
     uint32_t vertexBufferCount = 1;
     VkBuffer vertexBuffer[2] = {renderCommand.vertexBuffer->handle};
     if (renderCommand.instanceBuffer != nullptr)
@@ -544,11 +549,6 @@ void Renderer::CmdDrawRenderCommand(const RenderCommand &renderCommand, const Re
     if (descriptorChanged)
     {
         vkCmdBindDescriptorSets(mCommandBuffer.GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderCommand.pipeline->GetPipelineLayout(), 0, renderCommand.descriptorCount, descriptorSets, 0, nullptr);
-    }
-
-    if (renderCommand.pipeline != previousCommand.pipeline)
-    {
-        renderCommand.pipeline->CmdBindPipeline(mCommandBuffer);
     }
 
     vkCmdDrawIndexed(mCommandBuffer.GetHandle(), renderCommand.indexCount, renderCommand.instanceCount, 0, 0, 0);

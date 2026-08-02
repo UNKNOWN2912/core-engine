@@ -35,6 +35,16 @@ public:
     Camera &SetCameraType(CameraType type);
     Camera &SetZoom(float zoom);
 
+    glm::vec3 ScreenToWorld(const glm::vec3 &position) const
+    {
+        return mInverse * glm::vec4(position, 1.f);
+    };
+
+    glm::vec2 ScreenToWorld(const glm::vec2 &position) const
+    {
+        return ScreenToWorld(glm::vec3(position, 0));
+    };
+
     void SetViewMatrix(const glm::mat4 &matrix)
     {
         mView = matrix;

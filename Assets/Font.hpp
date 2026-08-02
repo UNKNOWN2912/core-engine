@@ -61,11 +61,17 @@ public:
         return mStorageBuffer;
     }
 
+    float GetMaxHeight() const
+    {
+        return mMaxHeight;
+    }
+
 private:
     std::unordered_map<char, Glyph> mCharaterImageMap;
     std::vector<BezierCurve> mCurves;
     std::string mName;
     float mFontSize = 0.f;
+    float mMaxHeight = FLT_MIN;
 
     StorageBuffer mStorageBuffer;
 
