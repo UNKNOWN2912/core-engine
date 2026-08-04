@@ -105,6 +105,7 @@ public:
     template <typename ComponentType>
     bool HasComponent(Entity entity)
     {
+        return mRegistry.all_of<ComponentType>(entity.mId);
     }
 
     void SetCamera(const Camera &camera)

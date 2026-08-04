@@ -3,8 +3,6 @@
 #include "Core/Application.hpp"
 #include "Renderer/Converter.hpp"
 #include "Renderer/GraphicsContext.hpp"
-#include "Renderer/Helper.hpp"
-#include "glm/gtc/matrix_transform.hpp"
 #include <cstring>
 
 void Renderer::Initialize(const RendererSpecification &specification)

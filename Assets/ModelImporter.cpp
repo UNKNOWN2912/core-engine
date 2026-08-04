@@ -134,7 +134,7 @@ std::string GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateri
     }
 
     Material material;
-    material.shader = Renderer::GetBasicShaderID();
+    material.shader = ShaderManager::GetBuiltinIdentifier().pbr;
     material.albedoTexture = diffuseTextureId;
     material.roughnessTexture = roughnessTextureId;
     material.metallicTexture = roughnessTextureId;
@@ -165,7 +165,7 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         std::string meshId = GetMeshFromAssimpMesh(aimesh, path, meshMap, i);
         std::string materialId = GetMaterialFromAssimpMaterial(aiscene, aimaterial, path, materialMap, textureMap, aimesh->mMaterialIndex);
 
-        std::string name = node->mName.C_Str();
+        std::string name = meshId + materialId;
         Entity entity = scene.CreateEntity(name);
         entity.GetComponent<EntityMetadata>().createdFromModel = true;
         entity.GetComponent<EntityMetadata>().enableSerializing = true;

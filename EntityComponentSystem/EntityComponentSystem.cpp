@@ -2,7 +2,9 @@
 
 Entity Scene::CreateEntity(std::string_view name)
 {
-    return {mRegistry.create(), this};
+    Entity entity = {mRegistry.create(), this};
+    entity.AddComponent<EntityMetadata>().name = name;
+    return entity;
 }
 
 Entity Scene::GetEntityById(EntityID id)

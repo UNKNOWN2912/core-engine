@@ -73,9 +73,9 @@ public:
     void TerminateApplication();
     void RunApplication();
 
+    void DisableCursor();
     void HideCursor();
-    void ShowCursor();
-    void ToggleCursor();
+    void ResetCursor();
     bool IsCursorHidden();
 
     void Close();
@@ -164,6 +164,7 @@ private:
     uint32_t mFrameCounter = 0;
 
     bool mHideCursor = false;
+    bool mDisableCursor = false;
 
     RendererSpecification mRendererSpecification;
 };

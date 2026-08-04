@@ -170,7 +170,11 @@ void Application::MainLoop()
     {
         mWindow.ProcessEvent();
 
-        if (mHideCursor)
+        if (mDisableCursor)
+        {
+            mWindow.DisableCursor();
+        }
+        else if (mHideCursor)
         {
             mWindow.HideCursor();
         }
@@ -201,16 +205,15 @@ void Application::HideCursor()
     mHideCursor = true;
 }
 
-void Application::ShowCursor()
+void Application::ResetCursor()
 {
+    mDisableCursor = false;
     mHideCursor = false;
 }
 
-void Application::ToggleCursor()
+void Application::DisableCursor()
 {
-    CHROME_TRACE_FUNCTION();
-
-    mHideCursor = !mWindow.isCursorHidden();
+    mDisableCursor = true;
 }
 
 bool Application::IsCursorHidden()

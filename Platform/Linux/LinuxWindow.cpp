@@ -640,6 +640,15 @@ GLFWwindow *Window::GetNativeWindow() const
     return mWindowData.window;
 }
 
+void Window::DisableCursor()
+{
+    CHROME_TRACE_FUNCTION();
+    if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+    {
+        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
+}
+
 void Window::ShowCursor()
 {
     CHROME_TRACE_FUNCTION();

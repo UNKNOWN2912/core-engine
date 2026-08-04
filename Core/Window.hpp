@@ -69,6 +69,7 @@ public:
 
     glm::vec2 GetCursorPosition() const;
 
+    void DisableCursor();
     void HideCursor();
     void ShowCursor();
     bool isCursorHidden() const;
