@@ -6,11 +6,11 @@
 
 struct MeshRendererComponent
 {
-    MeshID mesh = INVALID_MESH_ID;
-    MaterialID material = INVALID_MATERIAL_ID;
+    std::string mesh;
+    std::string material;
 
     MeshRendererComponent() = default;
-    MeshRendererComponent(MeshID meshId, MaterialID materialId)
+    MeshRendererComponent(std::string_view meshId, std::string_view materialId)
         : mesh(meshId), material(materialId)
     {
     }
@@ -20,7 +20,13 @@ struct TextComponent
 {
     std::string text;
     float spacing = 1.f;
-    FontID fontId = INVALID_FONT_ID;
+    std::string font;
     glm::vec4 forgroundColor = glm::vec4(1);
     glm::vec4 backgroundColor = glm::vec4(0);
+};
+
+struct CameraComponent
+{
+    Camera camera;
+    bool action = false;
 };

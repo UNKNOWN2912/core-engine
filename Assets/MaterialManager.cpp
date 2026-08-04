@@ -1,47 +1,39 @@
 #include "MaterialManager.hpp"
 
-MaterialID MaterialManager::LoadMaterial(std::string_view filename)
+std::string MaterialManager::LoadMaterial(std::string_view filename, std::string_view identifier)
 {
-    MaterialID id = GenerateID();
-    mMaterialMap[id] = Material();
-    return id;
+    mMaterialMap[identifier.data()] = Material();
+    return identifier.data();
 }
 
-MaterialID MaterialManager::AddMaterial(const Material &material)
+std::string MaterialManager::AddMaterial(const Material &material, std::string_view identifier)
 {
-    MaterialID id = GenerateID();
-    mMaterialMap[id] = material;
-    return id;
+    mMaterialMap[identifier.data()] = material;
+    return identifier.data();
 }
 
-MaterialID MaterialManager::GenerateID()
+void MaterialManager::DestroyMaterial(std::string_view identifier)
 {
-    return (MaterialID)mLastMaterialId++;
+    mMaterialMap[identifier.data()] = {};
 }
 
-void MaterialManager::DestroyMaterial(MaterialID materialId)
+Material &MaterialManager::GetMaterial(std::string_view identifier)
 {
-    mMaterialMap[materialId] = {};
+    return mMaterialMap.at(identifier.data());
 }
 
-Material &MaterialManager::GetMaterial(MaterialID id)
+bool MaterialManager::HasMaterial(std::string_view identifier)
 {
-    return mMaterialMap.at(id);
-}
-
-bool MaterialManager::HasMaterial(MaterialID materialId)
-{
-    return mMaterialMap.contains(materialId);
+    return mMaterialMap.contains(identifier.data());
 }
 void MaterialManager::Clear()
 {
     mMaterialMap.clear();
 }
 
-const std::unordered_map<MaterialID, Material> &MaterialManager::GetMap()
+const std::unordered_map<std::string, Material> &MaterialManager::GetMap()
 {
     return MaterialManager::mMaterialMap;
 }
 
-uint64_t MaterialManager::mLastMaterialId = 0;
-std::unordered_map<MaterialID, Material> MaterialManager::mMaterialMap;
+std::unordered_map<std::string, Material> MaterialManager::mMaterialMap;

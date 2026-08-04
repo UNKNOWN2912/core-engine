@@ -112,11 +112,11 @@ public:
 
     static void Submit(RenderCommand renderCommand);
     static void Submit(const Mesh &mesh, const Material &material, const Transform &transform);
-    static void Submit(MaterialID material, MeshID mesh, const Transform &transform);
+    static void Submit(std::string_view material, std::string_view mesh, const Transform &transform);
 
-    static void SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader);
+    static void SetBasicShader(std::string_view identifier, std::string_view vertexShader, std::string_view fragmentShader);
 
-    static ShaderID GetBasicShaderID();
+    static std::string GetBasicShaderID();
 
     static void AddLight(const Light &light);
     static void ClearLights();
@@ -127,7 +127,7 @@ public:
     static void SetProjectionMatrix(const glm::mat4 &matrix);
     static void SetViewMatrix(const glm::mat4 &matrix);
 
-    static void CreateGraphicsPipeline(ShaderID id);
+    static void CreateGraphicsPipeline(std::string_view id);
 
     static uint32_t GetInputInt()
     {
@@ -155,9 +155,9 @@ public:
         return mShadowMapDescriptor;
     }
 
-    static const GraphicsPipeline &GetShaderPipeline(ShaderID shader)
+    static const GraphicsPipeline &GetShaderPipeline(std::string_view shader)
     {
-        return mShaderPipelineMap[shader];
+        return mShaderPipelineMap[shader.data()];
     }
 
     static const RendererSpecification &GetSpecification()
@@ -210,8 +210,8 @@ private:
 
     static Descriptor mShadowMapDescriptor;
 
-    static std::unordered_map<ShaderID, GraphicsPipeline> mShaderPipelineMap;
-    static ShaderID mBasicShaderID;
+    static std::unordered_map<std::string, GraphicsPipeline> mShaderPipelineMap;
+    static std::string mBasicShaderID;
 
     static glm::uvec2 mViewportSize;
 

@@ -3,26 +3,22 @@
 #include <memory>
 #include <unordered_map>
 
-enum class MeshID : uint64_t;
-#define INVALID_MESH_ID MeshID(UINT64_MAX);
-
 class MeshManager
 {
 public:
-    static MeshID CreateMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, std::string_view name = "");
-    static MeshID AddMesh(std::shared_ptr<Mesh> mesh);
-    static void DestroyMesh(MeshID id);
+    static std::string CreateMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, std::string_view identifier);
+    static std::string AddMesh(const Mesh &mesh, std::string_view identifier);
+    static void DestroyMesh(std::string_view identifier);
 
-    static std::shared_ptr<Mesh> GetMesh(MeshID id);
-    static bool HasMesh(MeshID id);
-
-    static MeshID GenerateID();
+    static const Mesh &GetMesh(std::string_view identifier);
+    static Mesh &GetMeshRef(std::string_view identifier);
+    static bool HasMesh(std::string_view identifier);
 
     static void Clear();
 
-    static std::unordered_map<MeshID, std::shared_ptr<Mesh>> &GetMap();
+    static std::unordered_map<std::string, Mesh> &GetMap();
 
 private:
     static uint64_t mLastMeshId;
-    static std::unordered_map<MeshID, std::shared_ptr<Mesh>> mMeshMap;
+    static std::unordered_map<std::string, Mesh> mMeshMap;
 };

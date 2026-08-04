@@ -87,6 +87,7 @@ bool Application::WindowEventCallback(uint32_t code, void *data)
         glm::vec2 position = *(glm::vec2 *)data;
         glm::vec2 offset = position - previousMousePos;
         previousMousePos = position;
+        mCursorPosition = position;
         OnMouseMove(position, offset);
         break;
     }
@@ -153,9 +154,9 @@ uint32_t Application::GetFps() const
 {
     return mFps;
 }
-const glm::uvec2 &Application::GetCursorPos() const
+glm::vec2 Application::GetCursorPos() const
 {
-    return mCursorPosition;
+    return mWindow.GetCursorPosition();
 }
 
 void Application::MainLoop()

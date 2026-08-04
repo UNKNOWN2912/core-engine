@@ -67,6 +67,8 @@ public:
     bool IsFullscreen() const;
     void SetFullscreen(bool fullscreen);
 
+    glm::vec2 GetCursorPosition() const;
+
     void HideCursor();
     void ShowCursor();
     bool isCursorHidden() const;

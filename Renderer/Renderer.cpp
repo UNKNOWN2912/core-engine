@@ -263,10 +263,10 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
 
     PushConstantData data;
     data.model = transform.GetMatrix();
-    data.albedoIndex = (uint32_t)material.albedoTexture;
-    data.roughnessIndex = (uint32_t)material.roughnessTexture;
-    data.metallicIndex = (uint32_t)material.metallicTexture;
-    data.normalIndex = (uint32_t)material.normalTexture;
+    data.albedoIndex = TextureManager::GetTextureDescriptorIndex(material.albedoTexture);
+    data.roughnessIndex = TextureManager::GetTextureDescriptorIndex(material.roughnessTexture);
+    data.metallicIndex = TextureManager::GetTextureDescriptorIndex(material.metallicTexture);
+    data.normalIndex = TextureManager::GetTextureDescriptorIndex(material.normalTexture);
     data.inputInt = mInputInt;
     data.roughness = material.roughnessFactor;
     data.metallic = material.metallicFactor;
@@ -276,22 +276,24 @@ void Renderer::Submit(const Mesh &mesh, const Material &material, const Transfor
     memcpy(renderCommand.pushContantData, &data, sizeof(data));
     renderCommand.pushContantSize = sizeof(data);
 
+    renderCommand.debugName = "Mesh Material";
+
     mRenderCommands.push_back(renderCommand);
 }
 
-void Renderer::Submit(MaterialID material, MeshID mesh, const Transform &transform)
+void Renderer::Submit(std::string_view material, std::string_view mesh, const Transform &transform)
 {
-    Submit(*MeshManager::GetMesh(mesh), MaterialManager::GetMaterial(material), transform);
+    Submit(MeshManager::GetMesh(mesh), MaterialManager::GetMaterial(material), transform);
 }
 
-void Renderer::SetBasicShader(std::string_view vertexShader, std::string_view fragmentShader)
+void Renderer::SetBasicShader(std::string_view identifier, std::string_view vertexShader, std::string_view fragmentShader)
 {
-    mBasicShaderID = ShaderManager::Load(vertexShader, fragmentShader);
+    mBasicShaderID = ShaderManager::Load(identifier, vertexShader, fragmentShader);
 }
 
-ShaderID Renderer::GetBasicShaderID()
+std::string Renderer::GetBasicShaderID()
 {
-    return mBasicShaderID;
+    return ShaderManager::GetBuiltinIdentifier().pbr.data();
 }
 
 void Renderer::AddLight(const Light &light)
@@ -347,9 +349,9 @@ void Renderer::SetViewMatrix(const glm::mat4 &matrix)
     mUniformData.projection = matrix;
 }
 
-void Renderer::CreateGraphicsPipeline(ShaderID id)
+void Renderer::CreateGraphicsPipeline(std::string_view identifier)
 {
-    const Shader &shader = ShaderManager::Get(id);
+    const Shader &shader = ShaderManager::Get(identifier);
 
     GraphicsPipeline pipeline;
     pipeline.SetVertexShader(shader.vertex);
@@ -376,7 +378,7 @@ void Renderer::CreateGraphicsPipeline(ShaderID id)
     pipeline.AddColorBlendAttachment(true);
     pipeline.CreatePipeline(mSceneRenderPass, 0);
 
-    mShaderPipelineMap[id] = pipeline;
+    mShaderPipelineMap[identifier.data()] = pipeline;
 }
 RenderPass &Renderer::GetRenderPass()
 {
@@ -459,7 +461,7 @@ void Renderer::CreateSceneAttachments()
 void Renderer::CreatePresentPipeline()
 {
 
-    ShaderID fullscreenShader = ShaderManager::Load("Shaders/fullscreen.vert.spv", "Shaders/fullscreen.frag.spv", "", "", false);
+    std::string fullscreenShader = ShaderManager::Load("fullscreen", "Shaders/fullscreen.vert.spv", "Shaders/fullscreen.frag.spv", "", "", false);
 
     mPresentPipeline.AddDescriptors(mPresentInputDescriptor);
 
@@ -581,7 +583,7 @@ Sampler Renderer::mSampler;
 Descriptor Renderer::mShadowMapDescriptor;
 std::vector<ImageDeprecated> Renderer::mShadowMaps;
 Descriptor Renderer::mBufferDescriptor;
-ShaderID Renderer::mBasicShaderID;
-std::unordered_map<ShaderID, GraphicsPipeline> Renderer::mShaderPipelineMap;
+std::string Renderer::mBasicShaderID;
+std::unordered_map<std::string, GraphicsPipeline> Renderer::mShaderPipelineMap;
 uint32_t Renderer::mInputInt;
 glm::uvec2 Renderer::mViewportSize;

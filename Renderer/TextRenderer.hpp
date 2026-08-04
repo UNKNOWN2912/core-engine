@@ -44,13 +44,13 @@ public:
     static void Initialize();
     static void Terminate();
 
-    static void DrawText(FontID id, const std::string &text, float spacing = 1.f, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(1), const Transform &transform = {});
-    static void DrawCharacter(FontID id, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(0), const Transform &transform = {});
+    static void DrawText(std::string_view id, const std::string &text, float spacing = 1.f, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(1), const Transform &transform = {});
+    static void DrawCharacter(std::string_view id, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(0), const Transform &transform = {});
 
-    static void DrawText(FontID id, const std::string &text, const TextProperty &property);
-    static void DrawCharacter(FontID id, char ch, const glm::vec3 &position, const TextProperty &property);
+    static void DrawText(std::string_view id, const std::string &text, const TextProperty &property);
+    static void DrawCharacter(std::string_view id, char ch, const glm::vec3 &position, const TextProperty &property);
 
-    static void DrawText(FontID id, const std::string &text, const std::function<TextProperty(char ch, uint32_t index, const glm::vec2 &position, float totalSize)> &callback);
+    static void DrawText(std::string_view id, const std::string &text, const std::function<TextProperty(char ch, uint32_t index, const glm::vec2 &position, float totalSize)> &callback);
 
     static void SetCamera(const Camera &camera);
     static void SetSpacing(float spacing);
@@ -69,7 +69,7 @@ private:
     static TextUniformData mUniformData;
 
     static Camera mCamera;
-    static ShaderID mShaderID;
+    static std::string mShaderID;
 
     static Buffer mVertexBuffer;
     static Buffer mIndexBuffer;

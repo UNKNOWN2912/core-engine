@@ -4,40 +4,33 @@
 #include <memory>
 #include <unordered_map>
 
-enum class TextureID : uint64_t;
-#define INVALID_TEXTURE_ID TextureID(UINT64_MAX);
-
 class TextureManager
 {
 public:
     static void Initialize();
     static void Terminate();
-    static TextureID LoadTexture(std::string_view filename, ImageFormat format = ImageFormat::RGBA8);
-    static TextureID CreateTexture(void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter = Filter::Linear, Filter magFilter = Filter::Linear, AddressMode addressMode = AddressMode::Border);
+    static std::string LoadTexture(std::string_view identifier, std::string_view filename, ImageFormat format = ImageFormat::RGBA8);
+    static std::string CreateTexture(std::string_view identifier, void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter = Filter::Linear, Filter magFilter = Filter::Linear, AddressMode addressMode = AddressMode::Border);
 
-    static TextureID GenerateID();
+    static void DestroyTexture(std::string_view identifier);
 
-    static void DestroyTexture(TextureID textureId);
-
-    static std::shared_ptr<Texture> GetTexture(TextureID textureId);
-    static bool HasTexture(TextureID textureId);
+    static const Texture &GetTexture(std::string_view identifier);
+    static Texture &GetTextureRef(std::string_view identifier);
+    static bool HasTexture(std::string_view identifier);
 
     static uint32_t GetCount();
 
-    static const std::unordered_map<TextureID, std::shared_ptr<Texture>> &GetMap();
-
-    static consteval TextureID GetInvalidID()
-    {
-        return (TextureID)UINT64_MAX;
-    }
+    static const std::unordered_map<std::string, Texture> &GetMap();
 
     static const Descriptor &GetDescriptor();
+
+    static uint32_t GetTextureDescriptorIndex(std::string_view identifier);
 
     static void Clear();
 
 private:
     static Sampler mSampler;
     static Descriptor mDescriptor;
-    static uint64_t mLastTextureId;
-    static std::unordered_map<TextureID, std::shared_ptr<Texture>> mTextureMap;
+    static std::unordered_map<std::string, Texture> mTextureMap;
+    static std::unordered_map<std::string, uint32_t> mTextureDescriptorIndex;
 };

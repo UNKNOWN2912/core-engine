@@ -131,7 +131,7 @@ public:
     uint32_t GetFrameCount() const;
     uint32_t GetFps() const;
 
-    const glm::uvec2 &GetCursorPos() const;
+    glm::vec2 GetCursorPos() const;
 
     const RendererSpecification &GetRendererSpecification() const
     {

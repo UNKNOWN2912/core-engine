@@ -6,6 +6,7 @@
 #include <Core/Window.hpp>
 #include <GLFW/glfw3.h>
 #include <cassert>
+#include <math.h>
 #include <utility>
 
 namespace GlfwCallback
@@ -656,6 +657,13 @@ bool Window::IsFullscreen() const
 {
     CHROME_TRACE_FUNCTION();
     return glfwGetWindowMonitor(mWindowData.window) == glfwGetPrimaryMonitor();
+}
+
+glm::vec2 Window::GetCursorPosition() const
+{
+    double x = 0, y = 0;
+    glfwGetCursorPos(mWindowData.window, &x, &y);
+    return {x, y};
 }
 
 void Window::Maximize()

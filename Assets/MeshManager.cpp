@@ -1,45 +1,47 @@
 #include "MeshManager.hpp"
 
-MeshID MeshManager::CreateMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, std::string_view name)
+std::string MeshManager::CreateMesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, std::string_view identifier)
 {
-    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-    mesh->SetData(vertices, indices);
-    mesh->SetName(name.data());
-    return AddMesh(mesh);
+    Mesh mesh(vertices, indices);
+    return AddMesh(mesh, identifier);
 }
 
-MeshID MeshManager::AddMesh(std::shared_ptr<Mesh> mesh)
+std::string MeshManager::AddMesh(const Mesh &mesh, std::string_view identifier)
 {
-    MeshID id = GenerateID();
-    mMeshMap[id] = mesh;
-    return id;
-}
-MeshID MeshManager::GenerateID()
-{
-    return (MeshID)mLastMeshId++;
+    mMeshMap[identifier.data()] = mesh;
+    mMeshMap[identifier.data()].SetName(identifier.data());
+    return identifier.data();
 }
 void MeshManager::Clear()
 {
     mMeshMap.clear();
 }
-std::unordered_map<MeshID, std::shared_ptr<Mesh>> &MeshManager::GetMap()
+std::unordered_map<std::string, Mesh> &MeshManager::GetMap()
 {
     return mMeshMap;
 }
 
-void MeshManager::DestroyMesh(MeshID id)
+void MeshManager::DestroyMesh(std::string_view identifier)
 {
-    mMeshMap[id]->Destroy();
-    mMeshMap[id].reset();
+    mMeshMap[identifier.data()].Destroy();
 }
-std::shared_ptr<Mesh> MeshManager::GetMesh(MeshID id)
+
+const Mesh &MeshManager::GetMesh(std::string_view identifier)
 {
-    return (mMeshMap.contains(id)) ? mMeshMap.at(id) : nullptr;
+    assert(HasMesh(identifier));
+    return mMeshMap.at(identifier.data());
 }
-bool MeshManager::HasMesh(MeshID id)
+
+Mesh &MeshManager::GetMeshRef(std::string_view identifier)
 {
-    return mMeshMap.contains(id);
+    assert(HasMesh(identifier));
+    return mMeshMap.at(identifier.data());
+}
+
+bool MeshManager::HasMesh(std::string_view identifier)
+{
+    return mMeshMap.contains(identifier.data());
 }
 
 uint64_t MeshManager::mLastMeshId = 0;
-std::unordered_map<MeshID, std::shared_ptr<Mesh>> MeshManager::mMeshMap;
+std::unordered_map<std::string, Mesh> MeshManager::mMeshMap;

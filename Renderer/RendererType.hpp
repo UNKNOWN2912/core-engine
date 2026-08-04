@@ -25,4 +25,6 @@ struct RenderCommand
         bool enableDepthTest = true;
         bool enableDepthWrite = true;
     } pipelineSettings;
+
+    std::string debugName = "Untitled";
 };

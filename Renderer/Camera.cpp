@@ -131,10 +131,12 @@ void Camera::Calculate()
     case CameraType::Light:
         CalculateLight();
         break;
+    case CameraType::Menu:
+        CalculateMenuCamera();
+        break;
     }
 
     mProjection[1][1] *= -1;
-
     mInverse = glm::inverse(mProjection * mView);
 }
 const glm::mat4 &Camera::GetInverse() const
@@ -167,4 +169,12 @@ void Camera::CalculateLight()
     CHROME_TRACE_FUNCTION();
     mView = glm::lookAt(mPosition, mFront, mUp);
     mProjection = glm::ortho(-mZoom, mZoom, -1.f * mZoom, 1.f * mZoom, mNearPlane, mFarPlane);
+}
+
+void Camera::CalculateMenuCamera()
+{
+    CHROME_TRACE_FUNCTION();
+    mView = glm::lookAt(mPosition, mFront + mPosition, mUp);
+    mProjection = glm::ortho(mLeft, mRight, mBottom, mTop, mNearPlane, mFarPlane);
+    mProjection[1][1] *= -1;
 }

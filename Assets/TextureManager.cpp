@@ -1,10 +1,5 @@
 #include "TextureManager.hpp"
 
-TextureID TextureManager::GenerateID()
-{
-    return (TextureID)mLastTextureId++;
-}
-
 void TextureManager::Initialize()
 {
     mDescriptor.AddBindlessDescriptor(DescriptorType::CombinedSampler, ShaderStage::Fragment, 1024);
@@ -12,58 +7,66 @@ void TextureManager::Initialize()
 
     mSampler.CreateSampler();
 }
+
 void TextureManager::Terminate()
 {
 }
 
-TextureID TextureManager::LoadTexture(std::string_view filename, ImageFormat format)
+std::string TextureManager::LoadTexture(std::string_view identifier, std::string_view filename, ImageFormat format)
 {
-    TextureID id = GenerateID();
+    Texture texture;
+    texture.Load(filename, format);
 
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    texture->Load(filename, format);
+    mTextureMap[identifier.data()] = texture;
 
-    mTextureMap[id] = texture;
+    uint32_t index = mTextureDescriptorIndex.size();
+    mTextureDescriptorIndex[identifier.data()] = index;
 
-    mDescriptor.UpdateImageIndex(mTextureMap[id]->GetImage(), ImageLayout::ShaderRead, texture->GetSampler(), 0, (uint32_t)id);
+    mDescriptor.UpdateImageIndex(mTextureMap[identifier.data()].GetImage(), ImageLayout::ShaderRead, texture.GetSampler(), 0, index);
 
-    return id;
+    return identifier.data();
 }
 
-TextureID TextureManager::CreateTexture(void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
+std::string TextureManager::CreateTexture(std::string_view identifier, void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
 {
-    TextureID id = GenerateID();
+    Texture texture;
+    texture.Create(data, size, format, minFilter, magFilter, addressMode);
 
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    texture->Create(data, size, format, minFilter, magFilter, addressMode);
+    mTextureMap[identifier.data()] = texture;
 
-    mTextureMap[id] = texture;
+    uint32_t index = mTextureDescriptorIndex.size();
+    mTextureDescriptorIndex[identifier.data()] = index;
 
-    mDescriptor.UpdateImageIndex(mTextureMap[id]->GetImage(), ImageLayout::ShaderRead, texture->GetSampler(), 0, (uint32_t)id);
+    mDescriptor.UpdateImageIndex(mTextureMap[identifier.data()].GetImage(), ImageLayout::ShaderRead, texture.GetSampler(), 0, index);
 
-    return id;
+    return identifier.data();
 }
 
-void TextureManager::DestroyTexture(TextureID id)
+void TextureManager::DestroyTexture(std::string_view identifier)
 {
-    mTextureMap[id].reset();
+    mTextureMap[identifier.data()].Destroy();
 }
 
-std::shared_ptr<Texture> TextureManager::GetTexture(TextureID id)
+const Texture &TextureManager::GetTexture(std::string_view identifier)
 {
-    return mTextureMap.at(id);
+    return mTextureMap.at(identifier.data());
 }
 
-bool TextureManager::HasTexture(TextureID id)
+Texture &TextureManager::GetTextureRef(std::string_view identifier)
 {
-    return mTextureMap.contains(id);
+    return mTextureMap.at(identifier.data());
+}
+
+bool TextureManager::HasTexture(std::string_view identifier)
+{
+    return mTextureMap.contains(identifier.data());
 }
 
 uint32_t TextureManager::GetCount()
 {
     return mTextureMap.size();
 }
-const std::unordered_map<TextureID, std::shared_ptr<Texture>> &TextureManager::GetMap()
+const std::unordered_map<std::string, Texture> &TextureManager::GetMap()
 {
     return mTextureMap;
 }
@@ -72,12 +75,16 @@ const Descriptor &TextureManager::GetDescriptor()
 {
     return mDescriptor;
 }
+uint32_t TextureManager::GetTextureDescriptorIndex(std::string_view identifier)
+{
+    return mTextureDescriptorIndex[identifier.data()];
+}
 void TextureManager::Clear()
 {
     mTextureMap.clear();
 }
 
-uint64_t TextureManager::mLastTextureId = 0;
-std::unordered_map<TextureID, std::shared_ptr<Texture>> TextureManager::mTextureMap;
+std::unordered_map<std::string, Texture> TextureManager::mTextureMap;
 Sampler TextureManager::mSampler;
 Descriptor TextureManager::mDescriptor;
+std::unordered_map<std::string, uint32_t> TextureManager::mTextureDescriptorIndex;

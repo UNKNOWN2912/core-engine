@@ -8,7 +8,7 @@
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
 
-MeshID GetMeshFromAssimpMesh(const aiMesh *aimesh, const std::string &path, std::unordered_map<const aiMesh *, MeshID> &meshMap)
+std::string GetMeshFromAssimpMesh(const aiMesh *aimesh, const std::string &path, std::unordered_map<const aiMesh *, std::string> &meshMap, uint32_t meshIndex)
 {
     if (meshMap.contains(aimesh))
     {
@@ -49,31 +49,22 @@ MeshID GetMeshFromAssimpMesh(const aiMesh *aimesh, const std::string &path, std:
             indices.push_back(face.mIndices[j]);
         }
     }
-    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(vertices, indices);
-    std::string identifier;
 
-    MeshID meshId = MeshManager::AddMesh(mesh);
-
-    if (aimesh->mName.length != 0)
+    std::string identifier = aimesh->mName.C_Str();
+    if (aimesh->mName.length == 0)
     {
-        identifier = aimesh->mName.C_Str();
-    }
-    else
-    {
-        identifier = std::to_string((uint64_t)meshId);
+        identifier = std::format("Untitled: {}", meshIndex);
     }
 
-    mesh->SetName(identifier);
-    mesh->EnableSerializing(true);
-
-    meshMap[aimesh] = meshId;
+    std::string meshId = MeshManager::CreateMesh(vertices, indices, identifier);
+    MeshManager::GetMeshRef(meshId).EnableSerializing(true);
 
     return meshId;
 }
 
-TextureID LoadAssimpTexture(aiTextureType type, const std::string &path, const aiMaterial *aimaterial, const aiScene *aiscene, std::unordered_map<std::string, TextureID> &textureMap, bool normalized = true)
+std::string LoadAssimpTexture(aiTextureType type, const std::string &path, const aiMaterial *aimaterial, const aiScene *aiscene, std::unordered_map<std::string, std::string> &textureMap, bool normalized = true)
 {
-    TextureID result = TextureManager::GetInvalidID();
+    std::string result;
 
     if (aimaterial->GetTextureCount(type) != 0)
     {
@@ -89,8 +80,8 @@ TextureID LoadAssimpTexture(aiTextureType type, const std::string &path, const a
             if (texturePath.C_Str()[0] != '*')
             {
                 std::string fullPath = path + texturePath.C_Str();
-                result = TextureManager::LoadTexture(fullPath, normalized ? ImageFormat::RGBA8 : ImageFormat::RGBA8UNORM);
-                Texture &texture = *TextureManager::GetTexture(result);
+                result = TextureManager::LoadTexture(fullPath, fullPath, normalized ? ImageFormat::RGBA8 : ImageFormat::RGBA8UNORM);
+                Texture &texture = TextureManager::GetTextureRef(result);
                 texture.SetName(fullPath);
                 texture.SetFilename(fullPath);
                 texture.EnableSerializing(true);
@@ -104,8 +95,8 @@ TextureID LoadAssimpTexture(aiTextureType type, const std::string &path, const a
                 {
                     int width = 0, height = 0, channel = 0;
                     stbi_uc *data = stbi_load_from_memory(&texture->pcData->b, (int)texture->mWidth, &width, &height, &channel, 4);
-                    result = TextureManager::CreateTexture(data, {width, height}, normalized ? ImageFormat::RGBA8 : ImageFormat::RGBA8UNORM);
-                    TextureManager::GetTexture(result)->SetName(texturePath.C_Str());
+                    result = TextureManager::CreateTexture(texturePath.C_Str(), data, {width, height}, normalized ? ImageFormat::RGBA8 : ImageFormat::RGBA8UNORM);
+                    TextureManager::GetTextureRef(result).SetName(texturePath.C_Str());
                     textureMap[texturePath.C_Str()] = result;
                 }
             }
@@ -115,7 +106,7 @@ TextureID LoadAssimpTexture(aiTextureType type, const std::string &path, const a
     return result;
 }
 
-MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMaterial *aimaterial, const std::string &path, std::unordered_map<const aiMaterial *, MaterialID> &materialMap, std::unordered_map<std::string, TextureID> &textureMap)
+std::string GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMaterial *aimaterial, const std::string &path, std::unordered_map<const aiMaterial *, std::string> &materialMap, std::unordered_map<std::string, std::string> &textureMap, uint32_t materialIndex)
 {
     if (materialMap.contains(aimaterial))
     {
@@ -124,9 +115,9 @@ MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateria
 
     CullMode cullMode = CullMode::Front;
 
-    TextureID diffuseTextureId = LoadAssimpTexture(aiTextureType_DIFFUSE, path, aimaterial, aiscene, textureMap);
-    TextureID roughnessTextureId = LoadAssimpTexture(aiTextureType_DIFFUSE_ROUGHNESS, path, aimaterial, aiscene, textureMap, false);
-    TextureID normalTextureId = LoadAssimpTexture(aiTextureType_NORMALS, path, aimaterial, aiscene, textureMap, false);
+    std::string diffuseTextureId = LoadAssimpTexture(aiTextureType_DIFFUSE, path, aimaterial, aiscene, textureMap);
+    std::string roughnessTextureId = LoadAssimpTexture(aiTextureType_DIFFUSE_ROUGHNESS, path, aimaterial, aiscene, textureMap, false);
+    std::string normalTextureId = LoadAssimpTexture(aiTextureType_NORMALS, path, aimaterial, aiscene, textureMap, false);
 
     int twoSided = 0;
     aiGetMaterialInteger(aimaterial, AI_MATKEY_TWOSIDED, &twoSided);
@@ -136,11 +127,10 @@ MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateria
     }
 
     aiColor4D color = {1, 1, 1, 1};
-    if (diffuseTextureId == TextureManager::GetInvalidID())
+    if (diffuseTextureId.size() == 0)
     {
         aimaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color);
         unsigned char pixel[4] = {(unsigned char)(color.r * 255), (unsigned char)(color.g * 255), (unsigned char)(color.b * 255), (unsigned char)(color.a * 255)};
-        // diffuseTextureId = TextureManager::CreateTexture(pixel, {1, 1}, ImageFormat::RGBA8);
     }
 
     Material material;
@@ -153,21 +143,27 @@ MaterialID GetMaterialFromAssimpMaterial(const aiScene *aiscene, const aiMateria
     material.colorFactor = {color.r, color.g, color.b, color.a};
     material.enableSerializing = true;
 
-    MaterialID id = MaterialManager::AddMaterial(material);
+    std::string identifier = aimaterial->GetName().C_Str();
+    if (aimaterial->GetName().length == 0)
+    {
+        identifier = std::format("Untitled: {}", materialIndex);
+    }
+
+    std::string id = MaterialManager::AddMaterial(material, identifier);
     materialMap[aimaterial] = id;
 
     return id;
 }
 
-void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::string &path, std::unordered_map<const aiMesh *, MeshID> &meshMap, std::unordered_map<const aiMaterial *, MaterialID> &materialMap, std::unordered_map<std::string, TextureID> &textureMap)
+void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::string &path, std::unordered_map<const aiMesh *, std::string> &meshMap, std::unordered_map<const aiMaterial *, std::string> &materialMap, std::unordered_map<std::string, std::string> &textureMap)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *aimesh = aiscene->mMeshes[node->mMeshes[i]];
         aiMaterial *aimaterial = aiscene->mMaterials[aimesh->mMaterialIndex];
 
-        MeshID meshId = GetMeshFromAssimpMesh(aimesh, path, meshMap);
-        MaterialID materialId = GetMaterialFromAssimpMaterial(aiscene, aimaterial, path, materialMap, textureMap);
+        std::string meshId = GetMeshFromAssimpMesh(aimesh, path, meshMap, i);
+        std::string materialId = GetMaterialFromAssimpMaterial(aiscene, aimaterial, path, materialMap, textureMap, aimesh->mMaterialIndex);
 
         std::string name = node->mName.C_Str();
         Entity entity = scene.CreateEntity(name);
@@ -199,21 +195,19 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
 
 void ModelImporter::Import(std::string_view filename, Scene &scene)
 {
-    std::unordered_map<const aiMesh *, MeshID> meshMap;
-    std::unordered_map<const aiMaterial *, MaterialID> materialMap;
-    std::unordered_map<std::string, TextureID> textureMap;
+    std::unordered_map<const aiMesh *, std::string> meshMap;
+    std::unordered_map<const aiMaterial *, std::string> materialMap;
+    std::unordered_map<std::string, std::string> textureMap;
 
     Assimp::Importer importer;
     const aiScene *aiscene = importer.ReadFile(filename.data(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
     LOG("importer: {}", importer.GetErrorString());
 
     std::string basePath = filename.data();
-    basePath.erase(basePath.begin() + basePath.find_last_of('/') + 1, basePath.end());
+    basePath.erase(basePath.begin() + (int)basePath.find_last_of('/') + 1, basePath.end());
 
     aiNode *rootNode = aiscene->mRootNode;
     ProcessNode(scene, aiscene, rootNode, basePath, meshMap, materialMap, textureMap);
 
     importer.FreeScene();
-
-    scene.AddModelFileImporter(filename.data());
 }

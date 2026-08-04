@@ -27,7 +27,7 @@ void Light::Initialize()
     mDescriptor.CreateDescriptor();
     mDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
 
-    ShaderID pointLightShader = ShaderManager::Load("Shaders/shadow.vert.spv", "Shaders/shadow.frag.spv", "Shaders/shadow.geom.spv", "", false);
+    std::string pointLightShader = ShaderManager::Load("point", "Shaders/shadow.vert.spv", "Shaders/shadow.frag.spv", "Shaders/shadow.geom.spv", "", false);
 
     mPointLightPipeline.SetVertexShader(ShaderManager::Get(pointLightShader).vertex);
     mPointLightPipeline.SetFragmentShader(ShaderManager::Get(pointLightShader).fragment);
@@ -44,7 +44,7 @@ void Light::Initialize()
     mPointLightPipeline.SetPushConstant(ShaderStage::All, sizeof(PushConstantData));
     mPointLightPipeline.CreatePipeline(mRenderPass, 0);
 
-    ShaderID directionalLightShader = ShaderManager::Load("Shaders/directional.vert.spv", "Shaders/directional.frag.spv", "Shaders/directional.geom.spv", "", false);
+    std::string directionalLightShader = ShaderManager::Load("directional", "Shaders/directional.vert.spv", "Shaders/directional.frag.spv", "Shaders/directional.geom.spv", "", false);
 
     mDirectionalShadowPipeline.SetVertexShader(ShaderManager::Get(directionalLightShader).vertex);
     mDirectionalShadowPipeline.SetFragmentShader(ShaderManager::Get(directionalLightShader).fragment);

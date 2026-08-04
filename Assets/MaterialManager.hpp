@@ -1,27 +1,22 @@
 #pragma once
 #include "Renderer/Material.hpp"
 
-enum class MaterialID : uint64_t;
-#define INVALID_MATERIAL_ID MaterialID(UINT64_MAX);
-
 class MaterialManager
 {
 public:
-    static MaterialID LoadMaterial(std::string_view filename);
-    static MaterialID AddMaterial(const Material &material);
+    static std::string LoadMaterial(std::string_view filename, std::string_view identifier);
+    static std::string AddMaterial(const Material &material, std::string_view identifier);
 
-    static MaterialID GenerateID();
+    static void DestroyMaterial(std::string_view identifier);
 
-    static void DestroyMaterial(MaterialID materialId);
-
-    static Material &GetMaterial(MaterialID materialId);
-    static bool HasMaterial(MaterialID materialId);
+    static Material &GetMaterial(std::string_view identifier);
+    static bool HasMaterial(std::string_view identifier);
 
     static void Clear();
 
-    static const std::unordered_map<MaterialID, Material> &GetMap();
+    static const std::unordered_map<std::string, Material> &GetMap();
 
 private:
     static uint64_t mLastMaterialId;
-    static std::unordered_map<MaterialID, Material> mMaterialMap;
+    static std::unordered_map<std::string, Material> mMaterialMap;
 };

@@ -4,8 +4,12 @@
 class SceneSerializer
 {
 public:
-    void Export(std::string_view filename, Scene &scene);
-    void Import(std::string_view filename, Scene &scene);
+    void Export(std::string_view filename, Scene &scene)
+    {
+    }
+    void Import(std::string_view filename, Scene &scene)
+    {
+    }
 
 private:
 };

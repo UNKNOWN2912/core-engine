@@ -21,12 +21,12 @@ enum class AttributeType
 
 struct Material
 {
-    ShaderID shader = INVALID_SHADER_ID;
+    std::string shader;
 
-    TextureID albedoTexture = INVALID_TEXTURE_ID;
-    TextureID roughnessTexture = INVALID_TEXTURE_ID;
-    TextureID metallicTexture = INVALID_TEXTURE_ID;
-    TextureID normalTexture = INVALID_TEXTURE_ID;
+    std::string albedoTexture;
+    std::string roughnessTexture;
+    std::string metallicTexture;
+    std::string normalTexture;
 
     CullMode cullMode = CullMode::Back;
 

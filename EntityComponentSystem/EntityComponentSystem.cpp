@@ -2,25 +2,12 @@
 
 Entity Scene::CreateEntity(std::string_view name)
 {
-    mLastId = EntityID(uint32_t(mLastId) + 1);
-    Entity entity = mEntities.emplace_back(mLastId, this);
-
-    entity.AddComponent<EntityMetadata>().name = name;
-
-    return entity;
+    return {mRegistry.create(), this};
 }
 
 Entity Scene::GetEntityById(EntityID id)
 {
-    for (int i = 0; i < mEntities.size(); i++)
-    {
-        if (mEntities[i].mId == (EntityID)id)
-        {
-            return mEntities[i];
-        }
-    }
-
-    return Entity();
+    return {id, this};
 }
 
 Entity::Entity(EntityID id, Scene *scene)
@@ -30,17 +17,16 @@ Entity::Entity(EntityID id, Scene *scene)
 
 Entity Scene::GetEntityByName(std::string_view name)
 {
-    for (int i = 0; i < mEntities.size(); i++)
-    {
-        if (mEntities[i].GetComponent<EntityMetadata>().name == name)
-        {
-            return mEntities[i];
-        }
-    }
+    const auto &view = mRegistry.view<EntityMetadata>();
 
-    return {};
-}
-const std::vector<std::string> &Scene::GetModelFileImporter() const
-{
-    return mModelFileDependency;
+    Entity result;
+
+    view.each([&](const entt::entity &entity, const EntityMetadata &metadata) {
+        if (metadata.name == name)
+        {
+            result = Entity(entity, this);
+        }
+    });
+
+    return result;
 }

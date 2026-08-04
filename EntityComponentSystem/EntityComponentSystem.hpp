@@ -1,15 +1,9 @@
 #pragma once
-#include "Assets/FontManager.hpp"
-#include "Assets/MaterialManager.hpp"
-#include "Assets/MeshManager.hpp"
-#include "Assets/TextureManager.hpp"
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <vector>
+#include "Renderer/Camera.hpp"
+#include <Vendor/entt/single_include/entt/entt.hpp>
+#include <functional>
 
-enum class EntityID : uint64_t;
+using EntityID = entt::entity;
 enum class ComponentId : uint64_t;
 
 struct EntityMetadata
@@ -60,80 +54,13 @@ public:
 
 private:
     friend class Scene;
-
     EntityID mId = (EntityID)UINT64_MAX;
-
     Scene *mScene = nullptr;
-};
-
-class BaseStorage
-{
-public:
-};
-
-template <typename ComponentType>
-class ComponentStorage : public BaseStorage
-{
-public:
-    using EntityComponentPair = std::pair<Entity, ComponentType>;
-
-    template <typename... Args>
-    void PushComponent(Entity entity, Args... args)
-    {
-        mComponents.push_back({entity, ComponentType(args...)});
-    }
-
-    template <typename... Args>
-    ComponentType &EmplaceComponent(Entity entity, Args... args)
-    {
-        return mComponents.emplace_back(entity, ComponentType(args...)).second;
-    }
-
-    ComponentType &GetComponent(Entity entity)
-    {
-        for (EntityComponentPair &pair : mComponents)
-        {
-            if (pair.first == entity)
-            {
-                return pair.second;
-            }
-        }
-    }
-    const ComponentType &GetComponent(Entity entity) const
-    {
-        for (EntityComponentPair &pair : mComponents)
-        {
-            if (pair.first == entity)
-            {
-                return pair.second;
-            }
-        }
-    }
-
-    ComponentId GetTypeId()
-    {
-        return (ComponentId) typeid(ComponentType).hash_code();
-    }
-
-    const std::vector<EntityComponentPair> &GetEntities() const
-    {
-        return mComponents;
-    }
-
-    std::vector<EntityComponentPair> &GetEntities()
-    {
-        return mComponents;
-    }
-
-private:
-    std::vector<EntityComponentPair> mComponents;
 };
 
 class Scene
 {
 public:
-    using ComponentStoragePair = std::pair<ComponentId, std::shared_ptr<BaseStorage>>;
-
     Entity CreateEntity(std::string_view name);
     Entity GetEntityById(EntityID id);
     Entity GetEntityByName(std::string_view name);
@@ -141,131 +68,58 @@ public:
     template <typename ComponentType, typename... Args>
     ComponentType &AddComponent(const Entity &entity, Args... args)
     {
-        ComponentId componentId = (ComponentId) typeid(ComponentType).hash_code();
-
-        for (int i = 0; i < mStorage.size(); i++)
-        {
-            const ComponentStoragePair &pair = mStorage[i];
-
-            if (pair.first == componentId)
-            {
-                return ((ComponentStorage<ComponentType> *)mStorage[i].second.get())->EmplaceComponent(entity, args...);
-            }
-        }
-
-        ComponentStorage<ComponentType> *storage = (ComponentStorage<ComponentType> *)mStorage.emplace_back(ComponentStoragePair(componentId, new ComponentStorage<ComponentType>))
-                                                       .second.get();
-
-        return storage->EmplaceComponent(entity, args...);
-    }
-
-    template <typename ComponentType>
-    ComponentStorage<ComponentType> &GetStorage()
-    {
-        ComponentId componentId = (ComponentId) typeid(ComponentType).hash_code();
-
-        for (int i = 0; i < mStorage.size(); i++)
-        {
-            const ComponentStoragePair &pair = mStorage[i];
-            if (pair.first == componentId)
-            {
-                return *(ComponentStorage<ComponentType> *)pair.second.get();
-            }
-        }
-
-        static ComponentStorage<ComponentType> storage;
-        return storage;
-    }
-
-    template <typename ComponentType>
-    const ComponentStorage<ComponentType> &GetStorage() const
-    {
-        ComponentId componentId = (ComponentId) typeid(ComponentType).hash_code();
-
-        for (int i = 0; i < mStorage.size(); i++)
-        {
-            const ComponentStoragePair &pair = mStorage[i];
-
-            if (pair.first == componentId)
-            {
-                return *(ComponentStorage<ComponentType> *)pair.second.get();
-            }
-        }
-
-        static ComponentStorage<ComponentType> storage;
-        return storage;
+        return mRegistry.emplace<ComponentType>(entity.mId, args...);
     }
 
     template <typename ComponentType>
     ComponentType &GetComponent(const Entity &entity)
     {
-        return GetStorage<ComponentType>().GetComponent(entity);
+        return mRegistry.get<ComponentType>(entity.mId);
     }
 
     template <typename ComponentType>
     const ComponentType &GetComponent(const Entity &entity) const
     {
-        return GetStorage<ComponentType>().GetComponent(entity);
+        return mRegistry.get<ComponentType>(entity.mId);
     }
 
     template <typename ComponentType>
-    const std::vector<std::pair<Entity, ComponentType>> &GetEntities() const
+    void Each(const std::function<void(Entity, ComponentType &component)> &callback)
     {
-        return GetStorage<ComponentType>().GetEntities();
+        auto view = mRegistry.view<ComponentType>();
+        view.each([&](const entt::entity &id, ComponentType &component) {
+            Entity entity(id, this);
+            callback(entity, component);
+        });
     }
 
     template <typename ComponentType>
-    std::vector<std::pair<Entity, ComponentType>> &GetEntities()
+    void Each(const std::function<void(Entity, const ComponentType &component)> &callback) const
     {
-        return GetStorage<ComponentType>().GetEntities();
+        const auto view = mRegistry.view<ComponentType>();
+        view.each([&](const entt::entity &id, const ComponentType &component) {
+            callback({id, this}, component);
+        });
     }
 
     template <typename ComponentType>
     bool HasComponent(Entity entity)
     {
-        std::vector<std::pair<Entity, ComponentType>> v = GetStorage<ComponentType>().GetEntities();
-        for (const std::pair<Entity, ComponentType> &pair : v)
-        {
-            if (pair.first == entity)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
-    template <typename ComponentType>
-    bool ContainComponent()
+    void SetCamera(const Camera &camera)
     {
-        ComponentId componentId = (ComponentId) typeid(ComponentType).hash_code();
-
-        for (int i = 0; i < mStorage.size(); i++)
-        {
-            const ComponentStoragePair &pair = mStorage[i];
-
-            if (pair.first == componentId)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        mCamera = camera;
     }
 
-    void AddModelFileImporter(const std::string &filename)
+    const Camera &GetCamera() const
     {
-        mModelFileDependency.push_back(filename);
+        return mCamera;
     }
-
-    const std::vector<std::string> &GetModelFileImporter() const;
 
 private:
-    std::vector<Entity> mEntities;
-    std::vector<ComponentStoragePair> mStorage;
-
-    std::vector<std::string> mModelFileDependency;
-    EntityID mLastId = (EntityID)UINT64_MAX;
+    entt::registry mRegistry;
+    Camera mCamera;
 };
 
 template <typename ComponentType>

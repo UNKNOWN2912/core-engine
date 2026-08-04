@@ -1,28 +1,29 @@
 #include "FontManager.hpp"
 
-FontID FontManager::Load(std::string_view filename, uint32_t fontSize)
+std::string FontManager::Load(std::string_view filename, std::string_view identifier)
 {
-    FontID id = GenerateID();
-    Font font = mImporter.Import(filename, fontSize);
-    mFontMap[id] = font;
-    return id;
+    Font font = mImporter.Import(filename, 1024);
+    mFontMap[identifier.data()] = font;
+    return identifier.data();
 }
-void FontManager::Destroy(FontID id)
+
+void FontManager::Destroy(std::string_view identifier)
 {
 }
-const std::unordered_map<FontID, Font> &FontManager::GetMap()
+
+const std::unordered_map<std::string, Font> &FontManager::GetMap()
 {
     return mFontMap;
 }
 
-const Font &FontManager::GetFont(FontID id)
+const Font &FontManager::GetFont(std::string_view identifier)
 {
-    return mFontMap.at(id);
+    return mFontMap[identifier.data()];
 }
 
-bool FontManager::HasFont(FontID id)
+bool FontManager::HasFont(std::string_view identifier)
 {
-    return mFontMap.contains(id);
+    return mFontMap.contains(identifier.data());
 }
 
 void FontManager::Clear()
@@ -30,11 +31,6 @@ void FontManager::Clear()
     mFontMap.clear();
 }
 
-FontID FontManager::GenerateID()
-{
-    return (FontID)mLastId++;
-}
-
-std::unordered_map<FontID, Font> FontManager::mFontMap;
+std::unordered_map<std::string, Font> FontManager::mFontMap;
 FontImporter FontManager::mImporter;
 uint64_t FontManager::mLastId;

@@ -5,8 +5,13 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-enum class ShaderID : uint64_t;
-#define INVALID_SHADER_ID ShaderID(UINT64_MAX);
+struct BuiltinShaderIdentifier
+{
+    std::string_view pbr = "builtinPhysical";
+    std::string_view text = "builtinText";
+    std::string_view directionalShadow = "builtinDirectionalShadow";
+    std::string_view pointShadow = "builtinPointShadow";
+};
 
 struct Shader
 {
@@ -26,16 +31,19 @@ struct Shader
 class ShaderManager
 {
 public:
-    static ShaderID Load(std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile = "", std::string_view tessellationFile = "", bool createRendererObjects = true);
-    static ShaderID Load(std::string_view vertexFile, std::string_view fragmentFile, bool createRendererObjects);
-    static ShaderID Create(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode = {}, const std::vector<uint32_t> &tessellationCode = {}, bool createRendererObjects = true);
-    static Shader &Get(ShaderID id);
-    static bool Has(ShaderID id);
-    static ShaderID GenerateID();
-    static ShaderID GetInvalidID();
-    static const std::unordered_map<ShaderID, Shader> &GetMap();
+    static std::string Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile, std::string_view tessellationFile, bool createRendererObjects = true);
+    static std::string Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, bool createRendererObjects = true);
+    static std::string Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode = {}, const std::vector<uint32_t> &tessellationCode = {}, bool createRendererObjects = true);
+    static Shader &Get(std::string_view id);
+    static bool Has(std::string_view id);
+    static const std::unordered_map<std::string, Shader> &GetMap();
+    static const BuiltinShaderIdentifier &GetBuiltinIdentifier()
+    {
+        return mBuiltinShaderIdentifier;
+    }
 
 private:
     static uint64_t mLastShaderId;
-    static std::unordered_map<ShaderID, Shader> mShaderMap;
+    static std::unordered_map<std::string, Shader> mShaderMap;
+    static BuiltinShaderIdentifier mBuiltinShaderIdentifier;
 };
