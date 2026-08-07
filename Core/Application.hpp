@@ -83,16 +83,10 @@ public:
 
     bool WindowEventCallback(uint32_t code, void *data);
 
-    Window &GetWindow()
-    {
-        return mWindow;
-    }
+    Window &GetWindow();
 
     static Application *Create();
-    static Application *GetInstance()
-    {
-        return instance;
-    }
+    static Application *GetInstance();
 
     Application();
     virtual ~Application();

@@ -179,7 +179,7 @@ void GraphicsPipeline::CreatePipeline(const RenderPass &renderPass, uint32_t sub
     dynamicState.pDynamicStates = dynamicStates;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.topology = mPrimitive;
 
     VkPipelineMultisampleStateCreateInfo multisample = {VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
     multisample.rasterizationSamples = mSampleCount;

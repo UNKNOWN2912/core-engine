@@ -123,6 +123,16 @@ bool Application::WindowEventCallback(uint32_t code, void *data)
     return false;
 }
 
+Window &Application::GetWindow()
+{
+    return mWindow;
+}
+
+Application *Application::GetInstance()
+{
+    return instance;
+}
+
 Application::Application()
 {
     CHROME_TRACE_FUNCTION();

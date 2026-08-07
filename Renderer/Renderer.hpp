@@ -227,5 +227,5 @@ private:
 
     static void CmdDrawRenderCommand(const RenderCommand &renderCommand, const RenderCommand &previousCommand);
 
-    friend class Editor;
+    friend class EditorUI;
 };
