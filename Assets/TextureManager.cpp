@@ -77,6 +77,9 @@ const Descriptor &TextureManager::GetDescriptor()
 }
 uint32_t TextureManager::GetTextureDescriptorIndex(std::string_view identifier)
 {
+    if (identifier.size() == 0)
+        return UINT32_MAX;
+
     return mTextureDescriptorIndex[identifier.data()];
 }
 void TextureManager::Clear()
