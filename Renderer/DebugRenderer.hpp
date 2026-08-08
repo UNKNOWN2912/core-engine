@@ -15,8 +15,12 @@ public:
     void DrawLine(const glm::vec3 &start, const glm::vec3 &end, const glm::vec3 &color);
     void DrawWireframe(std::string_view mesh);
     void DrawPoint(const glm::vec3 &position, const glm::vec3 &color);
-    void DrawRect(const glm::vec3 &start, const glm::vec3 &end, const glm::vec3 &color);
-    void DrawCircle(const glm::vec3 &position, float radius, const glm::vec3 &color);
+    void DrawCuboid(const glm::vec3 &start, const glm::vec3 &end, const glm::vec3 &color);
+    void DrawCube(const glm::vec3 &position, float size, const glm::vec3 &color);
+    void DrawFrustrum(const glm::vec3 &start1, const glm::vec3 &end1, const glm::vec3 &start2, const glm::vec3 &end2, const glm::vec3 &color);
+    void DrawCircleXY(const glm::vec3 &position, float radius, const glm::vec3 &color, uint32_t lineCount = 30);
+    void DrawCircleZY(const glm::vec3 &position, float radius, const glm::vec3 &color, uint32_t lineCount = 30);
+    void DrawCircleXZ(const glm::vec3 &position, float radius, const glm::vec3 &color, uint32_t lineCount = 30);
 
     void Flush();
 

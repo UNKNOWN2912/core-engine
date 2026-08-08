@@ -176,7 +176,6 @@ void Light::GeneratePointLightShadowMap(const std::vector<RenderCommand> &render
         vkCmdSetDepthWriteEnable(mCommandBuffer.GetHandle(), true);
 
         vkCmdPushConstants(mCommandBuffer.GetHandle(), mPointLightPipeline.GetPipelineLayout(), VK_SHADER_STAGE_ALL, 0, renderCommand.pushContantSize, renderCommand.pushContantData);
-
         vkCmdDrawIndexed(mCommandBuffer.GetHandle(), renderCommand.indexCount, 1, 0, 0, 0);
     }
 
