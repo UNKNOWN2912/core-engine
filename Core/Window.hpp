@@ -30,6 +30,7 @@ struct WindowData
     GLFWwindow *window = nullptr;
     EventDispatcher dispatcher;
     bool isMaximized = false;
+    bool ignoreCursorCallback = false;
     struct RestoreData
     {
         int width = 0;
@@ -57,6 +58,7 @@ public:
 
     void DestroyWindow();
 
+    void SetCursorPos(const glm::uvec2 &position);
     void SetSize(const glm::uvec2 &size);
     void SetPosition(const glm::uvec2 &position);
     void SetTitle(const std::string &title);
@@ -68,11 +70,6 @@ public:
     void SetFullscreen(bool fullscreen);
 
     glm::vec2 GetCursorPosition() const;
-
-    void DisableCursor();
-    void HideCursor();
-    void ShowCursor();
-    bool isCursorHidden() const;
 
     void Maximize();
     void Restore();

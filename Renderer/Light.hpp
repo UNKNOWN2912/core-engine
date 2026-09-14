@@ -1,12 +1,12 @@
 #pragma once
-#include "Assets/ShaderManager.hpp"
 #include "Renderer/Camera.hpp"
 #include "Renderer/ImageView.hpp"
 #include "Renderer/RendererType.hpp"
 #include "Renderer/Shader.hpp"
 #include "Renderer/UniformBuffer.hpp"
-#include "Renderer/Utility.hpp"
 #include <glm/glm.hpp>
+
+#define USE_GEOMETRY_SHADER 1
 
 enum class LightType
 {
@@ -25,6 +25,7 @@ struct ShadowPushConstant
 {
     glm::mat4 model;
     float intensity;
+    uint32_t projectionIndex;
 };
 
 class Light
@@ -40,7 +41,7 @@ public:
     float GetOuterCosinAngle() const;
     float GetInnerCosinAngle() const;
     float GetIntensity() const;
-    const ImageDeprecated &GetShadowMap() const;
+    const Image &GetShadowMap() const;
     LightType GetType() const;
 
     void SetPosition(const glm::vec3 &position);
@@ -51,11 +52,7 @@ public:
     void SetShadowMapResolution(uint32_t resolution);
     void SetIntensity(float intensity);
     void SetType(LightType type);
-    void SetCamera(const Camera &camera)
-    {
-        mCamera = camera;
-        mShadowMapOutdated = true;
-    }
+    void SetCamera(const Camera &camera);
 
     void GenerateShadowMap(const std::vector<RenderCommand> &renderCommand);
 
@@ -63,6 +60,67 @@ public:
 
     glm::mat4 GetDirectionalProjection(uint32_t cascadeIndex) const;
     glm::mat4 GetPointProjection(const glm::vec3 &front, const glm::vec3 &up) const;
+
+    Light() = default;
+    Light(const Light &light) = delete;
+    ~Light()
+    {
+    }
+    Light(Light &&light) noexcept
+    {
+        mPosition = light.mPosition;
+        mDirection = light.mDirection;
+        mColor = light.mColor;
+
+        mOuterCosinAngle = light.mOuterCosinAngle;
+        mInnerCosinAngle = light.mInnerCosinAngle;
+        mIntensity = light.mIntensity;
+
+        mShadowMapOutdated = light.mShadowMapOutdated;
+        mShadowMapCreated = light.mShadowMapCreated;
+        mIsCubeMap = light.mIsCubeMap;
+
+        mShadowMap = std::move(light.mShadowMap);
+
+        mType = light.mType;
+
+        mCamera = light.mCamera;
+        mUseTightMatrix = light.mUseTightMatrix;
+
+        mFrameBuffers = std::move(light.mFrameBuffers);
+        mImageViews = std::move(light.mImageViews);
+
+        mShadowMapResolution = light.mShadowMapResolution;
+    }
+
+    Light &operator=(Light &&light) noexcept
+    {
+        mPosition = light.mPosition;
+        mDirection = light.mDirection;
+        mColor = light.mColor;
+
+        mOuterCosinAngle = light.mOuterCosinAngle;
+        mInnerCosinAngle = light.mInnerCosinAngle;
+        mIntensity = light.mIntensity;
+
+        mShadowMapOutdated = light.mShadowMapOutdated;
+        mShadowMapCreated = light.mShadowMapCreated;
+        mIsCubeMap = light.mIsCubeMap;
+
+        mShadowMap = std::move(light.mShadowMap);
+
+        mType = light.mType;
+
+        mCamera = light.mCamera;
+        mUseTightMatrix = light.mUseTightMatrix;
+
+        mFrameBuffers = std::move(light.mFrameBuffers);
+        mImageViews = std::move(light.mImageViews);
+
+        mShadowMapResolution = light.mShadowMapResolution;
+
+        return *this;
+    }
 
 private:
     friend class Editor;
@@ -78,7 +136,9 @@ private:
     bool mShadowMapCreated = false;
     bool mIsCubeMap = false;
 
-    ImageDeprecated mShadowMap;
+    Image mShadowMap;
+
+    // ImageDeprecated mShadowMap;
     LightType mType = LightType::PointLight;
 
     static CommandBuffer mCommandBuffer;

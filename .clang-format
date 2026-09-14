@@ -3,3 +3,4 @@ ColumnLimit: 0
 IndentWidth: 4
 TabWidth: 4
 AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: Empty

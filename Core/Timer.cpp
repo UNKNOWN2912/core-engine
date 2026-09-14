@@ -1,5 +1,5 @@
 #include "Timer.hpp"
-
+#include "Macro.hpp"
 
 void Timer::Start()
 {
@@ -18,39 +18,37 @@ float Timer::GetElapsedTime()
     dur = currentTime - mStart;
 
     return dur.count();
-    
 }
 float Timer::GetDuration()
 {
     mDuration = mEnd - mStart;
     return mDuration.count();
 }
-ScopedTimer::ScopedTimer(std::string_view label) 
-{ 
-    mLabel = label; 
-    mTimer.Start(); 
+ScopedTimer::ScopedTimer(std::string_view label)
+{
+    mLabel = label;
+    mTimer.Start();
 }
 
-ScopedTimer::~ScopedTimer() 
-{ 
-    mTimer.Stop(); 
-    LOG("Scoped Timer [{}]: {}", mLabel, mTimer.GetDuration()); 
+ScopedTimer::~ScopedTimer()
+{
+    mTimer.Stop();
+    LOG("Scoped Timer [{}]: {}", mLabel, mTimer.GetDuration());
 }
 
 static Timer globalTimer;
 
-void StartGlobalTimer() 
+void StartGlobalTimer()
 {
-    globalTimer.Start();    
+    globalTimer.Start();
 }
 
-void StopGlobalTimer() 
+void StopGlobalTimer()
 {
     globalTimer.Stop();
 }
 
-float GetGlobalTimeElapsed() 
+float GetGlobalTimeElapsed()
 {
     return globalTimer.GetElapsedTime();
 }
-

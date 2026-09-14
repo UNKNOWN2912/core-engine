@@ -29,19 +29,11 @@ std::string GetMeshFromAssimpMesh(const aiMesh *aimesh, const std::string &path,
         glm::vec3 position = {aimesh->mVertices[i].x, aimesh->mVertices[i].y, aimesh->mVertices[i].z};
         glm::vec3 normal = {aimesh->mNormals[i].x, aimesh->mNormals[i].y, aimesh->mNormals[i].z};
         glm::vec2 uv = glm::vec2(0);
-        glm::vec3 tangent = glm::vec3(0);
-        glm::vec3 bitangent = glm::vec3(0);
         if (aimesh->mTextureCoords[0] != nullptr)
         {
             uv = {aimesh->mTextureCoords[0][i].x, aimesh->mTextureCoords[0][i].y};
         }
-        if (aimesh->HasTangentsAndBitangents())
-        {
-            tangent = {aimesh->mTangents[i].x, aimesh->mTangents[i].y, aimesh->mTangents[i].z};
-            bitangent = {aimesh->mBitangents[i].x, aimesh->mBitangents[i].y, aimesh->mBitangents[i].z};
-        }
-
-        vertices.emplace_back(position, uv, normal, tangent, bitangent);
+        vertices.emplace_back(position, uv, normal);
     }
 
     for (int i = 0; i < aimesh->mNumFaces; i++)
@@ -166,7 +158,12 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         std::string meshId = GetMeshFromAssimpMesh(aimesh, path, meshMap, i, scene);
         std::string materialId = GetMaterialFromAssimpMaterial(aiscene, aimaterial, path, materialMap, textureMap, aimesh->mMaterialIndex, scene);
 
-        std::string name = meshId + materialId;
+        std::string name = node->mName.C_Str();
+        if (name.empty())
+        {
+            name = meshId + materialId;
+        }
+
         Entity entity = scene.CreateEntity(name);
         entity.GetComponent<EntityMetadata>().createdFromModel = true;
         if (name.size() == 0)

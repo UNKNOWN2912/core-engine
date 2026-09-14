@@ -15,9 +15,16 @@ struct Swizzle
 class ImageView
 {
 public:
-    void CreateImageView(const ImageDeprecated &image, ViewType type, ImageAspect aspect, uint32_t baseLayer = 0, uint32_t layerCount = 1, uint32_t baseMipmapLevel = 0, uint32_t mipmapCount = 1, const Swizzle &swizzle = {});
-    void CreateImageView(const Image &image, ViewType type, ImageAspect aspect, uint32_t baseLayer = 0, uint32_t layerCount = 1, uint32_t baseMipmapLevel = 0, uint32_t mipmapCount = 1, const Swizzle &swizzle = {});
-    void DestroyImageView();
+    ImageView() = default;
+    ImageView(const ImageView &view) = delete;
+    ImageView(ImageView &&view) noexcept;
+    ImageView &operator=(const ImageView &view) = delete;
+    ImageView &operator=(ImageView &&view) noexcept;
+    ImageView(const ImageDeprecated &image, ViewType type, ImageAspect aspect, uint32_t baseLayer = 0, uint32_t layerCount = 1, uint32_t baseMipmapLevel = 0, uint32_t mipmapCount = 1, const Swizzle &swizzle = {});
+    ImageView(const Image &image, ViewType type, ImageAspect aspect, uint32_t baseLayer = 0, uint32_t layerCount = 1, uint32_t baseMipmapLevel = 0, uint32_t mipmapCount = 1, const Swizzle &swizzle = {});
+    ~ImageView();
+
+    void Copy(const ImageView &imageView, const Image &image);
 
     VkImageView GetHandle() const;
     ViewType GetViewType() const;
@@ -36,6 +43,15 @@ private:
     uint32_t mLayerCount = 1;
     uint32_t mBaseMipmapLevel = 0;
     uint32_t mMipmapLevelCount = 1;
-
     Swizzle mSwizzle;
+
+    ImageFormat mFormat;
+
+private:
+    void CreateImageView(const ImageDeprecated &image, ViewType type, ImageAspect aspect, uint32_t baseLayer = 0, uint32_t layerCount = 1, uint32_t baseMipmapLevel = 0, uint32_t mipmapCount = 1, const Swizzle &swizzle = {});
+    void CreateImageView(const Image &image, ViewType type, ImageAspect aspect, uint32_t baseLayer = 0, uint32_t layerCount = 1, uint32_t baseMipmapLevel = 0, uint32_t mipmapCount = 1, const Swizzle &swizzle = {});
+    void CreateImageView(VkImage image, ImageFormat format, ViewType type, ImageAspect aspect, uint32_t baseLayer, uint32_t layerCount, uint32_t baseMipmapLevel, uint32_t mipmapCount, const Swizzle &swizzle);
+    void DestroyImageView();
+
+    void SetValues(ImageFormat format, ViewType viewType, ImageAspect aspect, uint32_t baseLayer, uint32_t layerCount, uint32_t baseMipmapLevel, uint32_t mipmapLevelCount, Swizzle swizzle);
 };

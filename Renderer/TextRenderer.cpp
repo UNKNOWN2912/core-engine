@@ -1,4 +1,5 @@
 #include "TextRenderer.hpp"
+#include "Core/Application.hpp"
 #include "Maths/Random.hpp"
 #include "Renderer/Renderer.hpp"
 #include <cstring>
@@ -21,12 +22,14 @@ struct TextVertex
 
 void TextRenderer::Initialize()
 {
+    const Renderer &renderer = Application::GetInstance()->GetRenderer();
+
     std::vector<Vertex> vertices =
         {
-            {{0.5, 0.5, 0.0}, {1, 0}, {}, {}, {}},
-            {{0.5, -0.5, 0.0}, {1, 1}, {}, {}, {}},
-            {{-0.5, -0.5, 0.0}, {0, 1}, {}, {}, {}},
-            {{-0.5, 0.5, 0.0}, {0, 0}, {}, {}, {}},
+            {{0.5, 0.5, 0.0}, {1, 0}, {}},
+            {{0.5, -0.5, 0.0}, {1, 1}, {}},
+            {{-0.5, -0.5, 0.0}, {0, 1}, {}},
+            {{-0.5, 0.5, 0.0}, {0, 0}, {}},
         };
 
     std::vector<TextVertex> textVertices =
@@ -62,38 +65,27 @@ void TextRenderer::Initialize()
     DestroyBuffer(mStagingVertexBuffer);
     DestroyBuffer(mStagingIndexBuffer);
 
-    // mQuadMeshId = MeshManager::CreateMesh(vertices, indices);
-
     mUniformBuffer = UniformBuffer(sizeof(TextUniformData), &mUniformData);
     mUniformDescriptor.AddDescriptor(DescriptorType::Uniform, ShaderStage::Vertex);
-    mUniformDescriptor.CreateDescriptor();
+    mUniformDescriptor.Create();
     mUniformDescriptor.UpdateBuffer(mUniformBuffer.GetBuffer(), 0);
 
     mBezierDescriptor.AddDescriptor(DescriptorType::StorageBuffer, ShaderStage::Fragment);
-    mBezierDescriptor.CreateDescriptor();
+    mBezierDescriptor.Create();
 
-    mShader.AddDescriptor(mUniformDescriptor, mBezierDescriptor);
-    mShader.AddLayout(TextVertex::GetLayout(0, 0));
-    mShader.AddLayout(TextInstanceData::GetLayout(1, 2));
-    mShader.AddColorBlendAttachment(true);
-    mShader.SetPushConstantSize(sizeof(TextPushConstant));
-    mShader.GetSettings().cullMode = CullMode::None;
-    mShader.GetSettings().enableDepthTest = true;
-    mShader.GetSettings().enableDepthWrite = true;
-    mShader.GetSettings().sampleCount = Renderer::GetSampleCount();
-    mShader.Load("Shaders/bezier.vert.spv", "Shaders/bezier.frag.spv", Renderer::GetRenderPass(), 0);
+    ShaderConfig config =
+        {
+            .sampleCount = Application::GetInstance()->GetRenderer().GetSampleCount(),
+            .cullMode = CullMode::None,
+            .enableDepthWrite = true,
+            .enableDepthTest = true,
+            .descriptors = {mUniformDescriptor, mBezierDescriptor},
+            .colorBlendAttachments = {true},
+            .layouts = {TextVertex::GetLayout(0, 0), TextInstanceData::GetLayout(1, 2)},
+            .pushConstantSize = sizeof(TextPushConstant),
+        };
 
-    mTextPipeline.AddColorBlendAttachment(true);
-
-    mTextPipeline.SetPushConstant(ShaderStage::All, sizeof(TextPushConstant));
-
-    mTextPipeline.EnableDepthTesting(false);
-    mTextPipeline.EnableDepthWrite(false);
-    mTextPipeline.SetCullMode(CullMode::None);
-
-    mTextPipeline.SetSampleCount(Renderer::GetSampleCount());
-
-    mTextPipeline.CreatePipeline(Renderer::GetRenderPass(), 1);
+    mShader = Shader("Shaders/bezier.vert.spv", "Shaders/bezier.frag.spv", renderer.GetRenderPass(), renderer.GetRenderPassColorSubpassIndex(), config);
 }
 
 void TextRenderer::Terminate()
@@ -256,14 +248,14 @@ void TextRenderer::Flush()
     renderCommand.indexCount = mIndexBuffer.capacity / sizeof(uint32_t);
     renderCommand.instanceBuffer = &mInstanceBuffer;
     renderCommand.instanceCount = mInstanceData.size();
-    renderCommand.pipeline = &mTextPipeline;
+    renderCommand.pipeline = &mShader.GetGraphicsPipeline();
     renderCommand.pipelineSettings.cullMode = CullMode::None;
     renderCommand.pushContantSize = sizeof(TextPushConstant);
     renderCommand.pipelineSettings.enableDepthTest = false;
     renderCommand.pipelineSettings.enableDepthWrite = false;
     memcpy(renderCommand.pushContantData, &mPushConstant, sizeof(TextPushConstant));
 
-    Renderer::Submit(renderCommand);
+    Application::GetInstance()->GetRenderer().Submit(renderCommand);
     mInstanceData.clear();
 }
 
@@ -275,15 +267,14 @@ void TextRenderer::SetCamera(const Camera &camera)
     mUniformBuffer.SetData(&mUniformData);
 }
 
-GraphicsPipeline TextRenderer::mTextPipeline;
-UniformBuffer TextRenderer::mUniformBuffer;
-Descriptor TextRenderer::mUniformDescriptor;
-Descriptor TextRenderer::mBezierDescriptor;
-TextUniformData TextRenderer::mUniformData;
-Camera TextRenderer::mCamera;
-Shader TextRenderer::mShader;
-Buffer TextRenderer::mVertexBuffer;
-Buffer TextRenderer::mIndexBuffer;
-InstanceBuffer TextRenderer::mInstanceBuffer;
-std::vector<TextInstanceData> TextRenderer::mInstanceData;
-TextPushConstant TextRenderer::mPushConstant;
+// UniformBuffer TextRenderer::mUniformBuffer;
+// Descriptor TextRenderer::mUniformDescriptor;
+// Descriptor TextRenderer::mBezierDescriptor;
+// TextUniformData TextRenderer::mUniformData;
+// Camera TextRenderer::mCamera;
+// Shader TextRenderer::mShader;
+// Buffer TextRenderer::mVertexBuffer;
+// Buffer TextRenderer::mIndexBuffer;
+// InstanceBuffer TextRenderer::mInstanceBuffer;
+// std::vector<TextInstanceData> TextRenderer::mInstanceData;
+// TextPushConstant TextRenderer::mPushConstant;

@@ -528,15 +528,6 @@ Window::Window(const glm::uvec2 &size, std::string_view title)
     glfwSetWindowMaximizeCallback(mWindowData.window, GlfwCallback::maximizeCallback);
 }
 
-void Window::HideCursor()
-{
-    CHROME_TRACE_FUNCTION();
-    if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_HIDDEN)
-    {
-        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    }
-}
-
 Window::Window(Window &&window) noexcept
 {
     mWindowData.window = window.mWindowData.window;
@@ -640,28 +631,6 @@ GLFWwindow *Window::GetNativeWindow() const
     return mWindowData.window;
 }
 
-void Window::DisableCursor()
-{
-    CHROME_TRACE_FUNCTION();
-    if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
-    {
-        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
-}
-
-void Window::ShowCursor()
-{
-    CHROME_TRACE_FUNCTION();
-    if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
-    {
-        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
-}
-bool Window::isCursorHidden() const
-{
-    CHROME_TRACE_FUNCTION();
-    return glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
-}
 bool Window::IsFullscreen() const
 {
     CHROME_TRACE_FUNCTION();

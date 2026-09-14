@@ -11,11 +11,9 @@ struct Vertex
     glm::vec3 position = glm::vec3(0);
     glm::vec2 uv = glm::vec3(0);
     glm::vec3 normal = glm::vec3(0);
-    glm::vec3 tangent = glm::vec3(0);
-    glm::vec3 bitangent = glm::vec3(0);
 
-    Vertex(glm::vec3 position, glm::vec2 uv, glm::vec3 normal, glm::vec3 tangent, glm::vec3 bitangent)
-        : position(position), uv(uv), normal(normal), tangent(tangent), bitangent(bitangent)
+    Vertex(glm::vec3 position, glm::vec2 uv, glm::vec3 normal)
+        : position(position), uv(uv), normal(normal)
     {
     }
     Vertex() = default;
@@ -27,8 +25,6 @@ struct Vertex
         layout.attributes.emplace_back(binding, 0 + startLocation, offsetof(Vertex, position), ImageFormat::RGB32);
         layout.attributes.emplace_back(binding, 1 + startLocation, offsetof(Vertex, uv), ImageFormat::RG32);
         layout.attributes.emplace_back(binding, 2 + startLocation, offsetof(Vertex, normal), ImageFormat::RGB32);
-        layout.attributes.emplace_back(binding, 3 + startLocation, offsetof(Vertex, tangent), ImageFormat::RGB32);
-        layout.attributes.emplace_back(binding, 4 + startLocation, offsetof(Vertex, bitangent), ImageFormat::RGB32);
 
         layout.bindings.emplace_back(binding, sizeof(Vertex), InputRate::Vertex);
 
@@ -39,12 +35,41 @@ struct Vertex
 class Mesh
 {
 public:
-    Mesh();
+    Mesh() = default;
     Mesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize);
     Mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
     void SetData(const void *vertices, size_t vertexSize, const uint32_t *indices, size_t indexSize);
     void SetData(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+
+    void GetMinMax(const glm::mat4 model, glm::vec3 &min, glm::vec3 &max) const
+    {
+        Vertex *data = (Vertex *)mStagingVertexBuffer.map;
+
+        if (IsStandardMesh() && !IsEmpty())
+        {
+            min = glm::vec3(FLT_MAX);
+            max = glm::vec3(-FLT_MAX);
+
+            for (uint32_t i = 0; i < mVertexBuffer.capacity / sizeof(Vertex); i++)
+            {
+                glm::vec3 position = model * glm::vec4(data[i].position, 1.f);
+
+                min.x = glm::min(min.x, position.x);
+                min.y = glm::min(min.y, position.y);
+                min.z = glm::min(min.z, position.z);
+
+                max.x = glm::max(max.x, position.x);
+                max.y = glm::max(max.y, position.y);
+                max.z = glm::max(max.z, position.z);
+            }
+
+            return;
+        }
+
+        min = glm::vec3(0);
+        max = glm::vec3(0);
+    }
 
     void *GetVertexData() const
     {
@@ -81,6 +106,11 @@ public:
     bool IsStandardMesh() const
     {
         return mStandardMesh;
+    }
+
+    bool IsEmpty() const
+    {
+        return mStagingVertexBuffer.capacity == 0;
     }
 
     const glm::vec3 &GetMinVertex() const

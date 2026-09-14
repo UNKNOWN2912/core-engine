@@ -6,38 +6,42 @@
 UniformBuffer::~UniformBuffer()
 {
     CHROME_TRACE_FUNCTION();
-    // DestroyUniformBuffer();
-}
-
-UniformBuffer::UniformBuffer(size_t size)
-{
-    CHROME_TRACE_FUNCTION();
-    mBuffer = CreateBuffer(size, BufferUsage::UniformBuffer, MemoryProperty::HostCoherent | MemoryProperty::HostVisible);
+    Destroy();
 }
 
 UniformBuffer::UniformBuffer(size_t size, void *data)
 {
     CHROME_TRACE_FUNCTION();
     mBuffer = CreateBuffer(size, BufferUsage::UniformBuffer, MemoryProperty::HostCoherent | MemoryProperty::HostVisible);
-    SetData(data);
+
+    if (data != nullptr)
+    {
+        SetData(data);
+    }
 }
 
-UniformBuffer::UniformBuffer(UniformBuffer &&uniformBuffer) noexcept : mBuffer(uniformBuffer.mBuffer)
+UniformBuffer::UniformBuffer(UniformBuffer &&uniformBuffer) noexcept
 {
+    mBuffer = uniformBuffer.mBuffer;
     uniformBuffer.mBuffer = {};
 }
 
 UniformBuffer &UniformBuffer::operator=(UniformBuffer &&uniformBuffer) noexcept
 {
+    Destroy();
+
     mBuffer = uniformBuffer.mBuffer;
     uniformBuffer.mBuffer = {};
 
     return *this;
 }
 
-void UniformBuffer::DestroyUniformBuffer()
+void UniformBuffer::Destroy()
 {
+    if (mBuffer.handle == VK_NULL_HANDLE)
+        return;
     DestroyBuffer(mBuffer);
+    mBuffer = {};
 }
 
 void UniformBuffer::SetData(void *data)

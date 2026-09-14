@@ -40,6 +40,7 @@ void EndCommandBuffer(VkCommandBuffer commandBuffer);
 void ExecuteCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue);
 VkShaderModule CreateShaderModuleFromMemory(VkDevice device, const std::vector<uint32_t> &code);
 VkShaderModule CreateShaderFromFile(VkDevice device, const char *filename);
+VkCommandPool CreateCommandPool();
 
 VkDescriptorSetLayout CreateDescriptorSetLayout(std::initializer_list<VkDescriptorSetLayoutBinding> bindings);
 VkDescriptorPool CreateDescriptorPool(std::initializer_list<VkDescriptorPoolSize> sizes, uint32_t maxSets);

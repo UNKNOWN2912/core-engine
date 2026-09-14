@@ -15,16 +15,15 @@ void Application::InitializeApplication()
     mGraphicsContext.Create(DeviceType::Dedicated);
     mGraphicsContext.SetAsCurrentContext();
 
-    Renderer::Initialize(mRendererSpecification);
+    mRenderer = Renderer(mRendererSpecification);
 }
 
 void Application::TerminateApplication()
 {
     CHROME_TRACE_FUNCTION();
-    Renderer::Terminate();
 }
 
-void Application::RunApplication()
+void Application::Run()
 {
     CHROME_TRACE_FUNCTION();
     InitializeApplication();
@@ -171,6 +170,24 @@ glm::vec2 Application::GetCursorPos() const
 {
     return mWindow.GetCursorPosition();
 }
+const RendererSpecification &Application::GetRendererSpecification() const
+{
+    return mRendererSpecification;
+}
+
+void Application::SetRendererSpecification(const RendererSpecification &specification)
+{
+    mRendererSpecification = specification;
+}
+const Renderer &Application::GetRenderer() const
+{
+    return mRenderer;
+}
+
+Renderer &Application::GetRenderer()
+{
+    return mRenderer;
+}
 
 void Application::MainLoop()
 {
@@ -183,18 +200,8 @@ void Application::MainLoop()
     {
         mWindow.ProcessEvent();
 
-        if (mDisableCursor)
-        {
-            mWindow.DisableCursor();
-        }
-        else if (mHideCursor)
-        {
-            mWindow.HideCursor();
-        }
-        else
-        {
-            mWindow.ShowCursor();
-        }
+        mMouse.ProcessMouseEvent(mWindow);
+        mKeyboard.ProcessKeyboardEvent(mWindow);
 
         fps++;
         if (fpsTimer.GetElapsedTime() > 1.f)
@@ -212,27 +219,14 @@ void Application::MainLoop()
     }
 }
 
-void Application::HideCursor()
+const Mouse &Application::GetMouse() const
 {
-    CHROME_TRACE_FUNCTION();
-    mHideCursor = true;
+    return mMouse;
 }
 
-void Application::ResetCursor()
+Mouse &Application::GetMouse()
 {
-    mDisableCursor = false;
-    mHideCursor = false;
-}
-
-void Application::DisableCursor()
-{
-    mDisableCursor = true;
-}
-
-bool Application::IsCursorHidden()
-{
-    CHROME_TRACE_FUNCTION();
-    return mWindow.isCursorHidden();
+    return mMouse;
 }
 
 Application *Application::instance = nullptr;

@@ -27,6 +27,7 @@ VkColorSpaceKHR GetVulkanColorSpace(ColorSpace colorspace);
 VkImageViewType GetVulkanViewType(ViewType viewtype);
 VkImageType GetVulkanImageType(ImageType type);
 VkComponentSwizzle GetVulkanComponentSwizzle(ComponentSwizzle swizzle);
+VkCompareOp GetVulkanCompareType(CompareType compare);
 
 ImageFormat GetNativeImageFormat(VkFormat imageFormat);
 ImageLayout GetNativeImageLayout(VkImageLayout imageLayout);
@@ -53,3 +54,4 @@ ColorSpace GetNativeColorSpace(VkColorSpaceKHR colorspace);
 ViewType GetNativeViewType(VkImageViewType viewtype);
 ImageType GetNativeImageType(VkImageType type);
 ComponentSwizzle GetNativeComponentSwizzle(VkComponentSwizzle swizzle);
+CompareType GetNativeCompareType(VkCompareOp compare);

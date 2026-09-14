@@ -1,29 +1,26 @@
 #include "ShaderManager.hpp"
-#include "Renderer/GraphicsContext.hpp"
+#include "Core/Application.hpp"
 #include "Renderer/Renderer.hpp"
-#include "Renderer/Utility.hpp"
 
-std::string ShaderManager::Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile, std::string_view tessellationFile, std::function<void(Shader &shader)> setupCallback)
+std::string ShaderManager::Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile, std::string_view tessellationFile, const ShaderConfig &config)
 {
-    Shader &shader = mShaderMap[identifier.data()];
-    setupCallback(shader);
-    shader.Load(vertexFile, fragmentFile, geometryFile, tessellationFile, Renderer::GetRenderPass(), 0);
+    Renderer &renderer = Application::GetInstance()->GetRenderer();
+    mShaderMap[identifier.data()] = Shader(vertexFile, fragmentFile, geometryFile, tessellationFile, renderer.GetRenderPass(), renderer.GetRenderPassColorSubpassIndex(), config);
     return identifier.data();
 }
-std::string ShaderManager::Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::function<void(Shader &shader)> setupCallback)
+std::string ShaderManager::Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, const ShaderConfig &config)
 {
-    return Load(identifier, vertexFile, fragmentFile, "", "", setupCallback);
+    return Load(identifier, vertexFile, fragmentFile, "", "", config);
 }
-std::string ShaderManager::Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, std::function<void(Shader &shader)> setupCallback)
+std::string ShaderManager::Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, const ShaderConfig &config)
 {
-    Shader &shader = mShaderMap[identifier.data()];
-    setupCallback(shader);
-    shader.Create(vertexCode, fragmentCode, geometryCode, tessellationCode, Renderer::GetRenderPass(), 0);
+    Renderer &renderer = Application::GetInstance()->GetRenderer();
+    mShaderMap[identifier.data()] = Shader(vertexCode, fragmentCode, geometryCode, tessellationCode, renderer.GetRenderPass(), renderer.GetRenderPassColorSubpassIndex(), config);
     return identifier.data();
 }
-std::string ShaderManager::Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, std::function<void(Shader &shader)> setupCallback)
+std::string ShaderManager::Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const ShaderConfig &config)
 {
-    return Create(identifier, vertexCode, fragmentCode, {}, {}, setupCallback);
+    return Create(identifier, vertexCode, fragmentCode, {}, {}, config);
 }
 
 Shader &ShaderManager::Get(std::string_view identifier)

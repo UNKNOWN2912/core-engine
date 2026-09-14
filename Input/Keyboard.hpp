@@ -124,4 +124,5 @@ enum class Key
     RightAlt,
     RightSuper,
     Menu,
+    MaxEnum
 };

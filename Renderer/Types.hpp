@@ -251,6 +251,7 @@ enum class Filter
     None = 0,
     Nearest,
     Linear,
+    Cubic,
 };
 
 enum class AddressMode
@@ -337,4 +338,17 @@ enum class ComponentSwizzle
     G,
     B,
     A,
+};
+
+enum class CompareType
+{
+    None,
+    Never,
+    Less,
+    Equal,
+    LessOrEqual,
+    Greater,
+    NotEqual,
+    GreaterOrEqual,
+    Always,
 };

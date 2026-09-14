@@ -14,6 +14,7 @@ file(GLOB sources
     "Assets/*.cpp" 
     "Profiler/*.cpp"
     "EntityComponentSystem/*.cpp"
+    "Input/*.cpp"
 )
 
 

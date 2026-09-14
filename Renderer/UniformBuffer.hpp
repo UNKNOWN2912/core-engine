@@ -7,18 +7,17 @@ class UniformBuffer
 public:
     UniformBuffer() = default;
     ~UniformBuffer();
-    UniformBuffer(const UniformBuffer &) = default;
-    UniformBuffer &operator=(const UniformBuffer &) = default;
-    UniformBuffer(size_t size);
-    UniformBuffer(size_t size, void *data);
+    UniformBuffer(const UniformBuffer &) = delete;
+    UniformBuffer &operator=(const UniformBuffer &) = delete;
+    UniformBuffer(size_t size, void *data = nullptr);
     UniformBuffer(UniformBuffer &&uniformBuffer) noexcept;
     UniformBuffer &operator=(UniformBuffer &&uniformBuffer) noexcept;
 
-    void DestroyUniformBuffer();
     void SetData(void *data);
     const Buffer &GetBuffer() const;
     size_t GetCapacity();
 
 private:
+    void Destroy();
     Buffer mBuffer;
 };

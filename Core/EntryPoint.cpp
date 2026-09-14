@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 {
     StartGlobalTimer();
     Application *application = Application::Create();
-    application->RunApplication();
+    application->Run();
     delete application;
     StopGlobalTimer();
 }

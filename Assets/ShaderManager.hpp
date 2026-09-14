@@ -17,10 +17,10 @@ struct BuiltinShaderIdentifier
 class ShaderManager
 {
 public:
-    std::string Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile, std::string_view tessellationFile, std::function<void(Shader &shader)> setupCallback = [](Shader &shader) {});
-    std::string Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::function<void(Shader &shader)> setupCallback = [](Shader &shader) {});
-    std::string Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode = {}, const std::vector<uint32_t> &tessellationCode = {}, std::function<void(Shader &shader)> setupCallback = [](Shader &shader) {});
-    std::string Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, std::function<void(Shader &shader)> setupCallback = [](Shader &shader) {});
+    std::string Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, std::string_view geometryFile, std::string_view tessellationFile, const ShaderConfig &config);
+    std::string Load(std::string_view identifier, std::string_view vertexFile, std::string_view fragmentFile, const ShaderConfig &config);
+    std::string Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, const ShaderConfig &config);
+    std::string Create(std::string_view identifier, const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const ShaderConfig &config);
     Shader &Get(std::string_view id);
     const Shader &Get(std::string_view id) const;
     bool Has(std::string_view id);

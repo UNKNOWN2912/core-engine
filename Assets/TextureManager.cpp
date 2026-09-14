@@ -2,7 +2,6 @@
 
 void TextureManager::Initialize()
 {
-    mSampler.CreateSampler();
 }
 
 void TextureManager::Terminate()
@@ -11,10 +10,8 @@ void TextureManager::Terminate()
 
 std::string TextureManager::LoadTexture(std::string_view identifier, std::string_view filename, ImageFormat format)
 {
-    Texture texture;
-    texture.Load(filename, format);
 
-    mTextureMap[identifier.data()] = texture;
+    mTextureMap.try_emplace(identifier.data(), filename, format);
 
     uint32_t index = mTextureDescriptorIndex.size();
     mTextureDescriptorIndex[identifier.data()] = index;
@@ -24,14 +21,17 @@ std::string TextureManager::LoadTexture(std::string_view identifier, std::string
 
 std::string TextureManager::CreateTexture(std::string_view identifier, void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
 {
-    Texture texture;
-    texture.Create(data, size, format, minFilter, magFilter, addressMode);
-
-    mTextureMap[identifier.data()] = texture;
+    mTextureMap.try_emplace(identifier.data(), data, size, format, minFilter, magFilter, addressMode);
 
     uint32_t index = mTextureDescriptorIndex.size();
     mTextureDescriptorIndex[identifier.data()] = index;
 
+    return identifier.data();
+}
+
+std::string TextureManager::MoveTexture(std::string_view identifier, Texture &&texture)
+{
+    mTextureMap[identifier.data()] = std::move(texture);
     return identifier.data();
 }
 

@@ -211,7 +211,7 @@ Font FontImporter::Import(std::string_view filename, uint32_t size)
         font.SetGlyphData(ch, fontData);
     }
 
-    font.mStorageBuffer.CreateStorageBuffer(font.mCurves.data(), font.mCurves.size() * sizeof(BezierCurve));
+    font.mStorageBuffer = StorageBuffer(font.mCurves.size() * sizeof(BezierCurve), font.mCurves.data());
 
     font.SetName(filename);
 

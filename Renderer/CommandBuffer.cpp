@@ -2,12 +2,12 @@
 #include "Renderer/Converter.hpp"
 #include "Renderer/Utility.hpp"
 
-void CommandBuffer::CreateCommandBuffer(VkCommandPool commandPool)
+void CommandBuffer::Create(VkCommandPool commandPool)
 {
     mHandle = AllocateCommandBuffer(commandPool);
     mCommandPool = commandPool;
 }
-void CommandBuffer::DestroyCommandBuffer()
+void CommandBuffer::Destroy()
 {
     if (mHandle == VK_NULL_HANDLE)
     {
@@ -62,7 +62,43 @@ void CommandBuffer::QueueSubmit(VkQueue queue, const Semaphore &waitSemaphore, c
     vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 }
 
+VkCommandBuffer CommandBuffer::GetHandle() const
+{
+    return mHandle;
+}
+
+CommandBuffer::CommandBuffer()
+{
+}
+
+CommandBuffer::CommandBuffer(VkCommandPool commandPool)
+{
+    Create(commandPool);
+}
+
+CommandBuffer::CommandBuffer(CommandBuffer &&commandBuffer) noexcept
+{
+    mHandle = commandBuffer.mHandle;
+    mCommandPool = commandBuffer.mCommandPool;
+
+    commandBuffer.mHandle = {};
+    commandBuffer.mCommandPool = {};
+}
+
+CommandBuffer &CommandBuffer::operator=(CommandBuffer &&commandBuffer) noexcept
+{
+    Destroy();
+
+    mHandle = commandBuffer.mHandle;
+    mCommandPool = commandBuffer.mCommandPool;
+
+    commandBuffer.mHandle = {};
+    commandBuffer.mCommandPool = {};
+
+    return *this;
+}
+
 CommandBuffer::~CommandBuffer()
 {
-    DestroyCommandBuffer();
+    Destroy();
 }

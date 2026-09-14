@@ -8,24 +8,38 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+struct DescriptorLayout
+{
+    DescriptorType type = DescriptorType::None;
+    ShaderStage shaderStage = ShaderStage::None;
+    uint32_t count = 1;
+};
+
 class Descriptor
 {
 public:
     void AddDescriptor(DescriptorType type, ShaderStage shaderStage);
     void AddBindlessDescriptor(DescriptorType type, ShaderStage shaderStage, uint32_t count);
-    void CreateDescriptor();
-    void DestroyDescriptor();
+    void Create();
+    void Destroy();
 
     void UpdateBuffer(const Buffer &buffer, uint32_t binding) const;
     void UpdateImage(const ImageDeprecated &image, ImageLayout layout, const Sampler &sampler, uint32_t binding) const;
     void UpdateImage(const Image &image, const Sampler &sampler, uint32_t binding) const;
     void UpdateImage(const ImageView &view, ImageLayout layout, const Sampler &sampler, uint32_t binding) const;
     void UpdateImageIndex(const ImageDeprecated &image, ImageLayout layout, const Sampler &sampler, uint32_t binding, uint32_t index) const;
+    void UpdateImageIndex(const Image &image, ImageLayout layout, const Sampler &sampler, uint32_t binding, uint32_t index) const;
 
     VkDescriptorSet GetDescriptorSet() const;
     VkDescriptorSetLayout GetDescriptorSetLayout() const;
     VkDescriptorPool GetDescriptorPool() const;
-    operator VkDescriptorSet();
+
+    Descriptor() = default;
+    Descriptor(std::initializer_list<DescriptorLayout> layouts);
+    Descriptor(const Descriptor &descriptor) = delete;
+    Descriptor(Descriptor &&descriptor) noexcept;
+    Descriptor &operator=(const Descriptor &descriptor) = delete;
+    Descriptor &operator=(Descriptor &&descriptor) noexcept;
 
 private:
     void CreateDescriptorSetLayout();
@@ -34,6 +48,7 @@ private:
 
     void DestroyDescriptorSetLayout();
     void DestroyDescriptorPool();
+    void FreeDescriptorSet();
 
     std::unordered_map<VkDescriptorType, uint32_t> mDescriptorTypeCount;
     std::vector<VkDescriptorSetLayoutBinding> mDescriptorBinding;

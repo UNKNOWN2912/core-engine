@@ -453,6 +453,8 @@ VkFilter GetVulkanFilter(Filter filter)
         return VK_FILTER_NEAREST;
     case Filter::Linear:
         return VK_FILTER_LINEAR;
+    case Filter::Cubic:
+        return VK_FILTER_CUBIC_IMG;
     }
     ERROR("Invalid filter: {}", (uint32_t)filter);
 
@@ -664,6 +666,35 @@ VkComponentSwizzle GetVulkanComponentSwizzle(ComponentSwizzle swizzle)
     ERROR("Invalid component swizzle");
 
     return VK_COMPONENT_SWIZZLE_IDENTITY;
+}
+
+VkCompareOp GetVulkanCompareType(CompareType compare)
+{
+    switch (compare)
+    {
+    case CompareType::None:
+        return VK_COMPARE_OP_MAX_ENUM;
+    case CompareType::Never:
+        return VK_COMPARE_OP_NEVER;
+    case CompareType::Less:
+        return VK_COMPARE_OP_LESS;
+    case CompareType::Equal:
+        return VK_COMPARE_OP_EQUAL;
+    case CompareType::LessOrEqual:
+        return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case CompareType::Greater:
+        return VK_COMPARE_OP_GREATER;
+    case CompareType::NotEqual:
+        return VK_COMPARE_OP_NOT_EQUAL;
+    case CompareType::GreaterOrEqual:
+        return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case CompareType::Always:
+        return VK_COMPARE_OP_ALWAYS;
+    }
+
+    ERROR("Invalid compare type");
+
+    return VK_COMPARE_OP_MAX_ENUM;
 }
 
 VkPrimitiveTopology GetVulkanPrimitive(PrimitiveType primitive)
@@ -1127,6 +1158,8 @@ Filter GetNativeFilter(VkFilter filter)
         return Filter::Nearest;
     case VK_FILTER_LINEAR:
         return Filter::Linear;
+    case VK_FILTER_CUBIC_IMG:
+        return Filter::Cubic;
     }
     ERROR("Invalid filter: {}", (uint32_t)filter);
 
@@ -1362,4 +1395,31 @@ ComponentSwizzle GetNativeComponentSwizzle(VkComponentSwizzle swizzle)
     ERROR("Invalid component swizzle");
 
     return ComponentSwizzle::None;
+}
+
+CompareType GetNativeCompareType(VkCompareOp compare)
+{
+    switch (compare)
+    {
+    case VK_COMPARE_OP_NEVER:
+        return CompareType::Never;
+    case VK_COMPARE_OP_LESS:
+        return CompareType::Less;
+    case VK_COMPARE_OP_EQUAL:
+        return CompareType::Equal;
+    case VK_COMPARE_OP_LESS_OR_EQUAL:
+        return CompareType::LessOrEqual;
+    case VK_COMPARE_OP_GREATER:
+        return CompareType::Greater;
+    case VK_COMPARE_OP_NOT_EQUAL:
+        return CompareType::NotEqual;
+    case VK_COMPARE_OP_GREATER_OR_EQUAL:
+        return CompareType::GreaterOrEqual;
+    case VK_COMPARE_OP_ALWAYS:
+        return CompareType::Always;
+    }
+
+    ERROR("Invalid compare operation");
+
+    return CompareType::None;
 }

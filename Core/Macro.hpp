@@ -1,6 +1,6 @@
 #pragma once
+#pragma unused_
 #include "Profiler/ChromeTraceProfiler.hpp"
-#include "Timer.hpp"
 #include <cassert>
 #include <print>
 

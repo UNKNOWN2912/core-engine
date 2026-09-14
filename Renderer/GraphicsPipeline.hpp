@@ -54,6 +54,137 @@ public:
 
     void ClearAttributesAndBinding();
 
+    void SetCompareOp(CompareType compare);
+
+    void SetDepthBias(bool enable, float slopeFactor, float constantFactor);
+
+    GraphicsPipeline() = default;
+    GraphicsPipeline(GraphicsPipeline &&pipeline) noexcept
+    {
+        mVertexShader = pipeline.mVertexShader;
+        mFragmentShader = pipeline.mFragmentShader;
+        mGeometryShader = pipeline.mGeometryShader;
+        mTessellationShader = pipeline.mTessellationShader;
+
+        mHandle = pipeline.mHandle;
+        mPipelineLayout = pipeline.mPipelineLayout;
+
+        mBindingDescription = std::move(pipeline.mBindingDescription);
+        mAttributeDescription = std::move(pipeline.mAttributeDescription);
+        mColorBlendStates = std::move(pipeline.mColorBlendStates);
+
+        mCullMode = pipeline.mCullMode;
+        mViewport = pipeline.mViewport;
+
+        mPrimitive = pipeline.mPrimitive;
+        mSampleCount = pipeline.mSampleCount;
+        mFrontFace = pipeline.mFrontFace;
+
+        mSetLayouts = std::move(pipeline.mSetLayouts);
+        mPushConstants = std::move(pipeline.mPushConstants);
+
+        mDepthTestEnable = pipeline.mDepthTestEnable;
+        mDepthWriteEnable = pipeline.mDepthWriteEnable;
+        mBlendEnable = pipeline.mBlendEnable;
+        mWireframeEnable = pipeline.mWireframeEnable;
+
+        mDepthCompareOp = pipeline.mDepthCompareOp;
+
+        mEnableDepthBias = pipeline.mEnableDepthBias;
+        mSlopeFactor = pipeline.mSlopeFactor;
+        mConstantFactor = pipeline.mConstantFactor;
+
+        pipeline.mVertexShader = {};
+        pipeline.mFragmentShader = {};
+        pipeline.mGeometryShader = {};
+        pipeline.mTessellationShader = {};
+        pipeline.mHandle = {};
+        pipeline.mPipelineLayout = {};
+        pipeline.mBindingDescription = {};
+        pipeline.mAttributeDescription = {};
+        pipeline.mColorBlendStates = {};
+        pipeline.mCullMode = {};
+        pipeline.mViewport = {};
+        pipeline.mPrimitive = {};
+        pipeline.mSampleCount = {};
+        pipeline.mFrontFace = {};
+        pipeline.mSetLayouts = {};
+        pipeline.mPushConstants = {};
+        pipeline.mDepthTestEnable = {};
+        pipeline.mDepthWriteEnable = {};
+        pipeline.mBlendEnable = {};
+        pipeline.mWireframeEnable = {};
+        pipeline.mDepthCompareOp = {};
+        pipeline.mEnableDepthBias = {};
+        pipeline.mSlopeFactor = {};
+        pipeline.mConstantFactor = {};
+    }
+
+    GraphicsPipeline &operator=(GraphicsPipeline &&pipeline) noexcept
+    {
+        DestroyPipeline();
+
+        mVertexShader = pipeline.mVertexShader;
+        mFragmentShader = pipeline.mFragmentShader;
+        mGeometryShader = pipeline.mGeometryShader;
+        mTessellationShader = pipeline.mTessellationShader;
+
+        mHandle = pipeline.mHandle;
+        mPipelineLayout = pipeline.mPipelineLayout;
+
+        mBindingDescription = std::move(pipeline.mBindingDescription);
+        mAttributeDescription = std::move(pipeline.mAttributeDescription);
+        mColorBlendStates = std::move(pipeline.mColorBlendStates);
+
+        mCullMode = pipeline.mCullMode;
+        mViewport = pipeline.mViewport;
+
+        mPrimitive = pipeline.mPrimitive;
+        mSampleCount = pipeline.mSampleCount;
+        mFrontFace = pipeline.mFrontFace;
+
+        mSetLayouts = std::move(pipeline.mSetLayouts);
+        mPushConstants = std::move(pipeline.mPushConstants);
+
+        mDepthTestEnable = pipeline.mDepthTestEnable;
+        mDepthWriteEnable = pipeline.mDepthWriteEnable;
+        mBlendEnable = pipeline.mBlendEnable;
+        mWireframeEnable = pipeline.mWireframeEnable;
+
+        mDepthCompareOp = pipeline.mDepthCompareOp;
+
+        mEnableDepthBias = pipeline.mEnableDepthBias;
+        mSlopeFactor = pipeline.mSlopeFactor;
+        mConstantFactor = pipeline.mConstantFactor;
+
+        pipeline.mVertexShader = {};
+        pipeline.mFragmentShader = {};
+        pipeline.mGeometryShader = {};
+        pipeline.mTessellationShader = {};
+        pipeline.mHandle = {};
+        pipeline.mPipelineLayout = {};
+        pipeline.mBindingDescription = {};
+        pipeline.mAttributeDescription = {};
+        pipeline.mColorBlendStates = {};
+        pipeline.mCullMode = {};
+        pipeline.mViewport = {};
+        pipeline.mPrimitive = {};
+        pipeline.mSampleCount = {};
+        pipeline.mFrontFace = {};
+        pipeline.mSetLayouts = {};
+        pipeline.mPushConstants = {};
+        pipeline.mDepthTestEnable = {};
+        pipeline.mDepthWriteEnable = {};
+        pipeline.mBlendEnable = {};
+        pipeline.mWireframeEnable = {};
+        pipeline.mDepthCompareOp = {};
+        pipeline.mEnableDepthBias = {};
+        pipeline.mSlopeFactor = {};
+        pipeline.mConstantFactor = {};
+
+        return *this;
+    }
+
 private:
     VkShaderModule mVertexShader = VK_NULL_HANDLE;
     VkShaderModule mFragmentShader = VK_NULL_HANDLE;
@@ -81,4 +212,10 @@ private:
     bool mDepthWriteEnable = false;
     bool mBlendEnable = false;
     bool mWireframeEnable = false;
+
+    VkCompareOp mDepthCompareOp = VK_COMPARE_OP_LESS;
+
+    bool mEnableDepthBias = false;
+    float mSlopeFactor = 0.f;
+    float mConstantFactor = 0.f;
 };
