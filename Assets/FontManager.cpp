@@ -3,7 +3,8 @@
 std::string FontManager::Load(std::string_view filename, std::string_view identifier)
 {
     Font font = mImporter.Import(filename, 1024);
-    mFontMap[identifier.data()] = font;
+    mFontMap[identifier.data()] = std::move(font);
+
     return identifier.data();
 }
 

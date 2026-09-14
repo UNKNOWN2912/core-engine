@@ -52,7 +52,7 @@ struct UniformData
     glm::vec3 cameraPosition = glm::vec3(0);
     int lightCount = 0;
     glm::vec3 cameraFront = glm::vec3(0);
-    float time;
+    float time = 0;
 };
 
 struct PushConstantData
@@ -89,152 +89,138 @@ struct LightUniformData
 class Renderer
 {
 public:
-    static void Initialize(const RendererSpecification &specification);
-    static void Terminate();
+    Renderer() = default;
+    Renderer(const Renderer &renderer) = delete;
+    Renderer(const RendererSpecification &specification);
+    ~Renderer();
+    Renderer &operator=(const Renderer &renderer) = delete;
+    Renderer &operator=(Renderer &&renderer);
+    Renderer(Renderer &&renderer);
 
-    static void BeginFrame(const Camera &camera);
-    static void EndFrame(const glm::vec4 &clearColor = glm::vec4(1, 0, 1, 1));
+    void Move(Renderer &&renderer);
 
-    static void SetResolution(const glm::uvec2 &resolution)
-    {
-        mResolution = resolution;
-    }
-    static const glm::uvec2 &GetResolution();
-    static SampleCount GetSampleCount();
-    static void SetSampleCount(const SampleCount &sampleCount);
-    static Surface CreateSurface(const Window &window, ImageFormat format = ImageFormat::BGRA8);
-    static void ResizeSurface(Surface &surface, ImageFormat format);
-    static void Present(Surface &surface);
+    void BeginFrame(const Camera &camera);
+    void EndFrame(const glm::vec4 &clearColor = glm::vec4(1, 0, 1, 1));
 
-    static void SetupSceneShader(Shader &shader);
+    void SetResolution(const glm::uvec2 &resolution);
+    const glm::uvec2 &GetResolution() const;
+    SampleCount GetSampleCount() const;
+    void SetSampleCount(const SampleCount &sampleCount);
+    Surface CreateSurface(const Window &window, ImageFormat format = ImageFormat::BGRA8);
+    void ResizeSurface(Surface &surface, ImageFormat format);
+    void Present(Surface &surface);
 
-    static const std::vector<RenderCommand> &GetRenderCommands();
+    ShaderConfig GetSceneShaderConfig() const;
 
-    static void Submit(RenderCommand renderCommand);
-    static void Submit(const Mesh &mesh, const Material &material, const Transform &transform, const TextureManager &textureManager, const ShaderManager &shaderManager);
+    const std::vector<RenderCommand> &GetRenderCommands() const;
 
-    static void SetBasicShader(std::string_view identifier, std::string_view vertexShader, std::string_view fragmentShader);
+    void Submit(RenderCommand renderCommand);
+    void Submit(const Mesh &mesh, const Material &material, const Transform &transform, const TextureManager &textureManager, const ShaderManager &shaderManager);
 
-    static std::string GetBasicShaderID();
+    void SetBasicShader(std::string_view identifier, std::string_view vertexShader, std::string_view fragmentShader);
 
-    static void AddLight(const Light &light);
-    static void ClearLights();
+    std::string GetBasicShaderID() const;
 
-    static void BeginLightPlacement();
-    static void EndLightPlacement();
+    void AddLight(const Light &light);
+    void ClearLights();
 
-    static void SetProjectionMatrix(const glm::mat4 &matrix);
-    static void SetViewMatrix(const glm::mat4 &matrix);
+    void BeginLightPlacement();
+    void EndLightPlacement();
 
-    static void CreateGraphicsPipeline(std::string_view identifier, ShaderManager &shaderManager);
+    void SetProjectionMatrix(const glm::mat4 &matrix);
+    void SetViewMatrix(const glm::mat4 &matrix);
 
-    static uint32_t GetInputInt()
-    {
-        return mInputInt;
-    }
+    void CreateGraphicsPipeline(std::string_view identifier, ShaderManager &shaderManager);
 
-    static void SetInputInt(uint32_t inputInt)
-    {
-        mInputInt = inputInt;
-    }
+    uint32_t GetInputInt() const;
 
-    static RenderPass &GetRenderPass();
-    static const RenderPass &GetPresentRenderPass();
+    void SetInputInt(uint32_t inputInt);
 
-    static const glm::uvec2 &GetViewportSize();
-    static void SetViewportSize(const glm::uvec2 &size);
+    RenderPass &GetRenderPass();
+    const RenderPass &GetRenderPass() const;
+    const RenderPass &GetPresentRenderPass() const;
 
-    static const Descriptor &GetBufferDescriptor()
+    const glm::uvec2 &GetViewportSize() const;
+    void SetViewportSize(const glm::uvec2 &size);
+
+    const Descriptor &GetBufferDescriptor() const
     {
         return mBufferDescriptor;
     }
 
-    static const Descriptor &GetShadowMapDescriptor()
+    const Descriptor &GetShadowMapDescriptor() const
     {
         return mShadowMapDescriptor;
     }
 
-    static const GraphicsPipeline &GetShaderPipeline(std::string_view shader)
-    {
-        return mShaderPipelineMap[shader.data()];
-    }
-
-    static const RendererSpecification &GetSpecification()
+    const RendererSpecification &GetSpecification() const
     {
         return Renderer::mSpecification;
     }
 
-    static Camera &GetCamera()
-    {
-        return mCamera;
-    }
-
-    static const Descriptor &GetTextureDescriptor()
+    const Descriptor &GetTextureDescriptor() const
     {
         return mTextureDescriptor;
     }
 
-    static uint32_t GetRenderPassColorSubpassIndex();
+    uint32_t GetRenderPassColorSubpassIndex() const;
 
 private:
-    static uint32_t mInputInt;
+    void Initialize(const RendererSpecification &specification);
+    void Terminate();
+    uint32_t mInputInt = 0;
 
-    static Descriptor mTextureDescriptor;
-    static Descriptor mBufferDescriptor;
+    Descriptor mTextureDescriptor;
+    Descriptor mBufferDescriptor;
 
-    static Sampler mSampler;
-    static FrameInfo mFrameInfo;
-    static RendererSpecification mSpecification;
-    static SampleCount mSampleCount;
-    static glm::uvec2 mResolution;
-    static RenderPass mSceneRenderPass;
-    static FrameBuffer mSceneFrameBuffer;
+    Sampler mSampler;
+    FrameInfo mFrameInfo;
+    RendererSpecification mSpecification;
+    SampleCount mSampleCount = SampleCount::Four;
+    glm::uvec2 mResolution = glm::uvec2(1920, 1080);
+    RenderPass mSceneRenderPass;
+    FrameBuffer mSceneFrameBuffer;
 
-    static ImageDeprecated mSceneColorAttachment;
-    static ImageDeprecated mSceneResolveAttachment;
-    static ImageDeprecated mSceneDepthAttachment;
-    static ImageDeprecated mSceneResolveDepthAttachment;
+    ImageDeprecated mSceneColorAttachment;
+    ImageDeprecated mSceneResolveAttachment;
+    ImageDeprecated mSceneDepthAttachment;
+    ImageDeprecated mSceneResolveDepthAttachment;
 
-    static CommandBuffer mCommandBuffer;
-    static Semaphore mImageAcquiredSemaphore;
-    static Semaphore mSwapchainRenderFinished;
+    CommandBuffer mCommandBuffer;
+    Semaphore mImageAcquiredSemaphore;
+    Semaphore mSwapchainRenderFinished;
 
-    static Shader mPresentShader;
-    static RenderPass mPresentRenderPass;
-    static CommandBuffer mPresentCommandBuffer;
-    static Descriptor mPresentInputDescriptor;
+    Shader mPresentShader;
+    RenderPass mPresentRenderPass;
+    CommandBuffer mPresentCommandBuffer;
+    Descriptor mPresentInputDescriptor;
 
-    static UniformBuffer mUniformBuffer;
-    static UniformData mUniformData;
+    UniformBuffer mUniformBuffer;
+    UniformData mUniformData;
 
-    static std::vector<RenderCommand> mRenderCommands;
+    std::vector<RenderCommand> mRenderCommands;
 
-    static Camera mCamera;
+    std::vector<std::reference_wrapper<const Image>> mShadowMaps;
 
-    static std::vector<Image> mShadowMaps;
-    static std::vector<LightUniformData> mLight;
-    static StorageBuffer mLightStorageBuffer;
+    std::vector<LightUniformData> mLight;
+    StorageBuffer mLightStorageBuffer;
+    Descriptor mShadowMapDescriptor;
 
-    static Descriptor mShadowMapDescriptor;
+    glm::uvec2 mViewportSize;
 
-    static std::unordered_map<std::string, GraphicsPipeline> mShaderPipelineMap;
-    static std::string mBasicShaderID;
-
-    static glm::uvec2 mViewportSize;
-
-    static Shader mDepthPrepassShader;
+    Shader mDepthPrepassShader;
 
 private:
-    static void CreateSceneRenderPassMultisampled();
-    static void CreateSceneFrameBufferMultisampled();
-    static void CreateSceneAttachmentsMultisampled();
-    static void CreateSceneRenderPass();
-    static void CreateSceneFrameBuffer();
-    static void CreateSceneAttachments();
-    static void CreatePresentPipeline();
-    static void CreatePresentRenderPass();
+    void CreateSceneRenderPassMultisampled();
+    void CreateSceneFrameBufferMultisampled();
+    void CreateSceneAttachmentsMultisampled();
+    void CreateSceneRenderPass();
+    void CreateSceneFrameBuffer();
+    void CreateSceneAttachments();
+    void CreatePresentPipeline();
+    void CreatePresentRenderPass();
 
-    static void CmdDrawRenderCommand(const RenderCommand &renderCommand, const RenderCommand &previousCommand);
+    void CmdDrawRenderCommand(const RenderCommand &renderCommand, const RenderCommand &previousCommand);
 
     friend class EditorUI;
 };

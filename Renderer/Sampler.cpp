@@ -1,7 +1,39 @@
+
 #include "Sampler.hpp"
 #include "Renderer/Converter.hpp"
 #include "Renderer/GraphicsContext.hpp"
 #include <vulkan/vulkan_core.h>
+
+Sampler::~Sampler()
+{
+    Destroy();
+}
+VkSampler Sampler::GetHandle() const
+{
+    return mHandle;
+}
+Sampler::Sampler(Filter minFilter, Filter magFilter, AddressMode u, AddressMode v, AddressMode w, bool enableCompare, CompareType compareType)
+{
+    SetFilter(minFilter, magFilter);
+    SetAddressMode(u, v, w);
+    EnableCompare(enableCompare, compareType);
+    Create();
+}
+
+Sampler &Sampler::operator=(Sampler &&sampler) noexcept
+{
+    Destroy();
+
+    mHandle = sampler.mHandle;
+    sampler.mHandle = VK_NULL_HANDLE;
+
+    return *this;
+}
+Sampler::Sampler(Sampler &&sampler) noexcept
+{
+    mHandle = sampler.mHandle;
+    sampler.mHandle = VK_NULL_HANDLE;
+}
 
 void Sampler::SetFilter(Filter minification, Filter magnification)
 {
@@ -18,12 +50,14 @@ void Sampler::SetBorderColor(const glm::vec4 &color)
 {
 }
 
-void Sampler::CreateSampler()
+void Sampler::Create()
 {
     vkCreateSampler(GraphicsContext::GetCurrentContext().GetDevice(), &mCreateInfo, nullptr, &mHandle);
 }
-void Sampler::DestroySampler()
+void Sampler::Destroy()
 {
+    if (mHandle == VK_NULL_HANDLE)
+        return;
     vkDestroySampler(GraphicsContext::GetCurrentContext().GetDevice(), mHandle, nullptr);
 }
 

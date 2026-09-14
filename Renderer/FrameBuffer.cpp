@@ -1,22 +1,15 @@
 #include "FrameBuffer.hpp"
 #include "Renderer/GraphicsContext.hpp"
-#include "Renderer/Image.hpp"
 #include "Renderer/RenderPass.hpp"
 
-void FrameBuffer::CreateFrameBuffer(const glm::uvec2 &size, std::initializer_list<const ImageView> attachments, const RenderPass &renderPass, uint32_t layers)
+void FrameBuffer::Create(const glm::uvec2 &size, const std::vector<VkImageView> &attachments, const RenderPass &renderPass, uint32_t layers)
 {
-    std::vector<VkImageView> attachmentViews;
-    for (const ImageView &image : attachments)
-    {
-        attachmentViews.push_back(image.GetHandle());
-    }
-
     VkFramebufferCreateInfo createInfo =
         {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = renderPass.GetHandle(),
-            .attachmentCount = (uint32_t)attachmentViews.size(),
-            .pAttachments = attachmentViews.data(),
+            .attachmentCount = (uint32_t)attachments.size(),
+            .pAttachments = attachments.data(),
             .width = size.x,
             .height = size.y,
             .layers = layers,
@@ -25,51 +18,7 @@ void FrameBuffer::CreateFrameBuffer(const glm::uvec2 &size, std::initializer_lis
     vkCreateFramebuffer(GraphicsContext::GetCurrentContext().GetDevice(), &createInfo, nullptr, &mHandle);
 }
 
-void FrameBuffer::CreateFrameBuffer(std::initializer_list<ImageDeprecated> attachments, const RenderPass &renderPass, uint32_t layers)
-{
-    std::vector<VkImageView> attachmentViews;
-    for (const ImageDeprecated &image : attachments)
-    {
-        attachmentViews.push_back(image.view);
-    }
-
-    VkFramebufferCreateInfo createInfo =
-        {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = renderPass.GetHandle(),
-            .attachmentCount = (uint32_t)attachmentViews.size(),
-            .pAttachments = attachmentViews.data(),
-            .width = attachments.begin()[0].size.x,
-            .height = attachments.begin()[0].size.y,
-            .layers = layers,
-        };
-
-    vkCreateFramebuffer(GraphicsContext::GetCurrentContext().GetDevice(), &createInfo, nullptr, &mHandle);
-}
-
-void FrameBuffer::CreateFrameBuffer(std::initializer_list<Image> attachments, const RenderPass &renderPass, uint32_t layers)
-{
-    std::vector<VkImageView> attachmentViews;
-    for (const Image &image : attachments)
-    {
-        attachmentViews.push_back(image.GetImageView().GetHandle());
-    }
-
-    VkFramebufferCreateInfo createInfo =
-        {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = renderPass.GetHandle(),
-            .attachmentCount = (uint32_t)attachmentViews.size(),
-            .pAttachments = attachmentViews.data(),
-            .width = attachments.begin()[0].GetSize().x,
-            .height = attachments.begin()[0].GetSize().y,
-            .layers = layers,
-        };
-
-    vkCreateFramebuffer(GraphicsContext::GetCurrentContext().GetDevice(), &createInfo, nullptr, &mHandle);
-}
-
-void FrameBuffer::DestroyFrameBuffer()
+void FrameBuffer::Destroy()
 {
     if (mHandle == VK_NULL_HANDLE)
     {
@@ -82,4 +31,24 @@ void FrameBuffer::DestroyFrameBuffer()
 VkFramebuffer FrameBuffer::GetHandle() const
 {
     return mHandle;
+}
+FrameBuffer::~FrameBuffer()
+{
+    Destroy();
+}
+
+FrameBuffer::FrameBuffer(FrameBuffer &&frameBuffer) noexcept
+{
+    mHandle = frameBuffer.mHandle;
+    mSize = frameBuffer.mSize;
+    frameBuffer.mHandle = VK_NULL_HANDLE;
+}
+
+FrameBuffer &FrameBuffer::operator=(FrameBuffer &&frameBuffer) noexcept
+{
+    Destroy();
+    mHandle = frameBuffer.mHandle;
+    mSize = frameBuffer.mSize;
+    frameBuffer.mHandle = VK_NULL_HANDLE;
+    return *this;
 }

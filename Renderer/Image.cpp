@@ -5,8 +5,12 @@
 #include "Renderer/GraphicsContext.hpp"
 #include <cstring>
 
-void Image::CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageType type, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount, uint32_t depth, bool cubeMap)
+void Image::Create(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageType type, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount, uint32_t depth, bool cubeMap)
 {
+    if (size.x == 0 || size.y == 0)
+    {
+        return;
+    }
     VkImageCreateInfo createInfo =
         {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -66,6 +70,10 @@ void Image::CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage u
     mSize = size;
     mLayerCount = layerCount;
     mMipmapCount = mipmapCount;
+    mImageType = type;
+    mDepth = depth;
+    mIsCubemap = cubeMap;
+    mMemoryProperty = memoryProperty;
     mMemorySize = requirements.size;
 
     if (cubeMap)
@@ -73,23 +81,91 @@ void Image::CreateImage(const glm::uvec2 &size, ImageFormat format, ImageUsage u
         viewType = ViewType::Cube;
     }
 
-    mImageView.CreateImageView(*this, viewType, aspect, 0, layerCount, 0, mipmapCount);
+    mImageView = ImageView(*this, viewType, aspect, 0, layerCount, 0, mipmapCount);
 }
 
-void Image::CreateColorAttachment(const glm::uvec2 &size, ImageUsage additionalUsage, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount)
+Image::Image(Image &&image) noexcept
 {
-    CreateImage(size, ImageFormat::BGRA8, ImageUsage::ColorAttachment | additionalUsage, ImageType::TwoDimensional, ImageAspect::Color, MemoryProperty::DeviceLocal, sampleCount, layerCount, mipmapCount, 1);
-}
-void Image::CreateDepthAttachment(const glm::uvec2 &size, ImageUsage additionalUsage, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount)
-{
-    CreateImage(size, ImageFormat::D32, ImageUsage::DepthStencil | additionalUsage, ImageType::TwoDimensional, ImageAspect::Depth, MemoryProperty::DeviceLocal, sampleCount, layerCount, mipmapCount, 1);
-}
-void Image::CreateCubeMap(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t mipmapCount)
-{
-    CreateImage(size, format, usage, ImageType::TwoDimensional, aspect, memoryProperty, sampleCount, 6, mipmapCount, 1, true);
+
+    mFormat = image.mFormat;
+    mUsage = image.mUsage;
+    mAspect = image.mAspect;
+    mSampleCount = image.mSampleCount;
+    mSize = image.mSize;
+    mLayout = image.mLayout;
+    mImageType = image.mImageType;
+    mMipmapCount = image.mMipmapCount;
+    mLayerCount = image.mLayerCount;
+    mDepth = image.mDepth;
+    mImageType = image.mImageType;
+
+    mHandle = image.mHandle;
+    mMemory = image.mMemory;
+    mMemorySize = image.mMemorySize;
+
+    mImageView = std::move(image.mImageView);
+
+    image.mMemory = VK_NULL_HANDLE;
+    image.mHandle = VK_NULL_HANDLE;
 }
 
-void Image::DestroyImage()
+Image &Image::operator=(Image &&image) noexcept
+{
+    Destroy();
+
+    mFormat = image.mFormat;
+    mUsage = image.mUsage;
+    mAspect = image.mAspect;
+    mSampleCount = image.mSampleCount;
+    mSize = image.mSize;
+    mLayout = image.mLayout;
+    mImageType = image.mImageType;
+    mMipmapCount = image.mMipmapCount;
+    mLayerCount = image.mLayerCount;
+    mDepth = image.mDepth;
+    mImageType = image.mImageType;
+
+    mHandle = image.mHandle;
+    mMemory = image.mMemory;
+    mMemorySize = image.mMemorySize;
+
+    mImageView = std::move(image.mImageView);
+
+    image.mMemory = VK_NULL_HANDLE;
+    image.mHandle = VK_NULL_HANDLE;
+
+    return *this;
+}
+
+Image::~Image()
+{
+    Destroy();
+}
+
+Image::Image(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageType type, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount, uint32_t depth, bool isCubeMap)
+{
+    Create(size, format, usage, type, aspect, memoryProperty, sampleCount, layerCount, mipmapCount, depth, isCubeMap);
+}
+
+void Image::Copy(const Image &image)
+{
+    Create(image.mSize, image.mFormat, image.mUsage, image.mImageType, image.mAspect, image.mMemoryProperty, image.mSampleCount, image.mLayerCount, image.mMipmapCount, image.mDepth, image.mIsCubemap);
+}
+
+Image Image::CreateColorAttachment(const glm::uvec2 &size, ImageUsage additionalUsage, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount)
+{
+    return Image(size, ImageFormat::BGRA8, ImageUsage::ColorAttachment | additionalUsage, ImageType::TwoDimensional, ImageAspect::Color, MemoryProperty::DeviceLocal, sampleCount, layerCount, mipmapCount, 1);
+}
+Image Image::CreateDepthAttachment(const glm::uvec2 &size, ImageUsage additionalUsage, SampleCount sampleCount, uint32_t layerCount, uint32_t mipmapCount)
+{
+    return Image(size, ImageFormat::D32, ImageUsage::DepthStencil | additionalUsage, ImageType::TwoDimensional, ImageAspect::Depth, MemoryProperty::DeviceLocal, sampleCount, layerCount, mipmapCount, 1);
+}
+Image Image::CreateCubeMap(const glm::uvec2 &size, ImageFormat format, ImageUsage usage, ImageAspect aspect, MemoryProperty memoryProperty, SampleCount sampleCount, uint32_t mipmapCount)
+{
+    return Image(size, format, usage, ImageType::TwoDimensional, aspect, memoryProperty, sampleCount, 6, mipmapCount, 1, true);
+}
+
+void Image::Destroy()
 {
     vkDestroyImage(GraphicsContext::GetCurrentContext().GetDevice(), mHandle, nullptr);
     vkFreeMemory(GraphicsContext::GetCurrentContext().GetDevice(), mMemory, nullptr);
@@ -97,8 +173,6 @@ void Image::DestroyImage()
 void Image::TransitionLayout(ImageLayout newLayout)
 {
     CommandBuffer commandBuffer;
-    commandBuffer.CreateCommandBuffer();
-
     commandBuffer.BeginRecording();
     VkImageMemoryBarrier barrier =
         {
@@ -156,8 +230,7 @@ void Image::SetData(const void *data, const glm::uvec2 &size, const glm::uvec2 &
     Buffer buffer = CreateBuffer(mMemorySize, BufferUsage::TransferSource, MemoryProperty::HostCoherent | MemoryProperty::HostVisible);
     memcpy(buffer.map, data, GetImageFormatMemorySize(mFormat) * size.x * size.y);
 
-    CommandBuffer commandBuffer;
-    commandBuffer.CreateCommandBuffer();
+    CommandBuffer commandBuffer = CommandBuffer(GraphicsContext::GetCurrentContext().GetCommandPool());
     commandBuffer.BeginRecording();
 
     CmdTransitionLayout(commandBuffer, ImageLayout::TransferDestination);
@@ -218,6 +291,15 @@ const ImageView &Image::GetImageView() const
 ImageLayout Image::GetLayout() const
 {
     return mLayout;
+}
+
+ImageType Image::GetImageType() const
+{
+    return mImageType;
+}
+size_t Image::GetMemorySize() const
+{
+    return mMemorySize;
 }
 
 uint32_t GetImageFormatComponentCount(ImageFormat format)

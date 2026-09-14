@@ -47,19 +47,20 @@ void Descriptor::AddBindlessDescriptor(DescriptorType type, ShaderStage shaderSt
     mBindingDescriptorCount.push_back(count);
 }
 
-void Descriptor::CreateDescriptor()
+void Descriptor::Create()
 {
     CreateDescriptorSetLayout();
     CreateDescriptorPool();
     AllocateDescriptorSet();
 }
 
-void Descriptor::DestroyDescriptor()
+void Descriptor::Destroy()
 {
     mDescriptorTypeCount.clear();
     mDescriptorBinding.clear();
-    DestroyDescriptorPool();
+    FreeDescriptorSet();
     DestroyDescriptorSetLayout();
+    DestroyDescriptorPool();
 }
 
 void Descriptor::CreateDescriptorSetLayout()
@@ -160,6 +161,13 @@ void Descriptor::DestroyDescriptorPool()
     }
     vkDestroyDescriptorPool(GraphicsContext::GetCurrentContext().GetDevice(), mDescriptorPool, nullptr);
     mDescriptorPool = VK_NULL_HANDLE;
+}
+
+void Descriptor::FreeDescriptorSet()
+{
+    // Freed when descriptor pool is destroyed
+
+    // vkFreeDescriptorSets(GraphicsContext::GetCurrentContext().GetDevice(), mDescriptorPool, 1, &mSet);
 }
 
 void Descriptor::UpdateBuffer(const Buffer &buffer, uint32_t binding) const
@@ -312,7 +320,61 @@ VkDescriptorPool Descriptor::GetDescriptorPool() const
     return mDescriptorPool;
 }
 
-Descriptor::operator VkDescriptorSet()
+Descriptor::Descriptor(std::initializer_list<DescriptorLayout> layouts)
 {
-    return mSet;
+    for (const DescriptorLayout &layout : layouts)
+    {
+        if (layout.count == 1)
+        {
+            AddDescriptor(layout.type, layout.shaderStage);
+        }
+        else
+        {
+            AddBindlessDescriptor(layout.type, layout.shaderStage, layout.count);
+        }
+    }
+
+    Create();
+}
+
+Descriptor::Descriptor(Descriptor &&descriptor) noexcept
+{
+    mDescriptorTypeCount = std::move(descriptor.mDescriptorTypeCount);
+    mDescriptorBinding = std::move(descriptor.mDescriptorBinding);
+    mBindingFlags = std::move(descriptor.mBindingFlags);
+    mBindingDescriptorCount = std::move(descriptor.mBindingDescriptorCount);
+    mSetLayoutFlag = descriptor.mSetLayoutFlag;
+    mBindingCreateInfo = descriptor.mBindingCreateInfo;
+    mExtentedInfoRequired = descriptor.mExtentedInfoRequired;
+
+    mSetLayout = descriptor.mSetLayout;
+    mDescriptorPool = descriptor.mDescriptorPool;
+    mSet = descriptor.mSet;
+
+    descriptor.mSet = VK_NULL_HANDLE;
+    descriptor.mDescriptorPool = VK_NULL_HANDLE;
+    descriptor.mSetLayout = VK_NULL_HANDLE;
+}
+
+Descriptor &Descriptor::operator=(Descriptor &&descriptor) noexcept
+{
+    Destroy();
+
+    mDescriptorTypeCount = std::move(descriptor.mDescriptorTypeCount);
+    mDescriptorBinding = std::move(descriptor.mDescriptorBinding);
+    mBindingFlags = std::move(descriptor.mBindingFlags);
+    mBindingDescriptorCount = std::move(descriptor.mBindingDescriptorCount);
+    mSetLayoutFlag = descriptor.mSetLayoutFlag;
+    mBindingCreateInfo = descriptor.mBindingCreateInfo;
+    mExtentedInfoRequired = descriptor.mExtentedInfoRequired;
+
+    mSetLayout = descriptor.mSetLayout;
+    mDescriptorPool = descriptor.mDescriptorPool;
+    mSet = descriptor.mSet;
+
+    descriptor.mSet = VK_NULL_HANDLE;
+    descriptor.mDescriptorPool = VK_NULL_HANDLE;
+    descriptor.mSetLayout = VK_NULL_HANDLE;
+
+    return *this;
 }

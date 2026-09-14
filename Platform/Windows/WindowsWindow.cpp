@@ -37,6 +37,12 @@ void mouseMoveCallback(GLFWwindow *window, double x, double y)
 {
     WindowData *windowData = (WindowData *)glfwGetWindowUserPointer(window);
 
+    if (windowData->ignoreCursorCallback)
+    {
+        windowData->ignoreCursorCallback = false;
+        return;
+    }
+
     glm::vec2 position = {x, y};
     windowData->dispatcher.Dispatch((uint32_t)WindowEvent::WindowMouseMove, &position);
 }
@@ -532,7 +538,7 @@ void Window::HideCursor()
     CHROME_TRACE_FUNCTION();
     if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_HIDDEN)
     {
-        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        //glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     }
 }
 
@@ -653,7 +659,7 @@ void Window::ShowCursor()
     CHROME_TRACE_FUNCTION();
     if (glfwGetInputMode(mWindowData.window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
     {
-        glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        //glfwSetInputMode(mWindowData.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
 }
 bool Window::isCursorHidden() const
@@ -712,4 +718,10 @@ VkSurfaceKHR Window::CreateWindowSurface() const
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     glfwCreateWindowSurface(GraphicsContext::GetCurrentContext().GetInstance(), mWindowData.window, nullptr, &surface);
     return surface;
+}
+
+void Window::SetCursorPos(const glm::uvec2 &position)
+{
+    mWindowData.ignoreCursorCallback = true;
+    glfwSetCursorPos(mWindowData.window, position.x, position.y);
 }

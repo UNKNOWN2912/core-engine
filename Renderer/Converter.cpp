@@ -453,6 +453,8 @@ VkFilter GetVulkanFilter(Filter filter)
         return VK_FILTER_NEAREST;
     case Filter::Linear:
         return VK_FILTER_LINEAR;
+    case Filter::Cubic:
+        return VK_FILTER_CUBIC_IMG;
     }
     ERROR("Invalid filter: {}", (uint32_t)filter);
 
@@ -1156,6 +1158,8 @@ Filter GetNativeFilter(VkFilter filter)
         return Filter::Nearest;
     case VK_FILTER_LINEAR:
         return Filter::Linear;
+    case VK_FILTER_CUBIC_IMG:
+        return Filter::Cubic;
     }
     ERROR("Invalid filter: {}", (uint32_t)filter);
 

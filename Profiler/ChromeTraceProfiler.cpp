@@ -1,4 +1,5 @@
 #include "ChromeTraceProfiler.hpp"
+#include "Core/Macro.hpp"
 #include "Core/Timer.hpp"
 #include <cstdio>
 #include <format>

@@ -2,11 +2,6 @@
 #include "Core/Macro.hpp"
 #include <memory.h>
 
-Mesh::Mesh()
-{
-    CHROME_TRACE_FUNCTION();
-}
-
 Mesh::Mesh(void *vertices, size_t vertexSize, uint32_t *indices, size_t indexSize)
 {
     CHROME_TRACE_FUNCTION();

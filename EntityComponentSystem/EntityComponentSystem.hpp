@@ -74,7 +74,7 @@ public:
     template <typename ComponentType, typename... Args>
     ComponentType &AddComponent(const Entity &entity, Args... args)
     {
-        return mRegistry.emplace<ComponentType>(entity.mId, args...);
+        return mRegistry.emplace<ComponentType>(entity.mId, std::forward<Args>(args)...);
     }
 
     template <typename ComponentType>
@@ -124,6 +124,10 @@ public:
     {
         return mCamera;
     }
+    Camera &GetCamera()
+    {
+        return mCamera;
+    }
 
     ResourceManager &GetResourceManager()
     {
@@ -156,7 +160,7 @@ const ComponentType &Entity::GetComponent() const
 template <typename ComponentType, typename... Args>
 ComponentType &Entity::AddComponent(Args... args)
 {
-    return mScene->AddComponent<ComponentType>(*this, args...);
+    return mScene->AddComponent<ComponentType>(*this, std::forward<Args>(args)...);
 }
 
 template <typename ComponentType>

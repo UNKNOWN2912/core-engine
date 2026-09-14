@@ -10,7 +10,7 @@ public:
     void Terminate();
     std::string LoadTexture(std::string_view identifier, std::string_view filename, ImageFormat format = ImageFormat::RGBA8);
     std::string CreateTexture(std::string_view identifier, void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter = Filter::Linear, Filter magFilter = Filter::Linear, AddressMode addressMode = AddressMode::Border);
-    std::string AddTexture(std::string_view identifier, Texture &texture);
+    std::string MoveTexture(std::string_view identifier, Texture &&texture);
 
     void DestroyTexture(std::string_view identifier);
 
@@ -28,7 +28,6 @@ public:
     void Clear();
 
 private:
-    Sampler mSampler;
     std::unordered_map<std::string, Texture> mTextureMap;
     std::unordered_map<std::string, uint32_t> mTextureDescriptorIndex;
 };

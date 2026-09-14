@@ -57,44 +57,44 @@ struct TextProperty
 class TextRenderer
 {
 public:
-    static void Initialize();
-    static void Terminate();
+    void Initialize();
+    void Terminate();
 
-    static void DrawText(const Font &font, const std::string &text, float spacing = 1.f, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(1), const Transform &transform = {});
-    static void DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(0), const Transform &transform = {});
+    void DrawText(const Font &font, const std::string &text, float spacing = 1.f, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(1), const Transform &transform = {});
+    void DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const glm::vec4 &forgroundColor = glm::vec4(1), const glm::vec4 &backgroundColor = glm::vec4(0), const Transform &transform = {});
 
-    static void DrawText(const Font &font, const std::string &text, const TextProperty &property);
-    static void DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const TextProperty &property);
+    void DrawText(const Font &font, const std::string &text, const TextProperty &property);
+    void DrawCharacter(const Font &font, char ch, const glm::vec3 &position, const TextProperty &property);
 
-    static void DrawText(const Font &font, const std::string &text, const std::function<TextProperty(char ch, uint32_t index, const glm::vec2 &position, float totalSize)> &callback);
+    void DrawText(const Font &font, const std::string &text, const std::function<TextProperty(char ch, uint32_t index, const glm::vec2 &position, float totalSize)> &callback);
 
-    static void SetCamera(const Camera &camera);
-    static void SetSpacing(float spacing);
-    static void Flush();
+    void SetCamera(const Camera &camera);
+    void SetSpacing(float spacing);
+    void Flush();
 
-    static TextPushConstant &GetPushConstant()
+    TextPushConstant &GetPushConstant()
     {
         return mPushConstant;
     }
 
 private:
-    static UniformBuffer mUniformBuffer;
-    static Descriptor mUniformDescriptor;
-    static Descriptor mBezierDescriptor;
-    static TextUniformData mUniformData;
+    UniformBuffer mUniformBuffer;
+    Descriptor mUniformDescriptor;
+    Descriptor mBezierDescriptor;
+    TextUniformData mUniformData;
 
-    static Camera mCamera;
-    static Shader mShader;
+    Camera mCamera;
+    Shader mShader;
 
-    static Buffer mVertexBuffer;
-    static Buffer mIndexBuffer;
+    Buffer mVertexBuffer;
+    Buffer mIndexBuffer;
 
-    static Buffer mQuadVertexBuffer;
-    static Buffer mQuadIndexBuffer;
+    Buffer mQuadVertexBuffer;
+    Buffer mQuadIndexBuffer;
 
-    static InstanceBuffer mInstanceBuffer;
+    InstanceBuffer mInstanceBuffer;
 
-    static std::vector<TextInstanceData> mInstanceData;
+    std::vector<TextInstanceData> mInstanceData;
 
-    static TextPushConstant mPushConstant;
+    TextPushConstant mPushConstant;
 };

@@ -251,6 +251,7 @@ enum class Filter
     None = 0,
     Nearest,
     Linear,
+    Cubic,
 };
 
 enum class AddressMode

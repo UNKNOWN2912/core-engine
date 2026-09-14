@@ -1,82 +1,43 @@
 #pragma once
-#include "Assets/MaterialManager.hpp"
-#include "Assets/MeshManager.hpp"
-#include "Assets/ShaderManager.hpp"
-#include "Assets/TextureManager.hpp"
 #include "Core/LayerStack.hpp"
+#include "Core/Timer.hpp"
 #include "Core/Window.hpp"
 #include "Input/Keyboard.hpp"
 #include "Input/Mouse.hpp"
+#include "Renderer/DebugRenderer.hpp"
 #include "Renderer/Renderer.hpp"
+#include <Input/Input.hpp>
 
 class Application
 {
 public:
-    virtual void OnInitialize()
-    {
-    }
-    virtual void OnStart()
-    {
-    }
-    virtual void OnUpdate()
-    {
-    }
-    virtual void OnEnd()
-    {
-    }
-
+    virtual void OnInitialize() {}
+    virtual void OnStart() {}
+    virtual void OnUpdate() {}
+    virtual void OnEnd() {}
+    virtual void OnWindowMove(const glm::uvec2 &position) {}
+    virtual void OnWindowResize(const glm::uvec2 &size) {}
+    virtual void OnWindowMinimize() {}
+    virtual void OnWindowMaximize() {}
+    virtual void OnMouseMove(const glm::vec2 &position, const glm::vec2 &offset) {}
+    virtual void OnMouseButtonPress(MouseButton button) {}
+    virtual void OnMouseButtonRelease(MouseButton button) {}
+    virtual void OnScroll(const glm::vec2 &scroll) {}
+    virtual void OnKeyPress(Key key) {}
+    virtual void OnKeyRepeat(Key key) {}
+    virtual void OnKeyRelease(Key key) {}
+    virtual void OnCharacterType(char ch) {}
     virtual void OnWindowClose()
     {
         Close();
     }
-    virtual void OnWindowMove(const glm::uvec2 &position)
-    {
-    }
-    virtual void OnWindowResize(const glm::uvec2 &size)
-    {
-    }
-    virtual void OnWindowMinimize()
-    {
-    }
-    virtual void OnWindowMaximize()
-    {
-    }
-
-    virtual void OnMouseMove(const glm::vec2 &position, const glm::vec2 &offset)
-    {
-    }
-    virtual void OnMouseButtonPress(MouseButton button)
-    {
-    }
-    virtual void OnMouseButtonRelease(MouseButton button)
-    {
-    }
-    virtual void OnScroll(const glm::vec2 &scroll)
-    {
-    }
-
-    virtual void OnKeyPress(Key key)
-    {
-    }
-    virtual void OnKeyRepeat(Key key)
-    {
-    }
-    virtual void OnKeyRelease(Key key)
-    {
-    }
-
-    virtual void OnCharacterType(char ch)
-    {
-    }
 
     void InitializeApplication();
     void TerminateApplication();
-    void RunApplication();
+    void Run();
 
-    void DisableCursor();
-    void HideCursor();
-    void ResetCursor();
-    bool IsCursorHidden();
+    const Mouse &GetMouse() const;
+    Mouse &GetMouse();
 
     void Close();
     bool IsRunning();
@@ -127,13 +88,29 @@ public:
 
     glm::vec2 GetCursorPos() const;
 
-    const RendererSpecification &GetRendererSpecification() const
+    const RendererSpecification &GetRendererSpecification() const;
+    void SetRendererSpecification(const RendererSpecification &specification);
+
+    const Renderer &GetRenderer() const;
+    Renderer &GetRenderer();
+
+    const Keyboard &GetKeyboard() const
     {
-        return mRendererSpecification;
+        return mKeyboard;
     }
-    void SetRendererSpecification(const RendererSpecification &specification)
+
+    Keyboard &GetKeyboard()
     {
-        mRendererSpecification = specification;
+        return mKeyboard;
+    }
+
+    const DebugRenderer &GetDebugRenderer() const
+    {
+        return mDebugRenderer;
+    }
+    DebugRenderer &GetDebugRenderer()
+    {
+        return mDebugRenderer;
     }
 
 private:
@@ -145,6 +122,9 @@ private:
     Window mWindow;
 
     glm::uvec2 mCursorPosition = glm::uvec2(0);
+
+    Renderer mRenderer;
+    DebugRenderer mDebugRenderer;
 
     uint32_t mFps = 0;
 
@@ -163,4 +143,7 @@ private:
     RendererSpecification mRendererSpecification;
 
     GraphicsContext mGraphicsContext;
+
+    Mouse mMouse;
+    Keyboard mKeyboard;
 };

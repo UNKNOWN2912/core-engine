@@ -1,12 +1,11 @@
 #include "Shader.hpp"
-#include "Renderer.hpp"
 
-void Shader::Load(std::string_view vertexFilename, std::string_view fragmentFilename, const RenderPass &renderPass, uint32_t subpass)
+void Shader::Load(std::string_view vertexFilename, std::string_view fragmentFilename, const RenderPass &renderPass, uint32_t subpass, const ShaderConfig &settings)
 {
-    Load(vertexFilename, fragmentFilename, "", "", renderPass, subpass);
+    Load(vertexFilename, fragmentFilename, "", "", renderPass, subpass, settings);
 }
 
-void Shader::Load(std::string_view vertexFilename, std::string_view fragmentFilename, std::string_view geometryFilename, std::string_view tessellationFilename, const RenderPass &renderPass, uint32_t subpass)
+void Shader::Load(std::string_view vertexFilename, std::string_view fragmentFilename, std::string_view geometryFilename, std::string_view tessellationFilename, const RenderPass &renderPass, uint32_t subpass, const ShaderConfig &settings)
 {
     if (!vertexFilename.empty())
     {
@@ -36,16 +35,16 @@ void Shader::Load(std::string_view vertexFilename, std::string_view fragmentFile
         mGraphicsPipeline.SetTessellationShader(mTessellationShaderModule);
     }
 
-    SetupPipelineSettings(mSettings);
+    SetupPipelineSettings(settings);
     mGraphicsPipeline.CreatePipeline(renderPass, subpass);
 }
 
-void Shader::Create(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const RenderPass &renderPass, uint32_t subpass)
+void Shader::Create(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const RenderPass &renderPass, uint32_t subpass, const ShaderConfig &settings)
 {
-    Create(vertexCode, fragmentCode, {}, {});
+    Create(vertexCode, fragmentCode, {}, {}, settings);
 }
 
-void Shader::Create(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, const RenderPass &renderPass, uint32_t subpass)
+void Shader::Create(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, const RenderPass &renderPass, uint32_t subpass, const ShaderConfig &settings)
 {
     if (!vertexCode.empty())
     {
@@ -71,7 +70,7 @@ void Shader::Create(const std::vector<uint32_t> &vertexCode, const std::vector<u
         mGraphicsPipeline.SetTessellationShader(mTessellationShaderModule);
     }
 
-    SetupPipelineSettings(mSettings);
+    SetupPipelineSettings(settings);
     mGraphicsPipeline.CreatePipeline(renderPass, subpass);
 }
 
@@ -81,14 +80,8 @@ void Shader::Destroy()
     vkDestroyShaderModule(GraphicsContext::GetCurrentContext().GetDevice(), mFragmentShaderModule, nullptr);
     vkDestroyShaderModule(GraphicsContext::GetCurrentContext().GetDevice(), mGeometryShaderModule, nullptr);
     vkDestroyShaderModule(GraphicsContext::GetCurrentContext().GetDevice(), mTessellationShaderModule, nullptr);
-
     mDescriptors.clear();
-
     mGraphicsPipeline.DestroyPipeline();
-}
-
-void Shader::AddDescriptor()
-{
 }
 
 const GraphicsPipeline &Shader::GetGraphicsPipeline() const
@@ -113,7 +106,89 @@ const std::string &Shader::GetTessellationFilename() const
     return mTessellationFilename;
 }
 
-void Shader::SetupPipelineSettings(const ShaderSettings &settings)
+Shader::Shader(const std::vector<uint32_t> &vertexCode, const std::vector<uint32_t> &fragmentCode, const std::vector<uint32_t> &geometryCode, const std::vector<uint32_t> &tessellationCode, const RenderPass &renderPass, uint32_t subpass, const ShaderConfig &settings)
+{
+    Create(vertexCode, fragmentCode, geometryCode, tessellationCode, renderPass, subpass, settings);
+}
+
+Shader::Shader(Shader &&shader) noexcept
+{
+    mGraphicsPipeline = std::move(shader.mGraphicsPipeline);
+
+    mSettings = shader.mSettings;
+
+    mVertexShaderModule = shader.mVertexShaderModule;
+    mFragmentShaderModule = shader.mFragmentShaderModule;
+    mGeometryShaderModule = shader.mGeometryShaderModule;
+    mTessellationShaderModule = shader.mTessellationShaderModule;
+
+    mVertexFilename = shader.mVertexFilename;
+    mFragmentFilename = shader.mFragmentFilename;
+    mGeometryFilename = shader.mGeometryFilename;
+    mTessellationFilename = shader.mTessellationFilename;
+
+    mDescriptors = std::move(shader.mDescriptors);
+
+    shader.mSettings = {};
+    shader.mVertexShaderModule = {};
+    shader.mFragmentShaderModule = {};
+    shader.mGeometryShaderModule = {};
+    shader.mTessellationShaderModule = {};
+    shader.mVertexFilename = {};
+    shader.mFragmentFilename = {};
+    shader.mGeometryFilename = {};
+    shader.mTessellationFilename = {};
+}
+
+Shader &Shader::operator=(Shader &&shader) noexcept
+{
+    Destroy();
+
+    mGraphicsPipeline = std::move(shader.mGraphicsPipeline);
+
+    mSettings = shader.mSettings;
+
+    mVertexShaderModule = shader.mVertexShaderModule;
+    mFragmentShaderModule = shader.mFragmentShaderModule;
+    mGeometryShaderModule = shader.mGeometryShaderModule;
+    mTessellationShaderModule = shader.mTessellationShaderModule;
+
+    mVertexFilename = shader.mVertexFilename;
+    mFragmentFilename = shader.mFragmentFilename;
+    mGeometryFilename = shader.mGeometryFilename;
+    mTessellationFilename = shader.mTessellationFilename;
+
+    mDescriptors = std::move(shader.mDescriptors);
+
+    shader.mSettings = {};
+    shader.mVertexShaderModule = {};
+    shader.mFragmentShaderModule = {};
+    shader.mGeometryShaderModule = {};
+    shader.mTessellationShaderModule = {};
+    shader.mVertexFilename = {};
+    shader.mFragmentFilename = {};
+    shader.mGeometryFilename = {};
+    shader.mTessellationFilename = {};
+
+    return *this;
+}
+
+Shader::~Shader()
+{
+    Destroy();
+}
+
+void Shader::AddDescriptor(const Descriptor &descriptor)
+{
+    mGraphicsPipeline.AddDescriptors(descriptor);
+}
+
+void Shader::AddColorBlendAttachment(bool enableBlending)
+{
+    mGraphicsPipeline.AddColorBlendAttachment(enableBlending);
+}
+
+void Shader::SetupPipelineSettings(const ShaderConfig &settings)
 {
     mGraphicsPipeline.SetCullMode(settings.cullMode);
     mGraphicsPipeline.SetSampleCount(settings.sampleCount);
@@ -121,11 +196,27 @@ void Shader::SetupPipelineSettings(const ShaderSettings &settings)
     mGraphicsPipeline.EnableDepthWrite(settings.enableDepthWrite);
     mGraphicsPipeline.SetPrimitive(settings.primitive);
     mGraphicsPipeline.SetCompareOp(settings.compare);
+    for (const VertexLayout &layout : settings.layouts)
+    {
+        AddLayout(layout);
+    }
+    for (const Descriptor &descriptor : settings.descriptors)
+    {
+        AddDescriptor(descriptor);
+    }
+    for (const bool blendEnable : settings.colorBlendAttachments)
+    {
+        AddColorBlendAttachment(blendEnable);
+    }
+    if (settings.pushConstantSize != 0)
+    {
+        SetPushConstantSize(settings.pushConstantSize);
+    }
+    SetDepthBias(settings.enableDepthBias, settings.slopeFactor, settings.constantFactor);
+
+    mSettings = settings;
 }
 
-void Shader::AddColorBlendAttachment()
-{
-}
 void Shader::AddLayout(const VertexLayout &layout)
 {
     for (const VertexAttribute &attribute : layout.attributes)
@@ -146,11 +237,11 @@ void Shader::SetDepthBias(bool enable, float slopeFactor, float constantFactor)
 {
     mGraphicsPipeline.SetDepthBias(enable, slopeFactor, constantFactor);
 }
-const ShaderSettings &Shader::GetSettings() const
+const ShaderConfig &Shader::GetSettings() const
 {
     return mSettings;
 }
-ShaderSettings &Shader::GetSettings()
+ShaderConfig &Shader::GetSettings()
 {
     return mSettings;
 }

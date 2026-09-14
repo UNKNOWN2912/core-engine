@@ -1,4 +1,5 @@
 #include "SceneSerializer.hpp"
+#include "Core/Application.hpp"
 #include "EntityComponentSystem/Component.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Renderer/Transform.hpp"
@@ -240,6 +241,7 @@ void DeserializeFontManager(const json::array_t &fontJsonArray, FontManager &fon
 
 void DeserializeShaderManager(const json::array_t &shaderJsonArray, ShaderManager &shaderManager)
 {
+    const Renderer &renderer = Application::GetInstance()->GetRenderer();
     for (const json &json : shaderJsonArray)
     {
         std::string vertexPath = json["vertexPath"];
@@ -247,12 +249,14 @@ void DeserializeShaderManager(const json::array_t &shaderJsonArray, ShaderManage
         std::string geometryPath = json["geometryPath"];
         std::string tessellationPath = json["tessellationPath"];
         std::string id = json["id"];
-        shaderManager.Load(id, vertexPath, fragmentPath, geometryPath, tessellationPath, [&](Shader &shader) {
-            Renderer::SetupSceneShader(shader);
-            shader.GetSettings().cullMode = json["cullMode"];
-            shader.GetSettings().enableDepthTest = json["enableDepthTest"];
-            shader.GetSettings().enableDepthWrite = json["enableDepthWrite"];
-        });
+
+        ShaderConfig config = renderer.GetSceneShaderConfig();
+        config.cullMode = json["cullMode"];
+        config.enableDepthTest = json["enableDepthTest"];
+        config.enableDepthWrite = json["enableDepthWrite"];
+        config.primitive = json["primitive"];
+        config.sampleCount = json["sampleCount"];
+        shaderManager.Load(id, vertexPath, fragmentPath, geometryPath, tessellationPath, config);
     }
 }
 
@@ -369,7 +373,6 @@ MeshRendererComponent DeserializeMeshRenderer(const json &json)
 
 Light DeserializeLight(const json &json)
 {
-
     Light light;
     light.SetPosition({json["position"][0], json["position"][1], json["position"][2]});
     light.SetDirection({json["direction"][0], json["direction"][1], json["direction"][2]});
@@ -430,7 +433,7 @@ void DeserializeEntities(const json::array_t &entityJsonArray, Scene &scene)
         if (json.contains("light"))
         {
             Light light = DeserializeLight(json["light"]);
-            entity.AddComponent<Light>(light);
+            entity.AddComponent<Light>(std::move(light));
         }
     }
 }

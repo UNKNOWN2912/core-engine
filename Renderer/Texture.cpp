@@ -156,45 +156,10 @@ uint32_t GetFormatChannelCount(ImageFormat format)
 void Texture::Create(void *data, const glm::uvec2 &size, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
 {
     CHROME_TRACE_FUNCTION();
+    mImage = Image(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageType::TwoDimensional, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One, 1, 1);
+    mImage.SetData(data, size);
 
-    if (IsValid())
-    {
-        Destroy();
-    }
-
-    mImage = CreateImage(size, format, ImageUsage::TransferDestination | ImageUsage::Sampler, ImageAspect::Color, MemoryProperty::DeviceLocal, SampleCount::One, 1, 1);
-    mStagingBuffer = CreateBuffer(mImage.memorySize, BufferUsage::TransferSource, MemoryProperty::HostVisible | MemoryProperty::HostCoherent);
-
-    unsigned char *staging = (unsigned char *)mStagingBuffer.map;
-    unsigned char *byteData = (unsigned char *)data;
-    for (int i = 0; i < size.x * size.y * GetFormatChannelCount(format); i++)
-    {
-        staging[i] = byteData[i];
-    }
-
-    VkCommandPool commandPool = CreateCommandPool();
-
-    CommandBuffer commandBuffer;
-    commandBuffer.CreateCommandBuffer(commandPool);
-
-    commandBuffer.BeginRecording(true);
-    CmdTransitionImageLayout(commandBuffer, ImageLayout::None, ImageLayout::TransferDestination, ImageAspect::Color, mImage);
-
-    CmdTransferImageData(commandBuffer, mStagingBuffer, mImage, ImageAspect::Color);
-
-    CmdTransitionImageLayout(commandBuffer, ImageLayout::TransferDestination, ImageLayout::ShaderRead, ImageAspect::Color, mImage);
-    commandBuffer.EndRecording();
-    commandBuffer.QueueSubmit(GraphicsContext::GetCurrentContext().GetQueues().transfer);
-
-    vkQueueWaitIdle(GraphicsContext::GetCurrentContext().GetQueues().transfer);
-
-    mIsValid = true;
-
-    DestroyBuffer(mStagingBuffer);
-
-    mSampler.SetAddressMode(addressMode, addressMode, addressMode);
-    mSampler.SetFilter(minFilter, magFilter);
-    mSampler.CreateSampler();
+    mSampler = Sampler(minFilter, magFilter, addressMode, addressMode, addressMode, false, CompareType::Always);
 }
 
 void Texture::Load(std::string_view filename, ImageFormat format, Filter minFilter, Filter magFilter, AddressMode addressMode)
@@ -216,19 +181,16 @@ void Texture::Load(std::string_view filename, ImageFormat format, Filter minFilt
     stbi_image_free(data);
 }
 
-const ImageDeprecated &Texture::GetImage() const
+const Image &Texture::GetImage() const
 {
     return mImage;
 }
 
-ImageDeprecated &Texture::GetImageRef()
+Image &Texture::GetImage()
 {
     return mImage;
 }
-bool Texture::IsValid() const
-{
-    return mIsValid;
-}
+
 const std::string &Texture::GetName() const
 {
     return mName;
@@ -254,9 +216,4 @@ const std::string &Texture::GetFilename() const
 
 void Texture::Destroy()
 {
-    if (mIsValid)
-    {
-        DestroyImage(mImage);
-    }
-    mIsValid = false;
 }

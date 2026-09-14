@@ -158,7 +158,12 @@ void ProcessNode(Scene &scene, const aiScene *aiscene, aiNode *node, const std::
         std::string meshId = GetMeshFromAssimpMesh(aimesh, path, meshMap, i, scene);
         std::string materialId = GetMaterialFromAssimpMaterial(aiscene, aimaterial, path, materialMap, textureMap, aimesh->mMaterialIndex, scene);
 
-        std::string name = meshId + materialId;
+        std::string name = node->mName.C_Str();
+        if (name.empty())
+        {
+            name = meshId + materialId;
+        }
+
         Entity entity = scene.CreateEntity(name);
         entity.GetComponent<EntityMetadata>().createdFromModel = true;
         if (name.size() == 0)

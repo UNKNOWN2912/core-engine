@@ -3,22 +3,36 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan_core.h>
 
+struct SamplerConfig
+{
+    Filter minification = Filter::Nearest;
+    Filter magnification = Filter::Nearest;
+    AddressMode addressMode[3] = {AddressMode::Repeat, AddressMode::Repeat, AddressMode::Repeat};
+    bool enableCompare = false;
+    CompareType compareType;
+};
+
 class Sampler
 {
 public:
+    VkSampler GetHandle() const;
+
+    Sampler(Filter minFilter, Filter magFilter, AddressMode u, AddressMode v, AddressMode w, bool enableCompare, CompareType compareType);
+    Sampler() = default;
+    Sampler(const Sampler &) = delete;
+    Sampler(Sampler &&sampler) noexcept;
+    Sampler &operator=(Sampler &&sampler) noexcept;
+    Sampler &operator=(const Sampler &) = delete;
+    ~Sampler();
+
+private:
     void SetFilter(Filter minification, Filter magnification);
     void SetAddressMode(AddressMode u, AddressMode v, AddressMode w);
     void SetBorderColor(const glm::vec4 &color);
-    void CreateSampler();
-    void DestroySampler();
     void EnableCompare(bool enable, CompareType compareType);
+    void Create();
+    void Destroy();
 
-    VkSampler GetHandle() const
-    {
-        return mHandle;
-    }
-
-private:
     VkSampler mHandle = VK_NULL_HANDLE;
     VkSamplerCreateInfo mCreateInfo =
         {
